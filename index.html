@@ -281,8 +281,8 @@ select.finput{cursor:pointer}
    SUPABASE — remplace ces deux valeurs par celles de ton projet
    (Dashboard Supabase > Project Settings > API)
 ========================================================== */
-const SUPABASE_URL = "https://xxxxxxxxxxxx.supabase.co";
-const SUPABASE_ANON_KEY = "ta-cle-anon-publique";
+const SUPABASE_URL = "https://shwtjplbjirgkgjtxrap.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_tZk7-W_5TusA_hMtrtvhhA_9Fedr8cP";
 const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const APP_STATE = { authenticated:false, role:null, user:null };
@@ -467,8 +467,138 @@ function showCTAModal(){
   </div>`;
 }
 
+/* ═══ ÉVALUATION TECHNIQUE — LANCER FRANC (import Google Sheets publié en CSV) ═══ */
+
+// TODO : remplacer par une vraie liaison joueur → Google Sheet stockée dans
+// Supabase (champ sur le profil du joueur), au lieu d'une URL en dur.
+const LANCER_FRANC_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJLTKsXH4bLWzxacKx2U_qTkAjI7MMPayOGiDQrAPCUfbGvCQHRYSITruoB8R5bg/pub?gid=668306045&single=true&output=csv';
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* ignoré */ }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function parseLancerFrancGrid(rows) {
+  // Lignes 0-4 = en-têtes (titre, nom/date, vidéos, Avant/Après, colonnes) ; données à partir de la ligne 5
+  const dataRows = rows.slice(5);
+  let currentEtape = '';
+  const criteres = [];
+  for (const r of dataRows) {
+    const etapeCell = (r[0] || '').trim();
+    const critereCell = (r[1] || '').trim();
+    if (!critereCell) continue;
+    if (etapeCell) currentEtape = etapeCell;
+    const avant = parseFloat(r[2]);
+    const commentAvant = (r[3] || '').trim();
+    const apres = parseFloat(r[5]);
+    const commentApres = (r[6] || '').trim();
+    criteres.push({
+      etape: currentEtape, critere: critereCell,
+      avant: isNaN(avant) ? null : avant, commentAvant,
+      apres: isNaN(apres) ? null : apres, commentApres,
+    });
+  }
+
+  const groupes = {};
+  criteres.forEach(c => {
+    if (!groupes[c.etape]) groupes[c.etape] = { avant: [], apres: [] };
+    if (c.avant !== null) groupes[c.etape].avant.push(c.avant);
+    if (c.apres !== null) groupes[c.etape].apres.push(c.apres);
+  });
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+  const etapes = Object.keys(groupes).map(etape => ({
+    etape,
+    moyenneAvant: avg(groupes[etape].avant),
+    moyenneApres: avg(groupes[etape].apres),
+  }));
+
+  return { criteres, etapes };
+}
+
+function radarSVGDual(etapes) {
+  const cx = 150, cy = 150, r = 105, n = etapes.length;
+  if (!n) return '';
+  let grid = '', polyAvant = '', polyApres = '', labels = '';
+  for (let g = 1; g <= 4; g++) {
+    const gr = r * g / 4; let gp = '';
+    for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
+    grid += `<polygon points="${gp}" fill="none" stroke="rgba(201,168,76,0.12)" stroke-width="0.5"/>`;
+  }
+  for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; grid += `<line x1="${cx}" y1="${cy}" x2="${cx + r * Math.cos(a)}" y2="${cy + r * Math.sin(a)}" stroke="rgba(201,168,76,0.08)" stroke-width="0.5"/>`; }
+  etapes.forEach((e, i) => {
+    const a = Math.PI * 2 * i / n - Math.PI / 2;
+    const rvA = r * (e.moyenneAvant / 5), xA = cx + rvA * Math.cos(a), yA = cy + rvA * Math.sin(a);
+    const rvP = r * (e.moyenneApres / 5), xP = cx + rvP * Math.cos(a), yP = cy + rvP * Math.sin(a);
+    const lx = cx + (r + 26) * Math.cos(a), ly = cy + (r + 26) * Math.sin(a);
+    polyAvant += `${xA},${yA} `;
+    polyApres += `${xP},${yP} `;
+    labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#B0ADA6" font-size="8" font-family="DM Sans" letter-spacing="0.3">${e.etape}</text>`;
+  });
+  return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}
+    <polygon points="${polyAvant}" fill="rgba(240,237,230,0.08)" stroke="#B0ADA6" stroke-width="1.5"/>
+    <polygon points="${polyApres}" fill="rgba(201,168,76,0.25)" stroke="#C9A84C" stroke-width="1.5"/>
+    ${labels}</svg>`;
+}
+
+function renderLancerFrancEval(etapes) {
+  if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
+  return `
+  <div class="card" style="display:flex;justify-content:center">${radarSVGDual(etapes)}</div>
+  <div style="display:flex;gap:14px;padding:0 14px 10px;font-size:11px;color:var(--w3)">
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#B0ADA6;margin-right:5px"></span>Avant</span>
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C9A84C;margin-right:5px"></span>Après</span>
+  </div>
+  <div class="card">
+    ${etapes.map(e => {
+      const prog = e.moyenneApres - e.moyenneAvant;
+      const progColor = prog > 0 ? 'var(--green)' : prog < 0 ? 'var(--red)' : 'var(--w3)';
+      const progLabel = prog === 0 ? '—' : (prog > 0 ? '+' : '') + prog.toFixed(1);
+      return `
+      <div class="sb-row">
+        <div class="sb-lbl" style="width:150px">${e.etape}</div>
+        <div class="sb-bg"><div class="sb-fill" style="width:${(e.moyenneApres / 5) * 100}%"></div></div>
+        <div class="sb-val">${e.moyenneApres.toFixed(1)}</div>
+        <div style="font-size:11px;color:${progColor};min-width:34px;text-align:right">${progLabel}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+async function loadLancerFrancEval() {
+  const el = document.getElementById('lf-eval-section');
+  if (!el) return;
+  try {
+    const res = await fetch(LANCER_FRANC_SHEET_URL);
+    if (!res.ok) throw new Error('Réponse invalide');
+    const text = await res.text();
+    const { etapes } = parseLancerFrancGrid(parseCSV(text));
+    el.innerHTML = renderLancerFrancEval(etapes);
+  } catch (e) {
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les données du Sheet Lancer Franc. Vérifie que le lien de publication est toujours actif.</div></div>`;
+  }
+}
+
 /* ═══ SUIVI ═══ */
 function suiviHTML(){
+  if (CURRENT.suivi === 'joueur') setTimeout(loadLancerFrancEval, 0);
   return `
   <div class="tabs">
     <div class="tb ${CURRENT.suivi==='joueur'?'on':''}" onclick="setSuivi('joueur',this)">Vue joueur</div>
@@ -482,6 +612,7 @@ function setSuivi(v,btn){
   btn.classList.add('on');
   CURRENT.suivi=v;
   document.getElementById('suivi-body').innerHTML=v==='joueur'?joueurHTML():coachHTML();
+  if (v === 'joueur') setTimeout(loadLancerFrancEval, 0);
 }
 
 function joueurHTML(){
@@ -516,6 +647,9 @@ function joueurHTML(){
     <div style="font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">${d}</div>
     <div style="font-size:13px;color:var(--w);line-height:1.55">${t}</div>
   </div>`).join('')}
+  <div class="sec">Évaluation technique — Lancer franc</div>
+  <div id="lf-eval-section" class="card" style="text-align:center;color:var(--w3);font-size:12px">Chargement des données…</div>
+
   <div style="padding:6px 14px 14px"><button class="gbtn full">Télécharger programme PDF</button></div>`;
 }
 
