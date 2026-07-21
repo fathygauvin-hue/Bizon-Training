@@ -25,17 +25,17 @@ a{color:inherit;text-decoration:none}
   --font-mono:'JetBrains Mono',monospace;
 
   /* --- App joueur/coach (identique au prototype) --- */
-  --gold:#C9A84C;--gold2:#E2C97E;--gold3:#8B6914;--gold4:rgba(201,168,76,0.13);
-  --bg:#0C0C0C;--s1:#161616;--s2:#1F1F1F;--s3:#282828;--s4:#323232;
-  --w:#F0EDE6;--w2:#B0ADA6;--w3:#6A6760;
-  --border:rgba(201,168,76,0.18);--border2:rgba(201,168,76,0.32);
+  --gold:#C9A227;--gold2:#E7C34B;--gold3:#C9A227;--gold4:rgba(201,162,39,0.13);
+  --bg:#0a0a0a;--s1:#141412;--s2:#1f1f1c;--s3:#282824;--s4:#32322e;
+  --w:#faf9f6;--w2:#c2c0b8;--w3:#8c8c84;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.16);
   --green:#7BC47A;--green-bg:rgba(59,109,17,0.22);
   --red:#E07070;--red-bg:rgba(162,45,45,0.22);
   --blue:#7BAEE0;--blue-bg:rgba(24,95,165,0.2);
   --r8:8px;--r12:12px;--r16:16px;
 }
 
-#auth-root,#app-shell{font-family:'DM Sans',sans-serif}
+#auth-root,#app-shell{font-family:'Inter',sans-serif}
 
 /* ============ SITE PUBLIC ============ */
 #site-public h1,#site-public h2,#site-public h3{font-family:var(--font-display);font-weight:400;letter-spacing:.02em;text-transform:uppercase;line-height:1.05}
@@ -97,10 +97,10 @@ a{color:inherit;text-decoration:none}
 .tag.a{background:var(--gold4);color:var(--gold2)}
 .tag.b{background:var(--blue-bg);color:var(--blue)}
 .divhr{height:.5px;background:var(--border);margin:10px 0}
-.gbtn{background:var(--gold3);color:var(--gold2);font-family:'DM Sans',sans-serif;font-weight:500;font-size:13px;padding:10px 16px;border-radius:var(--r8);border:.5px solid var(--border2);cursor:pointer;transition:background .15s}
-.gbtn:hover{background:var(--gold);color:#111}
+.gbtn{background:var(--gold);color:#0a0a0a;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;padding:10px 16px;border-radius:2px;border:1px solid transparent;cursor:pointer;transition:background .15s}
+.gbtn:hover{background:var(--gold2)}
 .gbtn.full{width:100%;text-align:center}
-.ghost{background:var(--s3);color:var(--w2);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 16px;border-radius:var(--r8);border:.5px solid var(--border);cursor:pointer;transition:background .15s}
+.ghost{background:var(--s3);color:var(--w2);font-family:'Inter',sans-serif;font-size:13px;padding:10px 16px;border-radius:var(--r8);border:.5px solid var(--border);cursor:pointer;transition:background .15s}
 .ghost:hover{background:var(--s4)}
 .ghost.full{width:100%;text-align:center}
 .avatar{border-radius:50%;background:var(--gold3);display:flex;align-items:center;justify-content:center;font-weight:500;color:var(--gold2);flex-shrink:0}
@@ -120,13 +120,13 @@ a{color:inherit;text-decoration:none}
 .ev-dot{width:4px;height:4px;border-radius:50%;background:var(--gold);margin-top:1px}
 .tabs{display:flex;gap:6px;padding:10px 14px 4px;overflow-x:auto}
 .tabs::-webkit-scrollbar{display:none}
-.tb{flex-shrink:0;padding:6px 16px;border-radius:20px;border:.5px solid var(--border);background:var(--s2);color:var(--w3);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
+.tb{flex-shrink:0;padding:6px 16px;border-radius:20px;border:.5px solid var(--border);background:var(--s2);color:var(--w3);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s}
 .tb.on{background:var(--gold4);border-color:var(--border2);color:var(--gold2)}
 .bubble{max-width:74%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.55;margin-bottom:5px}
 .bin{background:var(--s2);border:.5px solid var(--border);align-self:flex-start;border-radius:3px 12px 12px 12px;color:var(--w)}
 .bout{background:var(--gold3);color:var(--gold2);align-self:flex-end;border-radius:12px 3px 12px 12px}
 .btime{font-size:10px;color:var(--w3);margin-bottom:2px}
-.finput{background:var(--s3);border:.5px solid var(--border);border-radius:var(--r8);padding:10px 12px;color:var(--w);font-family:'DM Sans',sans-serif;font-size:13px;width:100%;outline:none;margin-bottom:8px}
+.finput{background:var(--s3);border:.5px solid var(--border);border-radius:var(--r8);padding:10px 12px;color:var(--w);font-family:'Inter',sans-serif;font-size:13px;width:100%;outline:none;margin-bottom:8px}
 .finput:focus{border-color:var(--border2)}
 textarea.finput{resize:none;line-height:1.5}
 select.finput{cursor:pointer}
@@ -250,14 +250,14 @@ select.finput{cursor:pointer}
     <div id="topbar">
       <div class="logo" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);letter-spacing:2.5px">Bizon Training</div>
       <div class="icon-btn" onclick="nav('messages')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
         <div class="notif-dot"></div>
       </div>
     </div>
     <div id="content"></div>
     <div id="botnav">
       <div class="nt on" id="nt-home" onclick="nav('home')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
         <span>Accueil</span>
       </div>
       <div class="nt" id="nt-suivi" onclick="nav('suivi')">
@@ -540,9 +540,9 @@ function radarSVGDual(etapes) {
   for (let g = 1; g <= 4; g++) {
     const gr = r * g / 4; let gp = '';
     for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
-    grid += `<polygon points="${gp}" fill="none" stroke="rgba(201,168,76,0.12)" stroke-width="0.5"/>`;
+    grid += `<polygon points="${gp}" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.5"/>`;
   }
-  for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; grid += `<line x1="${cx}" y1="${cy}" x2="${cx + r * Math.cos(a)}" y2="${cy + r * Math.sin(a)}" stroke="rgba(201,168,76,0.08)" stroke-width="0.5"/>`; }
+  for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; grid += `<line x1="${cx}" y1="${cy}" x2="${cx + r * Math.cos(a)}" y2="${cy + r * Math.sin(a)}" stroke="rgba(201,162,39,0.08)" stroke-width="0.5"/>`; }
   etapes.forEach((e, i) => {
     const a = Math.PI * 2 * i / n - Math.PI / 2;
     const rvA = r * (e.moyenneAvant / 5), xA = cx + rvA * Math.cos(a), yA = cy + rvA * Math.sin(a);
@@ -550,22 +550,24 @@ function radarSVGDual(etapes) {
     const lx = cx + (r + 26) * Math.cos(a), ly = cy + (r + 26) * Math.sin(a);
     polyAvant += `${xA},${yA} `;
     polyApres += `${xP},${yP} `;
-    labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#B0ADA6" font-size="8" font-family="DM Sans" letter-spacing="0.3">${e.etape}</text>`;
+    labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="0.3">${e.etape}</text>`;
   });
   return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}
-    <polygon points="${polyAvant}" fill="rgba(240,237,230,0.08)" stroke="#B0ADA6" stroke-width="1.5"/>
-    <polygon points="${polyApres}" fill="rgba(201,168,76,0.25)" stroke="#C9A84C" stroke-width="1.5"/>
+    <polygon points="${polyAvant}" fill="rgba(250,249,246,0.08)" stroke="#8c8c84" stroke-width="1.5"/>
+    <polygon points="${polyApres}" fill="rgba(201,162,39,0.25)" stroke="#C9A227" stroke-width="1.5"/>
     ${labels}</svg>`;
 }
 
-function renderLancerFrancEval(etapes) {
+function renderLancerFrancEval(etapes, criteres) {
   if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
+  const comments = (criteres || []).filter(c => c.commentAvant || c.commentApres);
   return `
   <div class="card" style="display:flex;justify-content:center">${radarSVGDual(etapes)}</div>
   <div style="display:flex;gap:14px;padding:0 14px 10px;font-size:11px;color:var(--w3)">
-    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#B0ADA6;margin-right:5px"></span>Avant</span>
-    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C9A84C;margin-right:5px"></span>Après</span>
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#8c8c84;margin-right:5px"></span>Avant</span>
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C9A227;margin-right:5px"></span>Après</span>
   </div>
+  <div class="sec" style="padding-left:14px">Détail par étape</div>
   <div class="card">
     ${etapes.map(e => {
       const prog = e.moyenneApres - e.moyenneAvant;
@@ -579,7 +581,15 @@ function renderLancerFrancEval(etapes) {
         <div style="font-size:11px;color:${progColor};min-width:34px;text-align:right">${progLabel}</div>
       </div>`;
     }).join('')}
-  </div>`;
+  </div>
+  ${comments.length ? `
+  <div class="sec" style="padding-left:14px">Commentaires du coach</div>
+  ${comments.map(c => `
+  <div class="card" style="margin-bottom:8px">
+    <div style="font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">${c.etape} — ${c.critere}</div>
+    ${c.commentAvant ? `<div style="font-size:12px;color:var(--w2);margin-bottom:3px"><b style="color:var(--w3)">Avant :</b> ${c.commentAvant}</div>` : ''}
+    ${c.commentApres ? `<div style="font-size:12px;color:var(--w)"><b style="color:var(--w3)">Après :</b> ${c.commentApres}</div>` : ''}
+  </div>`).join('')}` : ''}`;
 }
 
 async function loadLancerFrancEval() {
@@ -589,16 +599,28 @@ async function loadLancerFrancEval() {
     const res = await fetch(LANCER_FRANC_SHEET_URL);
     if (!res.ok) throw new Error('Réponse invalide');
     const text = await res.text();
-    const { etapes } = parseLancerFrancGrid(parseCSV(text));
-    el.innerHTML = renderLancerFrancEval(etapes);
+    const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
+    el.innerHTML = renderLancerFrancEval(etapes, criteres);
   } catch (e) {
     el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les données du Sheet Lancer Franc. Vérifie que le lien de publication est toujours actif.</div></div>`;
   }
 }
 
+// Page dédiée plein écran (remplace #content), accessible depuis la vue
+// joueur ET la vue coach — lecture seule dans les deux cas.
+async function openLancerFrancEval() {
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--border)">
+      <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Évaluation technique · Lancer franc</div>
+    </div>
+    <div id="lf-eval-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement des données…</div>
+  `;
+  await loadLancerFrancEval();
+}
+
 /* ═══ SUIVI ═══ */
 function suiviHTML(){
-  if (CURRENT.suivi === 'joueur') setTimeout(loadLancerFrancEval, 0);
   return `
   <div class="tabs">
     <div class="tb ${CURRENT.suivi==='joueur'?'on':''}" onclick="setSuivi('joueur',this)">Vue joueur</div>
@@ -612,7 +634,6 @@ function setSuivi(v,btn){
   btn.classList.add('on');
   CURRENT.suivi=v;
   document.getElementById('suivi-body').innerHTML=v==='joueur'?joueurHTML():coachHTML();
-  if (v === 'joueur') setTimeout(loadLancerFrancEval, 0);
 }
 
 function joueurHTML(){
@@ -647,8 +668,14 @@ function joueurHTML(){
     <div style="font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">${d}</div>
     <div style="font-size:13px;color:var(--w);line-height:1.55">${t}</div>
   </div>`).join('')}
-  <div class="sec">Évaluation technique — Lancer franc</div>
-  <div id="lf-eval-section" class="card" style="text-align:center;color:var(--w3);font-size:12px">Chargement des données…</div>
+  <div class="sec">Évaluation technique</div>
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openLancerFrancEval()">
+    <div>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc</div>
+      <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires du coach</div>
+    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+  </div>
 
   <div style="padding:6px 14px 14px"><button class="gbtn full">Télécharger programme PDF</button></div>`;
 }
@@ -675,6 +702,14 @@ function coachHTML(){
       <span class="tag ${j.stc}">${j.st}</span>
     </div>
   </div>`).join('')}
+  <div class="sec">Évaluation technique</div>
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openLancerFrancEval()">
+    <div>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc — Karim Saïdi</div>
+      <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires (données du Sheet)</div>
+    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+  </div>
   <div class="sec">Note post-workout</div>
   <div class="card">
     <div style="font-size:12px;color:var(--w3);margin-bottom:8px">Séance du 2 juin · Cardio & Tirs</div>
@@ -738,18 +773,18 @@ function radarSVG(skills){
   for(let g=1;g<=4;g++){
     const gr=r*g/4;let gp='';
     for(let i=0;i<n;i++){const a=Math.PI*2*i/n-Math.PI/2;gp+=`${cx+gr*Math.cos(a)},${cy+gr*Math.sin(a)} `}
-    grid+=`<polygon points="${gp}" fill="none" stroke="rgba(201,168,76,0.12)" stroke-width="0.5"/>`;
+    grid+=`<polygon points="${gp}" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.5"/>`;
   }
-  for(let i=0;i<n;i++){const a=Math.PI*2*i/n-Math.PI/2;grid+=`<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="rgba(201,168,76,0.08)" stroke-width="0.5"/>`}
+  for(let i=0;i<n;i++){const a=Math.PI*2*i/n-Math.PI/2;grid+=`<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="rgba(201,162,39,0.08)" stroke-width="0.5"/>`}
   skills.forEach(([l,v],i)=>{
     const a=Math.PI*2*i/n-Math.PI/2;
     const rv=r*v/100,x=cx+rv*Math.cos(a),y=cy+rv*Math.sin(a);
     const lx=cx+(r+20)*Math.cos(a),ly=cy+(r+20)*Math.sin(a);
     poly+=`${x},${y} `;
-    dots+=`<circle cx="${x}" cy="${y}" r="3" fill="#C9A84C"/>`;
-    labels+=`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#C9A84C" font-size="9.5" font-family="Bebas Neue" letter-spacing="1">${l}</text>`;
+    dots+=`<circle cx="${x}" cy="${y}" r="3" fill="#C9A227"/>`;
+    labels+=`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#C9A227" font-size="9.5" font-family="Bebas Neue" letter-spacing="1">${l}</text>`;
   });
-  return `<svg width="240" height="210" viewBox="0 0 240 210">${grid}<polygon points="${poly}" fill="rgba(139,105,20,0.28)" stroke="#C9A84C" stroke-width="1.5"/>${dots}${labels}</svg>`;
+  return `<svg width="240" height="210" viewBox="0 0 240 210">${grid}<polygon points="${poly}" fill="rgba(139,105,20,0.28)" stroke="#C9A227" stroke-width="1.5"/>${dots}${labels}</svg>`;
 }
 
 /* ═══ BIBLIO ═══ */
@@ -963,7 +998,7 @@ function loginHTML() {
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px">Mot de passe</div>
-          <button onclick="showAuthScreen('forgot')" style="background:none;border:none;color:var(--gold2);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif">Oublié ?</button>
+          <button onclick="showAuthScreen('forgot')" style="background:none;border:none;color:var(--gold2);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif">Oublié ?</button>
         </div>
         <div style="position:relative">
           <input class="finput" type="password" placeholder="••••••••" id="login-pwd" style="margin:0;padding-right:42px"/>
@@ -989,7 +1024,7 @@ function loginHTML() {
 
     <div style="padding:16px 20px 40px;text-align:center">
       <div style="font-size:11px;color:var(--w3)">Tu as reçu un lien d'invitation ?</div>
-      <button onclick="showAuthScreen('register-player-invite',{token:'A7K2M9',coach:'Marc Bizon'})" style="background:none;border:none;color:var(--gold2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:3px;font-weight:500">Rejoindre via invitation ↗</button>
+      <button onclick="showAuthScreen('register-player-invite',{token:'A7K2M9',coach:'Marc Bizon'})" style="background:none;border:none;color:var(--gold2);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:3px;font-weight:500">Rejoindre via invitation ↗</button>
     </div>
 
     <!-- ⚠️ TEMPORAIRE — à retirer une fois Supabase branché avec de vraies clés.
