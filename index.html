@@ -322,9 +322,9 @@ function showAuthScreen(view, data){
 }
 async function enterApp(user){
   // Récupère le rôle depuis la table `profiles`.
-  // ⚠️ Adapte cette requête si ton schéma Supabase existant diffère.
   const { data:profile } = await sbClient.from('profiles').select('role, first_name, last_name').eq('id', user.id).single();
   APP_STATE.authenticated=true;
+  APP_STATE.userId=user.id;
   APP_STATE.role=profile?.role || 'joueur';
   APP_STATE.user={ name: profile ? `${profile.first_name||''} ${profile.last_name||''}`.trim() || user.email : user.email };
   if(APP_STATE.role==='coach') CURRENT.suivi='coach';
@@ -488,10 +488,7 @@ function showCTAModal(){
 }
 
 /* ═══ ÉVALUATION TECHNIQUE — LANCER FRANC (import Google Sheets publié en CSV) ═══ */
-
-// TODO : remplacer par une vraie liaison joueur → Google Sheet stockée dans
-// Supabase (champ sur le profil du joueur), au lieu d'une URL en dur.
-const LANCER_FRANC_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJLTKsXH4bLWzxacKx2U_qTkAjI7MMPayOGiDQrAPCUfbGvCQHRYSITruoB8R5bg/pub?gid=668306045&single=true&output=csv';
+// Le lien Sheet est désormais lu depuis profiles.sheet_lf pour chaque joueur.
 
 function parseCSV(text) {
   const rows = [];
@@ -621,11 +618,21 @@ function renderLancerFrancEval(etapes, criteres) {
   <div style="height:24px"></div>`;
 }
 
-async function loadLancerFrancEval() {
+async function loadLancerFrancEval(playerId) {
   const el = document.getElementById('lf-eval-section');
   if (!el) return;
+  if (!playerId) {
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec un vrai compte pour voir tes données (le mode aperçu n'a pas de profil Supabase).</div></div>`;
+    return;
+  }
   try {
-    const res = await fetch(LANCER_FRANC_SHEET_URL);
+    const { data: profile, error: pErr } = await sbClient.from('profiles').select('sheet_lf').eq('id', playerId).single();
+    if (pErr) throw pErr;
+    if (!profile?.sheet_lf) {
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun lien Google Sheet configuré pour ce joueur (Lancer franc).</div></div>`;
+      return;
+    }
+    const res = await fetch(profile.sheet_lf);
     if (!res.ok) throw new Error('Réponse invalide');
     const text = await res.text();
     const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
@@ -637,29 +644,26 @@ async function loadLancerFrancEval() {
 
 // Page dédiée plein écran (remplace #content), accessible depuis la vue
 // joueur ET la vue coach — lecture seule dans les deux cas.
-async function openLancerFrancEval() {
+// Sans argument : affiche les données du joueur connecté. Avec un playerId
+// (appelé depuis la vue coach) : affiche les données de ce joueur précis.
+async function openLancerFrancEval(playerId) {
+  const targetId = playerId || APP_STATE.userId;
   document.getElementById('content').innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:.5px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
       <div style="font-size:14px;font-weight:500;color:var(--w)">Évaluation technique · Lancer franc</div>
     </div>
     <div id="lf-eval-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement des données…</div>
   `;
-  await loadLancerFrancEval();
+  await loadLancerFrancEval(targetId);
 }
 
 /* ═══ ÉVALUATION TECHNIQUE — 2PTS / 3PTS (format checklist TRUE/FALSE) ═══ */
+// Les liens Sheet sont désormais lus depuis profiles.sheet_2pts / sheet_3pts.
 
-const CHECKLIST_SHEETS = {
-  '3pts': {
-    label: '3 points après drive',
-    // TODO : vérifier que ce lien reste bien celui de l'onglet "Tir 3PTS"
-    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYdmVAAQK9a_C7lkk6tyRm5R27Ei9FC1i23g2yPdBldl2Aq6EOfRQup8yuWQ9rJg/pub?gid=1053623918&single=true&output=csv',
-  },
-  '2pts': {
-    label: '2 points',
-    url: '', // TODO : coller le lien CSV publié de l'onglet "Tir 2PTS"
-  },
+const CHECKLIST_LABELS = {
+  '3pts': '3 points après drive',
+  '2pts': '2 points',
 };
 
 function parseChecklistGrid(rows) {
@@ -734,16 +738,23 @@ function renderChecklistEval(etapes) {
   <div style="height:24px"></div>`;
 }
 
-async function loadChecklistEval(key) {
+async function loadChecklistEval(key, playerId) {
   const el = document.getElementById('checklist-eval-section');
   if (!el) return;
-  const conf = CHECKLIST_SHEETS[key];
-  if (!conf || !conf.url) {
-    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Lien Sheet pas encore configuré pour cette catégorie.</div></div>`;
+  if (!playerId) {
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec un vrai compte pour voir tes données (le mode aperçu n'a pas de profil Supabase).</div></div>`;
     return;
   }
+  const column = key === '2pts' ? 'sheet_2pts' : 'sheet_3pts';
   try {
-    const res = await fetch(conf.url);
+    const { data: profile, error: pErr } = await sbClient.from('profiles').select(column).eq('id', playerId).single();
+    if (pErr) throw pErr;
+    const url = profile ? profile[column] : null;
+    if (!url) {
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun lien Google Sheet configuré pour ce joueur (${CHECKLIST_LABELS[key]}).</div></div>`;
+      return;
+    }
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Réponse invalide');
     const text = await res.text();
     const { etapes } = parseChecklistGrid(parseCSV(text));
@@ -753,16 +764,16 @@ async function loadChecklistEval(key) {
   }
 }
 
-async function openChecklistEval(key) {
-  const conf = CHECKLIST_SHEETS[key];
+async function openChecklistEval(key, playerId) {
+  const targetId = playerId || APP_STATE.userId;
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
-      <div style="font-size:14px;font-weight:500;color:var(--w)">Évaluation technique · ${conf.label}</div>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Évaluation technique · ${CHECKLIST_LABELS[key]}</div>
     </div>
     <div id="checklist-eval-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement des données…</div>
   `;
-  await loadChecklistEval(key);
+  await loadChecklistEval(key, targetId);
 }
 
 /* ═══ SUIVI ═══ */
@@ -856,73 +867,139 @@ function joueurHTML(){
 }
 
 function coachHTML(){
-  const joueurs=[
-    {av:'KS',n:'Karim Saïdi',r:'Arrière · U21',score:8.2,st:'En forme',stc:'g'},
-    {av:'TM',n:'Thomas M.',r:'Pivot · Senior',score:7.1,st:'Blessé',stc:'r'},
-    {av:'AL',n:'Alex L.',r:'Meneur · U18',score:9.0,st:'En forme',stc:'g'},
-    {av:'JD',n:'Jordan D.',r:'Ailier · U21',score:6.8,st:'Repos',stc:'a'},
-    {av:'RB',n:'Ryan B.',r:'Pivot · U21',score:7.5,st:'En forme',stc:'g'},
-  ];
+  setTimeout(loadCoachPlayers, 0);
   return `
   <div class="sec" style="padding-left:0;padding-top:24px">Liste joueurs</div>
-  <div class="app-grid-3" style="padding:0">
-    ${joueurs.map(j=>`
-    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openEval('${j.n}')">
-      <div class="avatar" style="width:40px;height:40px;font-size:12px">${j.av}</div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:500;color:var(--w)">${j.n}</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:1px">${j.r}</div>
-      </div>
-      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);line-height:1">${j.score.toFixed(1)}</div>
-        <span class="tag ${j.stc}">${j.st}</span>
-      </div>
-    </div>`).join('')}
-  </div>
-  <div class="sec" style="padding-left:0;padding-top:22px">Évaluation technique — Karim Saïdi</div>
-  <div class="app-grid-3" style="padding:0">
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openLancerFrancEval()">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('2pts')">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar par étape</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('3pts')">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">3 points</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar par étape</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
+  <div id="coach-players-list" class="app-grid-3" style="padding:0">
+    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--w3);font-size:12px">Chargement des joueurs…</div>
   </div>
   <div class="app-grid-2" style="padding:0;margin-top:22px">
-    <div>
-      <div class="sec" style="padding-left:0">Note post-workout</div>
-      <div class="card">
-        <div style="font-size:12px;color:var(--w3);margin-bottom:8px">Séance du 2 juin · Cardio & Tirs</div>
-        <textarea class="finput" rows="3" placeholder="Observations générales de la séance…"></textarea>
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button class="gbtn" style="flex:1" onclick="alert('Note enregistrée !')">Enregistrer</button>
-          <button class="ghost" style="padding:10px 14px" title="Uploader PDF">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
     <div>
       <div class="sec" style="padding-left:0">&nbsp;</div>
       <button class="gbtn full" onclick="showInviteModal()">Générer lien invitation joueur</button>
     </div>
   </div>
   <div style="height:28px"></div>`;
+}
+
+async function loadCoachPlayers() {
+  const el = document.getElementById('coach-players-list');
+  if (!el) return;
+  if (!APP_STATE.userId) {
+    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec un vrai compte coach pour voir tes joueurs (le mode aperçu n'a pas de profil Supabase).</div></div>`;
+    return;
+  }
+  try {
+    const { data: players, error } = await sbClient
+      .from('profiles')
+      .select('id, first_name, last_name, position, level')
+      .eq('coach_id', APP_STATE.userId)
+      .eq('role', 'joueur');
+    if (error) throw error;
+
+    if (!players || !players.length) {
+      el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Aucun joueur rattaché pour l'instant. Génère un lien d'invitation pour en ajouter.</div></div>`;
+      return;
+    }
+
+    el.innerHTML = players.map(p => {
+      const initials = ((p.first_name || '?')[0] + (p.last_name || '?')[0]).toUpperCase();
+      const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+      const role = [p.position, p.level].filter(Boolean).join(' · ') || 'Joueur';
+      return `
+      <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openPlayerDetail('${p.id}','${name.replace(/'/g, "\\'")}')">
+        <div class="avatar" style="width:40px;height:40px;font-size:12px">${initials}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500;color:var(--w)">${name}</div>
+          <div style="font-size:12px;color:var(--w3);margin-top:1px">${role}</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--red)">Impossible de charger la liste des joueurs.</div></div>`;
+  }
+}
+
+// Page dédiée : détail d'un joueur pour le coach — accès aux 3 évaluations,
+// note post-workout, et gestion des liens Google Sheets de ce joueur.
+async function openPlayerDetail(playerId, playerName) {
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">${playerName}</div>
+    </div>
+
+    <div class="sec" style="padding-left:0;padding-top:20px">Évaluation technique</div>
+    <div class="app-grid-3" style="padding:0">
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openLancerFrancEval('${playerId}')">
+        <div><div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('2pts','${playerId}')">
+        <div><div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar par étape</div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('3pts','${playerId}')">
+        <div><div style="font-size:14px;font-weight:500;color:var(--w)">3 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar par étape</div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>
+
+    <div class="app-grid-2" style="padding:0;margin-top:22px">
+      <div>
+        <div class="sec" style="padding-left:0">Note post-workout</div>
+        <div class="card">
+          <div style="font-size:12px;color:var(--w3);margin-bottom:8px">Séance du 2 juin · Cardio & Tirs</div>
+          <textarea class="finput" rows="3" placeholder="Observations générales de la séance…"></textarea>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="gbtn" style="flex:1" onclick="alert('Note enregistrée !')">Enregistrer</button>
+            <button class="ghost" style="padding:10px 14px" title="Évaluation détaillée par sliders" onclick="openEval('${playerName.replace(/'/g, "\\'")}')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sec" style="padding-left:0">Liens Google Sheets</div>
+        <div id="player-sheets-form" class="card">Chargement…</div>
+      </div>
+    </div>
+    <div style="height:28px"></div>`;
+  await loadPlayerSheetsForm(playerId);
+}
+
+async function loadPlayerSheetsForm(playerId) {
+  const el = document.getElementById('player-sheets-form');
+  if (!el) return;
+  try {
+    const { data: profile, error } = await sbClient
+      .from('profiles')
+      .select('sheet_lf, sheet_2pts, sheet_3pts')
+      .eq('id', playerId)
+      .single();
+    if (error) throw error;
+    el.innerHTML = `
+      <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien Lancer franc</div>
+      <input class="finput" id="edit-sheet-lf" value="${profile?.sheet_lf || ''}" placeholder="URL CSV publiée…"/>
+      <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien 2 points</div>
+      <input class="finput" id="edit-sheet-2pts" value="${profile?.sheet_2pts || ''}" placeholder="URL CSV publiée…"/>
+      <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien 3 points</div>
+      <input class="finput" id="edit-sheet-3pts" value="${profile?.sheet_3pts || ''}" placeholder="URL CSV publiée…"/>
+      <button class="gbtn full" onclick="savePlayerSheets('${playerId}')">Enregistrer les liens</button>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger les liens de ce joueur.</div>`;
+  }
+}
+
+async function savePlayerSheets(playerId) {
+  const sheet_lf = document.getElementById('edit-sheet-lf').value.trim();
+  const sheet_2pts = document.getElementById('edit-sheet-2pts').value.trim();
+  const sheet_3pts = document.getElementById('edit-sheet-3pts').value.trim();
+  const { error } = await sbClient.from('profiles').update({ sheet_lf, sheet_2pts, sheet_3pts }).eq('id', playerId);
+  if (error) { alert(error.message); return; }
+  alert('Liens enregistrés !');
 }
 
 function openEval(name){
