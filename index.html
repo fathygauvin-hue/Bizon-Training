@@ -386,19 +386,23 @@ async function loadLancerFrancEval(playerId) {
   }
   try {
     const { data: profile, error: pErr } = await sbClient.from('profiles').select('sheet_lf').eq('id', playerId).single();
-    if (pErr) throw pErr;
+    if (pErr) { pErr._stage = 'supabase'; throw pErr; }
     if (!profile?.sheet_lf) {
       el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun lien Google Sheet configuré pour ce joueur (Lancer franc).</div></div>`;
       return;
     }
-    const res = await fetch(profile.sheet_lf);
-    if (!res.ok) throw new Error('Réponse invalide');
+    let res;
+    try {
+      res = await fetch(profile.sheet_lf);
+    } catch (fe) { fe._stage = 'fetch-network'; throw fe; }
+    if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
     const text = await res.text();
     const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
     el.innerHTML = renderLancerFrancEval(etapes, criteres);
   } catch (e) {
     console.error('Erreur chargement Lancer Franc:', e);
-    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les données du Sheet Lancer Franc. Vérifie que le lien de publication est toujours actif.</div></div>`;
+    const stage = e._stage || 'inconnu';
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les données du Sheet Lancer Franc.</div><div style="font-size:11px;color:var(--w3);margin-top:8px;font-family:monospace">Étape: ${stage}<br>Détail: ${(e.message || String(e)).replace(/</g,'&lt;')}</div></div>`;
   }
 }
 
@@ -504,20 +508,24 @@ async function loadChecklistEval(key, playerId) {
   const column = key === '2pts' ? 'sheet_2pts' : 'sheet_3pts';
   try {
     const { data: profile, error: pErr } = await sbClient.from('profiles').select(column).eq('id', playerId).single();
-    if (pErr) throw pErr;
+    if (pErr) { pErr._stage = 'supabase'; throw pErr; }
     const url = profile ? profile[column] : null;
     if (!url) {
       el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun lien Google Sheet configuré pour ce joueur (${CHECKLIST_LABELS[key]}).</div></div>`;
       return;
     }
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Réponse invalide');
+    let res;
+    try {
+      res = await fetch(url);
+    } catch (fe) { fe._stage = 'fetch-network'; throw fe; }
+    if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
     const text = await res.text();
     const { etapes } = parseChecklistGrid(parseCSV(text));
     el.innerHTML = renderChecklistEval(etapes);
   } catch (e) {
     console.error('Erreur chargement checklist:', e);
-    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les données du Sheet. Vérifie que le lien de publication est toujours actif.</div></div>`;
+    const stage = e._stage || 'inconnu';
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les données du Sheet.</div><div style="font-size:11px;color:var(--w3);margin-top:8px;font-family:monospace">Étape: ${stage}<br>Détail: ${(e.message || String(e)).replace(/</g,'&lt;')}</div></div>`;
   }
 }
 
