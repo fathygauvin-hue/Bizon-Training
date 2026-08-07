@@ -787,47 +787,138 @@ async function savePlayerSheets(playerId) {
   if (msgEl) { msgEl.textContent = 'Liens enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; }, 2500); }
 }
 
-/* ═══ BIBLIO ═══ */
+/* ═══ BIBLIO — vidéos Google Drive ═══ */
+const VIDEO_CATEGORIES = ['Tir','Dribble','Finition','Défense','Physique','Autre'];
+const BIBLIO_STATE = { filter:'Tous', videos:[] };
+
 function biblioHTML(){
-  const exercises=[
-    {n:'Crossover explosion',cat:'Dribble',free:true,fav:false},
-    {n:'Floater one-hand',cat:'Tir',free:true,fav:true},
-    {n:'Euro step finish',cat:'Finition',free:false,fav:false},
-    {n:'Pull-up mid-range',cat:'Tir',free:false,fav:true},
-    {n:'Pick & roll read',cat:'Lecture',free:true,fav:false},
-    {n:'Defensive footwork',cat:'Défense',free:true,fav:false},
-    {n:'Catch & shoot corner',cat:'Tir',free:false,fav:false},
-    {n:'Fast break finishing',cat:'Finition',free:false,fav:false},
-  ];
+  setTimeout(loadVideos, 0);
   return `
-  <div style="padding:24px 0 4px;display:flex;align-items:center;justify-content:space-between">
+  <div style="padding:24px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--w);letter-spacing:1px">Bibliothèque</div>
+    ${APP_STATE.role==='coach' ? `<button class="gbtn" onclick="showAddVideoModal()">+ Ajouter une vidéo</button>` : ''}
   </div>
   <div class="tabs" style="padding-left:0;padding-right:0">
-    <div class="tb on">Tous</div>
-    <div class="tb">Tir</div>
-    <div class="tb">Dribble</div>
-    <div class="tb">Finition</div>
-    <div class="tb">Défense</div>
-    <div class="tb">Favoris</div>
+    ${['Tous',...VIDEO_CATEGORIES].map(c=>`<div class="tb ${BIBLIO_STATE.filter===c?'on':''}" onclick="setBiblioFilter('${c}')">${c}</div>`).join('')}
   </div>
-  <div class="app-grid-3" style="padding:0;margin-top:4px">
-    ${exercises.map(e=>`
-    <div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer">
-      <div style="width:42px;height:42px;border-radius:var(--r8);background:${e.free?'var(--gold4)':'rgba(24,95,165,0.2)'};border:.5px solid ${e.free?'var(--border2)':'rgba(123,174,224,0.3)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${e.free?'var(--gold)':'var(--blue)'}" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 00-4 10 14.5 14.5 0 004 10 14.5 14.5 0 004-10A14.5 14.5 0 0012 2z"/><path d="M2 12h20"/></svg>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;color:var(--w)">${e.n}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
-          <span class="tag ${e.free?'a':'b'}" style="font-size:10px">${e.cat}</span>
-          ${!e.free?`<span class="tag b" style="font-size:10px">Premium</span>`:''}
-        </div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="${e.fav?'var(--gold)':'none'}" stroke="var(--gold)" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-    </div>`).join('')}
+  <div id="biblio-list" class="app-grid-3" style="padding:0;margin-top:4px">
+    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--w3);font-size:12px">Chargement des vidéos…</div>
   </div>
   <div style="height:16px"></div>`;
+}
+
+function setBiblioFilter(c){
+  BIBLIO_STATE.filter=c;
+  render();
+}
+
+// Extrait l'ID de fichier depuis un lien Google Drive (formats /file/d/ID/... ou ?id=ID)
+function driveFileId(url){
+  if(!url) return null;
+  let m = url.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+  if(m) return m[1];
+  m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+  if(m) return m[1];
+  return null;
+}
+
+async function loadVideos(){
+  const el=document.getElementById('biblio-list');
+  if(!el) return;
+  try{
+    let query=sbClient.from('videos').select('*').order('created_at',{ascending:false});
+    if(BIBLIO_STATE.filter!=='Tous') query=query.eq('category',BIBLIO_STATE.filter);
+    const { data:videos, error }=await query;
+    if(error) throw error;
+    BIBLIO_STATE.videos=videos||[];
+    if(!videos || !videos.length){
+      el.innerHTML=`<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Aucune vidéo${BIBLIO_STATE.filter!=='Tous'?` dans la catégorie « ${BIBLIO_STATE.filter} »`:''} pour l'instant.${APP_STATE.role==='coach'?' Ajoute ta première vidéo avec le bouton ci-dessus.':''}</div></div>`;
+      return;
+    }
+    const isCoach = APP_STATE.role==='coach';
+    el.innerHTML=videos.map(v=>`
+    <div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;margin:0" onclick="openVideo('${v.id}')">
+      <div style="width:42px;height:42px;border-radius:var(--r8);background:var(--gold4);border:.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--gold)" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"><polygon points="7,4 20,12 7,20"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(v.title||'').replace(/</g,'&lt;')}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+          ${v.category?`<span class="tag a" style="font-size:10px">${v.category}</span>`:''}
+        </div>
+      </div>
+      ${isCoach?`<button class="ghost" style="padding:6px 10px;flex-shrink:0;color:var(--red)" title="Supprimer" onclick="event.stopPropagation();deleteVideo('${v.id}')">✕</button>`:''}
+    </div>`).join('');
+  }catch(e){
+    console.error('Erreur chargement vidéos:', e);
+    el.innerHTML=`<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--red)">Impossible de charger les vidéos.</div><div style="font-size:11px;color:var(--w3);margin-top:6px;font-family:monospace">${(e.message||String(e)).replace(/</g,'&lt;')}</div></div>`;
+  }
+}
+
+function openVideo(id){
+  const v=(BIBLIO_STATE.videos||[]).find(x=>String(x.id)===String(id));
+  if(!v) return;
+  const fid=driveFileId(v.drive_url);
+  document.getElementById('content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <button onclick="nav('biblio')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(v.title||'').replace(/</g,'&lt;')}</div>
+        ${v.category?`<div style="font-size:11px;color:var(--w3)">${v.category}</div>`:''}
+      </div>
+    </div>
+    <div style="padding:16px 0">
+      ${fid
+        ? `<div style="position:relative;padding-top:56.25%;background:var(--s1);border-radius:var(--r12);overflow:hidden;border:.5px solid var(--border)">
+             <iframe src="https://drive.google.com/file/d/${fid}/preview" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+           </div>`
+        : `<div class="card" style="margin:0"><div style="font-size:12px;color:var(--red)">Lien Google Drive non reconnu. Vérifie qu'il ressemble à https://drive.google.com/file/d/…/view</div></div>`}
+      <div style="padding-top:12px">
+        <a href="${v.drive_url}" target="_blank" rel="noopener" class="ghost" style="display:inline-block;text-decoration:none">Ouvrir dans Google Drive ↗</a>
+      </div>
+    </div>`;
+}
+
+function showAddVideoModal(){
+  document.getElementById('content').innerHTML=`
+  <div class="overlay">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:1.5px">Ajouter une vidéo</div>
+        <button onclick="nav('biblio')" style="background:none;border:none;color:var(--w3);font-size:22px;cursor:pointer">✕</button>
+      </div>
+      <input class="finput" id="nv-title" placeholder="Titre (ex: Crossover explosion)"/>
+      <select class="finput" id="nv-category">
+        ${VIDEO_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <input class="finput" id="nv-url" placeholder="Lien Google Drive de la vidéo…"/>
+      <div style="font-size:11px;color:var(--w3);line-height:1.5;margin-bottom:10px">
+        Dans Drive : clic droit sur la vidéo → Partager → Accès général : <span style="color:var(--gold2)">« Tous les utilisateurs qui ont le lien »</span> → Copier le lien. Sans ça, les joueurs ne pourront pas la lire.
+      </div>
+      <div id="nv-error" style="color:var(--red);font-size:12px;margin-bottom:8px"></div>
+      <button class="gbtn full" onclick="createVideo()">Ajouter la vidéo</button>
+    </div>
+  </div>`;
+}
+
+async function createVideo(){
+  const title=document.getElementById('nv-title').value.trim();
+  const category=document.getElementById('nv-category').value;
+  const drive_url=document.getElementById('nv-url').value.trim();
+  const errEl=document.getElementById('nv-error');
+  if(!title){ errEl.textContent='Le titre est requis.'; return; }
+  if(!drive_url || !driveFileId(drive_url)){ errEl.textContent='Colle un lien Google Drive valide (https://drive.google.com/file/d/…).'; return; }
+  errEl.textContent='';
+  const { error }=await sbClient.from('videos').insert({ title, category, drive_url, coach_id:APP_STATE.userId });
+  if(error){ errEl.textContent=error.message; return; }
+  nav('biblio');
+}
+
+async function deleteVideo(id){
+  if(!confirm('Supprimer cette vidéo de la bibliothèque ? (le fichier reste dans ton Drive)')) return;
+  const { error }=await sbClient.from('videos').delete().eq('id', id);
+  if(error){ alert(error.message); return; }
+  loadVideos();
 }
 
 /* ═══ PROFIL ═══ */
