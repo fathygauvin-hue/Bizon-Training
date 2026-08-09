@@ -430,9 +430,7 @@ async function loadLancerFrancEval(playerId) {
     if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
     const text = await res.text();
     const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
-    el.innerHTML = renderLancerFrancEval(etapes, criteres) + evalHistoryShellHTML();
-    EVAL_CURRENT.type = 'lancer_franc'; EVAL_CURRENT.playerId = playerId; EVAL_CURRENT.etapes = etapes; EVAL_CURRENT.scoreKey = 'moyenneApres';
-    await loadEvalHistorySection('lancer_franc', playerId, etapes, 'moyenneApres');
+    el.innerHTML = renderLancerFrancEval(etapes, criteres);
   } catch (e) {
     console.error('Erreur chargement Lancer Franc:', e);
     const stage = e._stage || 'inconnu';
@@ -558,9 +556,7 @@ async function loadChecklistEval(key, playerId) {
     if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
     const text = await res.text();
     const { etapes } = parseChecklistGrid(parseCSV(text));
-    el.innerHTML = renderChecklistEval(etapes) + evalHistoryShellHTML();
-    EVAL_CURRENT.type = key; EVAL_CURRENT.playerId = playerId; EVAL_CURRENT.etapes = etapes; EVAL_CURRENT.scoreKey = 'moyenne';
-    await loadEvalHistorySection(key, playerId, etapes, 'moyenne');
+    el.innerHTML = renderChecklistEval(etapes);
   } catch (e) {
     console.error('Erreur chargement checklist:', e);
     const stage = e._stage || 'inconnu';
@@ -580,81 +576,61 @@ async function openChecklistEval(key, playerId) {
   await loadChecklistEval(key, targetId);
 }
 
-/* ═══ HISTORIQUE DES ÉVALUATIONS (instantanés datés, stockés dans Supabase) ═══ */
-const EVAL_CURRENT = { type:null, playerId:null, etapes:null, scoreKey:null };
-
-function overallAvgFromEtapes(etapes, key){
-  const vals = (etapes||[]).map(e=>e[key]).filter(v=>typeof v==='number' && !isNaN(v));
-  if(!vals.length) return null;
-  return vals.reduce((a,b)=>a+b,0)/vals.length;
-}
-
-function evalHistoryShellHTML(){
+/* ═══ SUIVI COACH (diagnostics texte horodatés, privés au coach) ═══ */
+function coachNotesShellHTML(){
   return `
-  <div class="sec" style="padding-left:0;padding-top:22px">Progression</div>
-  <div id="eval-history-section" class="card">Chargement de l'historique…</div>
+  <div class="sec" style="padding-left:0;padding-top:22px">Suivi coach</div>
+  <div class="card">
+    <textarea class="finput" id="new-coach-note" rows="3" placeholder="Diagnostic après entraînement…" style="resize:vertical;margin-bottom:8px"></textarea>
+    <button class="gbtn full" onclick="submitCoachNote()">Ajouter le diagnostic</button>
+  </div>
+  <div id="coach-notes-list">Chargement…</div>
   <div style="height:24px"></div>`;
 }
 
-function evalHistoryChartSVG(history){
-  const w=600, h=140, pad=28;
-  const vals = history.map(h => (typeof h.overall_avg==='number' ? h.overall_avg : 0));
-  const n = vals.length;
-  if(n<2) return `<div style="font-size:11px;color:var(--w3);margin-bottom:10px">Ajoute au moins 2 instantanés pour voir une courbe de progression.</div>`;
-  const maxV=5;
-  const stepX=(w-2*pad)/(n-1);
-  const pts=vals.map((v,i)=>{
-    const x=pad+i*stepX;
-    const y=h-pad-(Math.max(0,Math.min(maxV,v))/maxV)*(h-2*pad);
-    return [x,y];
-  });
-  const path=pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-  const dots=pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="#C9A227"/>`).join('');
-  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block;margin-bottom:8px">
-    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-    <path d="${path}" fill="none" stroke="#C9A227" stroke-width="2"/>
-    ${dots}
-  </svg>`;
-}
-
-async function loadEvalHistorySection(type, playerId, currentEtapes, scoreKey){
-  const el = document.getElementById('eval-history-section');
+async function loadCoachNotes(playerId){
+  const el = document.getElementById('coach-notes-list');
   if(!el) return;
   try{
-    const { history } = await callApi('getEvaluationHistory', { playerId, type });
-    const isCoach = APP_STATE.role === 'coach';
-    let html = '';
-    if(!history || !history.length){
-      html += `<div style="font-size:12px;color:var(--w3)">Aucun instantané enregistré pour l'instant.${isCoach ? ' Enregistre le premier pour commencer à suivre la progression dans le temps.' : ''}</div>`;
-    } else {
-      html += evalHistoryChartSVG(history);
-      html += history.slice().reverse().map(hh=>{
-        const d = new Date(hh.recorded_at);
-        const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
-        const avg = typeof hh.overall_avg === 'number' ? hh.overall_avg.toFixed(1) : '—';
-        return `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--w2);padding:5px 0;border-bottom:.5px solid var(--border)"><span>${dateStr}</span><span style="color:var(--gold2)">${avg}</span></div>`;
-      }).join('');
+    const { notes } = await callApi('getCoachNotes', { playerId });
+    if(!notes || !notes.length){
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun diagnostic enregistré pour l'instant.</div></div>`;
+      return;
     }
-    if(isCoach){
-      html += `<button class="gbtn full" style="margin-top:12px" onclick="saveEvalSnapshot('${type}','${playerId}')">Enregistrer un instantané aujourd'hui</button>`;
-    }
-    el.innerHTML = html;
+    el.innerHTML = notes.map(n=>{
+      const d = new Date(n.created_at);
+      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) + ' · ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      return `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+          <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px">${dateStr}</div>
+          <button onclick="removeCoachNote('${n.id}','${playerId}')" style="background:none;border:none;color:var(--w3);cursor:pointer;font-size:14px;line-height:1;flex-shrink:0" title="Supprimer">✕</button>
+        </div>
+        <div style="font-size:13px;color:var(--w2);white-space:pre-wrap">${(n.note||'').replace(/</g,'&lt;')}</div>
+      </div>`;
+    }).join('');
   }catch(e){
-    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger l'historique.</div>`;
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger le suivi coach.</div></div>`;
   }
 }
 
-async function saveEvalSnapshot(type, playerId){
-  if(!EVAL_CURRENT.etapes || EVAL_CURRENT.type!==type || EVAL_CURRENT.playerId!==playerId){
-    alert('Données non disponibles, réessaie.');
-    return;
-  }
-  const scoreKey = EVAL_CURRENT.scoreKey;
-  const etapesPayload = EVAL_CURRENT.etapes.map(e=>({ etape: e.etape, score: e[scoreKey] }));
-  const overall_avg = overallAvgFromEtapes(EVAL_CURRENT.etapes, scoreKey);
+async function submitCoachNote(){
+  const ta = document.getElementById('new-coach-note');
+  const note = (ta.value||'').trim();
+  if(!note) return;
+  const playerId = CURRENT.playerDetailId;
   try{
-    await callApi('saveEvaluationSnapshot', { playerId, type, etapes: etapesPayload, overall_avg });
-    await loadEvalHistorySection(type, playerId, EVAL_CURRENT.etapes, scoreKey);
+    await callApi('addCoachNote', { playerId, note });
+    ta.value='';
+    await loadCoachNotes(playerId);
+  }catch(e){ alert(e.message); }
+}
+
+async function removeCoachNote(noteId, playerId){
+  if(!confirm('Supprimer ce diagnostic ?')) return;
+  try{
+    await callApi('deleteCoachNote', { noteId });
+    await loadCoachNotes(playerId);
   }catch(e){ alert(e.message); }
 }
 
@@ -840,9 +816,11 @@ async function openPlayerDetail(playerId, playerName) {
         <div id="player-sheets-form" class="card">Chargement…</div>
       </div>
     </div>
-    <div style="height:28px"></div>`;
+    ${coachNotesShellHTML()}`;
+  CURRENT.playerDetailId = playerId;
   await loadPlayerSheetsForm(playerId);
   await loadPlayerCodeBox(playerId);
+  await loadCoachNotes(playerId);
 }
 
 async function loadPlayerCodeBox(playerId){
