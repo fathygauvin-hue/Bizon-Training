@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 /* ============ RESET & TOKENS ============ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -120,13 +119,30 @@ select.finput{cursor:pointer}
 
 <script>
 /* ==========================================================
-   SUPABASE
+   API — toutes les opérations Supabase passent par l'Edge Function "api"
+   (le code d'accès est vérifié côté serveur, la clé anon ne donne plus
+   aucun accès direct aux tables : voir RLS + revoke sur profiles/videos)
 ========================================================== */
-const SUPABASE_URL = "https://shwtjplbjirgkgjtxrap.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_tZk7-W_5TusA_hMtrtvhhA_9Fedr8cP";
-const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const EDGE_FN_URL = "https://shwtjplbjirgkgjtxrap.supabase.co/functions/v1/api";
 
-const APP_STATE = { authenticated:false, role:null, userId:null, user:null };
+async function callApi(action, payload = {}) {
+  const code = APP_STATE.code || localStorage.getItem('bizon_access_code') || '';
+  const res = await fetch(EDGE_FN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ action, code, ...payload }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+const APP_STATE = { authenticated:false, role:null, userId:null, user:null, code:null };
 const CURRENT = { screen:'suivi', suivi:'joueur' };
 
 /* ============ ACCÈS PAR CODE (remplace login email/mot de passe) ============ */
@@ -170,8 +186,16 @@ async function handleAccessCode(){
     return;
   }
   errEl.textContent='Vérification…';
-  const { data:profile, error } = await sbClient.from('profiles').select('*').eq('access_code', code).single();
-  if(error || !profile){
+  let profile;
+  try {
+    APP_STATE.code = code; // nécessaire pour que callApi() envoie ce code
+    const data = await callApi('login', {});
+    profile = data.profile;
+  } catch (e) {
+    profile = null;
+  }
+  if(!profile){
+    APP_STATE.code = null;
     errEl.textContent='Code invalide. Vérifie et réessaie.';
     input.style.animation='shake .3s';
     setTimeout(()=>input.style.animation='',300);
@@ -184,6 +208,7 @@ async function handleAccessCode(){
 
 async function enterApp(profile){
   APP_STATE.authenticated=true;
+  APP_STATE.code=profile.access_code;
   APP_STATE.userId=profile.id;
   APP_STATE.role=profile.role || 'joueur';
   APP_STATE.user={
@@ -201,7 +226,7 @@ async function enterApp(profile){
 
 function handleLogout(){
   localStorage.removeItem('bizon_access_code');
-  APP_STATE.authenticated=false; APP_STATE.role=null; APP_STATE.user=null; APP_STATE.userId=null;
+  APP_STATE.authenticated=false; APP_STATE.role=null; APP_STATE.user=null; APP_STATE.userId=null; APP_STATE.code=null;
   document.getElementById('app-shell').style.display='none';
   // Nettoie le ?code=XXXXXX de l'URL pour éviter une reconnexion auto involontaire
   const url=new URL(window.location.href);
@@ -217,12 +242,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   const savedCode=localStorage.getItem('bizon_access_code');
   const code = urlCode || savedCode;
   if(code && code.length===6){
-    const { data:profile } = await sbClient.from('profiles').select('*').eq('access_code', code).single();
-    if(profile){
-      localStorage.setItem('bizon_access_code', code);
-      await enterApp(profile);
-      return;
-    }
+    APP_STATE.code = code;
+    try {
+      const data = await callApi('login', {});
+      if(data.profile){
+        localStorage.setItem('bizon_access_code', code);
+        await enterApp(data.profile);
+        return;
+      }
+    } catch(e) { /* code invalide ou expiré, on retombe sur l'écran d'accès */ }
+    APP_STATE.code = null;
   }
   showAccessScreen(urlCode);
 });
@@ -385,15 +414,18 @@ async function loadLancerFrancEval(playerId) {
     return;
   }
   try {
-    const { data: profile, error: pErr } = await sbClient.from('profiles').select('sheet_lf').eq('id', playerId).single();
-    if (pErr) { pErr._stage = 'supabase'; throw pErr; }
-    if (!profile?.sheet_lf) {
+    let sheets;
+    try {
+      const data = await callApi('getSheetLinks', { playerId });
+      sheets = data.sheets;
+    } catch (aErr) { aErr._stage = 'supabase'; throw aErr; }
+    if (!sheets?.sheet_lf) {
       el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun lien Google Sheet configuré pour ce joueur (Lancer franc).</div></div>`;
       return;
     }
     let res;
     try {
-      res = await fetch(profile.sheet_lf);
+      res = await fetch(sheets.sheet_lf);
     } catch (fe) { fe._stage = 'fetch-network'; throw fe; }
     if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
     const text = await res.text();
@@ -507,9 +539,12 @@ async function loadChecklistEval(key, playerId) {
   }
   const column = key === '2pts' ? 'sheet_2pts' : 'sheet_3pts';
   try {
-    const { data: profile, error: pErr } = await sbClient.from('profiles').select(column).eq('id', playerId).single();
-    if (pErr) { pErr._stage = 'supabase'; throw pErr; }
-    const url = profile ? profile[column] : null;
+    let sheets;
+    try {
+      const data = await callApi('getSheetLinks', { playerId });
+      sheets = data.sheets;
+    } catch (aErr) { aErr._stage = 'supabase'; throw aErr; }
+    const url = sheets ? sheets[column] : null;
     if (!url) {
       el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun lien Google Sheet configuré pour ce joueur (${CHECKLIST_LABELS[key]}).</div></div>`;
       return;
@@ -611,12 +646,7 @@ async function loadCoachPlayers() {
     return;
   }
   try {
-    const { data: players, error } = await sbClient
-      .from('profiles')
-      .select('id, first_name, last_name, position, level')
-      .eq('coach_id', APP_STATE.userId)
-      .eq('role', 'joueur');
-    if (error) throw error;
+    const { players } = await callApi('listPlayers', {});
 
     if (!players || !players.length) {
       el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Aucun joueur rattaché pour l'instant. Ajoute ton premier joueur ci-dessous.</div></div>`;
@@ -669,13 +699,10 @@ async function createPlayer(){
   const errEl = document.getElementById('np-error');
   if(!first_name || !last_name){ errEl.textContent='Prénom et nom requis.'; return; }
   errEl.textContent='';
-  const access_code = genAccessCode();
-  const { data, error } = await sbClient.from('profiles').insert({
-    role:'joueur', first_name, last_name, position, level,
-    coach_id: APP_STATE.userId, access_code
-  }).select().single();
-  if(error){ errEl.textContent = error.message; return; }
-  showPlayerCreatedModal(data);
+  try {
+    const { player } = await callApi('createPlayer', { first_name, last_name, position, level });
+    showPlayerCreatedModal(player);
+  } catch(e) { errEl.textContent = e.message; }
 }
 
 function showPlayerCreatedModal(p){
@@ -740,11 +767,10 @@ async function loadPlayerCodeBox(playerId){
   const el = document.getElementById('player-code-box');
   if (!el) return;
   try {
-    const { data: profile, error } = await sbClient.from('profiles').select('access_code').eq('id', playerId).single();
-    if (error) throw error;
-    const link = `${window.location.origin}${window.location.pathname}?code=${profile.access_code}`;
+    const { access_code } = await callApi('getPlayerAccess', { playerId });
+    const link = `${window.location.origin}${window.location.pathname}?code=${access_code}`;
     el.innerHTML = `
-      <div style="font-size:20px;letter-spacing:4px;text-align:center;color:var(--gold2);font-family:monospace;margin-bottom:10px">${profile.access_code}</div>
+      <div style="font-size:20px;letter-spacing:4px;text-align:center;color:var(--gold2);font-family:monospace;margin-bottom:10px">${access_code}</div>
       <button class="ghost full" onclick="navigator.clipboard&&navigator.clipboard.writeText('${link}').then(()=>alert('Lien copié !'))">Copier le lien</button>
     `;
   } catch (e) {
@@ -756,19 +782,14 @@ async function loadPlayerSheetsForm(playerId) {
   const el = document.getElementById('player-sheets-form');
   if (!el) return;
   try {
-    const { data: profile, error } = await sbClient
-      .from('profiles')
-      .select('sheet_lf, sheet_2pts, sheet_3pts')
-      .eq('id', playerId)
-      .single();
-    if (error) throw error;
+    const { sheets } = await callApi('getSheetLinks', { playerId });
     el.innerHTML = `
       <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien Lancer franc</div>
-      <input class="finput" id="edit-sheet-lf" value="${profile?.sheet_lf || ''}" placeholder="URL CSV publiée…"/>
+      <input class="finput" id="edit-sheet-lf" value="${sheets?.sheet_lf || ''}" placeholder="URL CSV publiée…"/>
       <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien 2 points</div>
-      <input class="finput" id="edit-sheet-2pts" value="${profile?.sheet_2pts || ''}" placeholder="URL CSV publiée…"/>
+      <input class="finput" id="edit-sheet-2pts" value="${sheets?.sheet_2pts || ''}" placeholder="URL CSV publiée…"/>
       <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien 3 points</div>
-      <input class="finput" id="edit-sheet-3pts" value="${profile?.sheet_3pts || ''}" placeholder="URL CSV publiée…"/>
+      <input class="finput" id="edit-sheet-3pts" value="${sheets?.sheet_3pts || ''}" placeholder="URL CSV publiée…"/>
       <div id="sheets-save-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
       <button class="gbtn full" onclick="savePlayerSheets('${playerId}')">Enregistrer les liens</button>
     `;
@@ -781,9 +802,10 @@ async function savePlayerSheets(playerId) {
   const sheet_lf = document.getElementById('edit-sheet-lf').value.trim();
   const sheet_2pts = document.getElementById('edit-sheet-2pts').value.trim();
   const sheet_3pts = document.getElementById('edit-sheet-3pts').value.trim();
-  const { error } = await sbClient.from('profiles').update({ sheet_lf, sheet_2pts, sheet_3pts }).eq('id', playerId);
   const msgEl = document.getElementById('sheets-save-msg');
-  if (error) { alert(error.message); return; }
+  try {
+    await callApi('updatePlayerSheets', { playerId, sheet_lf, sheet_2pts, sheet_3pts });
+  } catch(e) { alert(e.message); return; }
   if (msgEl) { msgEl.textContent = 'Liens enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; }, 2500); }
 }
 
@@ -826,10 +848,7 @@ async function loadVideos(){
   const el=document.getElementById('biblio-list');
   if(!el) return;
   try{
-    let query=sbClient.from('videos').select('*').order('created_at',{ascending:false});
-    if(BIBLIO_STATE.filter!=='Tous') query=query.eq('category',BIBLIO_STATE.filter);
-    const { data:videos, error }=await query;
-    if(error) throw error;
+    const { videos } = await callApi('listVideos', { category: BIBLIO_STATE.filter });
     BIBLIO_STATE.videos=videos||[];
     if(!videos || !videos.length){
       el.innerHTML=`<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Aucune vidéo${BIBLIO_STATE.filter!=='Tous'?` dans la catégorie « ${BIBLIO_STATE.filter} »`:''} pour l'instant.${APP_STATE.role==='coach'?' Ajoute ta première vidéo avec le bouton ci-dessus.':''}</div></div>`;
@@ -909,16 +928,18 @@ async function createVideo(){
   if(!title){ errEl.textContent='Le titre est requis.'; return; }
   if(!drive_url || !driveFileId(drive_url)){ errEl.textContent='Colle un lien Google Drive valide (https://drive.google.com/file/d/…).'; return; }
   errEl.textContent='';
-  const { error }=await sbClient.from('videos').insert({ title, category, drive_url, coach_id:APP_STATE.userId });
-  if(error){ errEl.textContent=error.message; return; }
-  nav('biblio');
+  try {
+    await callApi('createVideo', { title, category, drive_url });
+    nav('biblio');
+  } catch(e) { errEl.textContent = e.message; }
 }
 
 async function deleteVideo(id){
   if(!confirm('Supprimer cette vidéo de la bibliothèque ? (le fichier reste dans ton Drive)')) return;
-  const { error }=await sbClient.from('videos').delete().eq('id', id);
-  if(error){ alert(error.message); return; }
-  loadVideos();
+  try {
+    await callApi('deleteVideo', { videoId: id });
+    loadVideos();
+  } catch(e) { alert(e.message); }
 }
 
 /* ═══ PROFIL ═══ */
