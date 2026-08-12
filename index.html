@@ -123,6 +123,7 @@ select.finput{cursor:pointer}
    (le code d'accès est vérifié côté serveur, la clé anon ne donne plus
    aucun accès direct aux tables : voir RLS + revoke sur profiles/videos)
 ========================================================== */
+const SUPABASE_URL = "https://shwtjplbjirgkgjtxrap.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_tZk7-W_5TusA_hMtrtvhhA_9Fedr8cP";
 const EDGE_FN_URL = "https://shwtjplbjirgkgjtxrap.supabase.co/functions/v1/api";
 
@@ -140,6 +141,24 @@ async function callApi(action, payload = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
   return data;
+}
+
+// Upload direct du fichier vers Supabase Storage via une URL signée à usage unique
+// (obtenue depuis l'Edge Function "api" — le token autorise uniquement CET upload précis).
+async function uploadToSignedUrl(path, token, file) {
+  const url = `${SUPABASE_URL}/storage/v1/object/upload/sign/athlete-videos/${path}?token=${token}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+      'Content-Type': file.type || 'video/mp4',
+      'x-upsert': 'false',
+    },
+    body: file,
+  });
+  if (!res.ok) { const t = await res.text().catch(()=> ''); throw new Error('Échec de l\'envoi de la vidéo (' + res.status + ') ' + t); }
+  return true;
 }
 
 const APP_STATE = { authenticated:false, role:null, userId:null, user:null, code:null };
@@ -680,7 +699,129 @@ function joueurHTML(){
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
     </div>
   </div>
+  <div class="sec" style="padding-left:0;padding-top:22px">Exercices filmés</div>
+  <div class="app-grid-3" style="padding:0">
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openMyExercises()">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--w)">Mes vidéos</div>
+        <div style="font-size:12px;color:var(--w3);margin-top:2px">Filme-toi et envoie au coach</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  </div>
   <div style="height:24px"></div>`;
+}
+
+/* ═══ VIDÉOS D'EXERCICES — soumises par le joueur, privées (visibles par lui + son coach uniquement) ═══ */
+let VIDEO_RETURN_FN = () => nav('suivi');
+
+function openMyExercises(){
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Mes exercices filmés</div>
+    </div>
+    <div class="sec" style="padding-left:0;padding-top:18px">Envoyer une nouvelle vidéo</div>
+    <div class="card">
+      <input class="finput" id="ex-name" placeholder="Nom de l'exercice (ex: Tir en course)"/>
+      <textarea class="finput" id="ex-note" rows="2" placeholder="Note pour le coach (optionnel)" style="resize:vertical"></textarea>
+      <input type="file" accept="video/*" capture="environment" id="ex-file" class="finput" style="padding:8px"/>
+      <div style="font-size:11px;color:var(--w3);margin-bottom:8px">Vidéo visible uniquement par toi et ton coach. 50 Mo max.</div>
+      <div id="ex-upload-error" style="color:var(--red);font-size:12px;margin-bottom:8px"></div>
+      <button class="gbtn full" id="ex-upload-btn" onclick="submitExerciseVideo()">Envoyer la vidéo</button>
+    </div>
+    <div class="sec" style="padding-left:0;padding-top:20px">Mes envois</div>
+    <div id="my-exercises-list">
+      <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
+    </div>
+    <div style="height:24px"></div>`;
+  loadMyExercisesList();
+}
+
+async function submitExerciseVideo(){
+  const nameInput = document.getElementById('ex-name');
+  const noteInput = document.getElementById('ex-note');
+  const fileInput = document.getElementById('ex-file');
+  const errEl = document.getElementById('ex-upload-error');
+  const btn = document.getElementById('ex-upload-btn');
+  const exerciseName = (nameInput.value||'').trim();
+  const note = (noteInput.value||'').trim();
+  const file = fileInput.files[0];
+  if(!exerciseName){ errEl.textContent="Nom de l'exercice requis."; return; }
+  if(!file){ errEl.textContent='Sélectionne ou filme une vidéo.'; return; }
+  if(file.size > 50*1024*1024){ errEl.textContent='Vidéo trop lourde (50 Mo max).'; return; }
+  errEl.textContent='';
+  btn.disabled = true; btn.textContent = 'Envoi en cours…';
+  try{
+    const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+    const { path, token } = await callApi('requestVideoUpload', { exerciseName, note, fileExt: ext });
+    await uploadToSignedUrl(path, token, file);
+    nameInput.value=''; noteInput.value=''; fileInput.value='';
+    await loadMyExercisesList();
+  }catch(e){ errEl.textContent = e.message; }
+  btn.disabled = false; btn.textContent = 'Envoyer la vidéo';
+}
+
+async function loadMyExercisesList(){
+  const el = document.getElementById('my-exercises-list');
+  if(!el) return;
+  try{
+    const { submissions } = await callApi('listMySubmissions', {});
+    if(!submissions || !submissions.length){
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune vidéo envoyée pour l'instant.</div></div>`;
+      return;
+    }
+    el.innerHTML = submissions.map(s=>{
+      const d = new Date(s.created_at);
+      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+      const statusTag = s.status==='reviewed' ? `<span class="tag g" style="font-size:10px">Corrigé</span>` : `<span class="tag a" style="font-size:10px">En attente</span>`;
+      return `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:500;color:var(--w)">${(s.exercise_name||'').replace(/</g,'&lt;')}</div>
+            <div style="font-size:11px;color:var(--w3);margin-top:2px">${dateStr}</div>
+          </div>
+          ${statusTag}
+        </div>
+        ${s.note ? `<div style="font-size:12px;color:var(--w2);margin-top:8px">${s.note.replace(/</g,'&lt;')}</div>` : ''}
+        ${s.coach_feedback ? `<div style="font-size:12px;color:var(--gold2);margin-top:8px;padding-top:8px;border-top:.5px solid var(--border)"><b>Retour du coach :</b> ${s.coach_feedback.replace(/</g,'&lt;')}</div>` : ''}
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="ghost" style="flex:1" onclick="VIDEO_RETURN_FN=openMyExercises;openSubmissionPlayer('${s.id}')">▶ Revoir ma vidéo</button>
+          <button class="ghost" style="color:var(--red)" onclick="deleteMySubmission('${s.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger tes vidéos.</div></div>`;
+  }
+}
+
+async function deleteMySubmission(id){
+  if(!confirm('Supprimer cette vidéo ?')) return;
+  try{
+    await callApi('deleteSubmission', { submissionId:id });
+    await loadMyExercisesList();
+  }catch(e){ alert(e.message); }
+}
+
+async function openSubmissionPlayer(id){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <button onclick="VIDEO_RETURN_FN()" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Vidéo de l'exercice</div>
+    </div>
+    <div style="padding:16px 0" id="submission-player-wrap">
+      <div style="text-align:center;color:var(--w3);font-size:12px">Chargement de la vidéo…</div>
+    </div>`;
+  try{
+    const { url } = await callApi('getSubmissionVideoUrl', { submissionId:id });
+    document.getElementById('submission-player-wrap').innerHTML =
+      `<video src="${url}" controls playsinline style="width:100%;border-radius:var(--r12);background:#000;max-height:70vh"></video>`;
+  }catch(e){
+    document.getElementById('submission-player-wrap').innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">${e.message}</div></div>`;
+  }
 }
 
 function relativeDaysFR(dateStr){
@@ -733,6 +874,8 @@ async function loadCoachPlayers() {
       if (!p.last_note_at) return true;
       return (now - new Date(p.last_note_at).getTime()) / 86400000 > STALE_DAYS;
     }).length;
+    let pendingVideos = 0;
+    try { const s = await callApi('getCoachSubmissionsSummary', {}); pendingVideos = s.pendingCount || 0; } catch(e) {}
 
     if (statsEl) {
       statsEl.innerHTML = `
@@ -747,6 +890,10 @@ async function loadCoachPlayers() {
       <div class="card" style="margin:0;text-align:center">
         <div style="font-size:22px;font-weight:600;color:${staleOrNever?'var(--red)':'var(--w)'}">${staleOrNever}</div>
         <div style="font-size:11px;color:var(--w3);margin-top:2px">Sans suivi (14j+)</div>
+      </div>
+      <div class="card" style="margin:0;text-align:center">
+        <div style="font-size:22px;font-weight:600;color:${pendingVideos?'var(--red)':'var(--w)'}">${pendingVideos}</div>
+        <div style="font-size:11px;color:var(--w3);margin-top:2px">Vidéos à corriger</div>
       </div>`;
     }
 
@@ -863,11 +1010,71 @@ async function openPlayerDetail(playerId, playerName) {
         <div id="player-sheets-form" class="card">Chargement…</div>
       </div>
     </div>
-    ${coachNotesShellHTML()}`;
+    ${coachNotesShellHTML()}
+    <div class="sec" style="padding-left:0;padding-top:22px">Exercices filmés</div>
+    <div id="coach-exercises-list">
+      <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
+    </div>
+    <div style="height:24px"></div>`;
   CURRENT.playerDetailId = playerId;
+  CURRENT.playerDetailName = playerName;
   await loadPlayerSheetsForm(playerId);
   await loadPlayerCodeBox(playerId);
   await loadCoachNotes(playerId);
+  await loadCoachExercisesList(playerId);
+}
+
+async function loadCoachExercisesList(playerId){
+  const el = document.getElementById('coach-exercises-list');
+  if(!el) return;
+  try{
+    const { submissions } = await callApi('listCoachSubmissions', { playerId });
+    if(!submissions || !submissions.length){
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune vidéo envoyée par ce joueur pour l'instant.</div></div>`;
+      return;
+    }
+    el.innerHTML = submissions.map(s=>{
+      const d = new Date(s.created_at);
+      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+      const statusTag = s.status==='reviewed' ? `<span class="tag g" style="font-size:10px">Corrigé</span>` : `<span class="tag a" style="font-size:10px">En attente</span>`;
+      return `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:500;color:var(--w)">${(s.exercise_name||'').replace(/</g,'&lt;')}</div>
+            <div style="font-size:11px;color:var(--w3);margin-top:2px">${dateStr}</div>
+          </div>
+          ${statusTag}
+        </div>
+        ${s.note ? `<div style="font-size:12px;color:var(--w2);margin-top:8px"><b style="color:var(--w3)">Note du joueur :</b> ${s.note.replace(/</g,'&lt;')}</div>` : ''}
+        <button class="ghost full" style="margin-top:10px" onclick="VIDEO_RETURN_FN=()=>openPlayerDetail('${playerId}','${(CURRENT.playerDetailName||'').replace(/'/g, "\\'")}');openSubmissionPlayer('${s.id}')">▶ Voir la vidéo</button>
+        <textarea class="finput" id="fb-${s.id}" rows="2" placeholder="Feedback pour le joueur…" style="resize:vertical;margin-top:10px">${s.coach_feedback ? s.coach_feedback.replace(/</g,'&lt;') : ''}</textarea>
+        <div style="display:flex;gap:8px">
+          <button class="gbtn" style="flex:1" onclick="submitCoachFeedback('${s.id}','${playerId}')">${s.status==='reviewed' ? 'Mettre à jour' : 'Marquer comme corrigé'}</button>
+          <button class="ghost" style="color:var(--red)" onclick="deleteCoachSubmission('${s.id}','${playerId}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les vidéos.</div></div>`;
+  }
+}
+
+async function submitCoachFeedback(submissionId, playerId){
+  const ta = document.getElementById('fb-'+submissionId);
+  const coach_feedback = (ta.value||'').trim();
+  try{
+    await callApi('markSubmissionReviewed', { submissionId, coach_feedback });
+    await loadCoachExercisesList(playerId);
+  }catch(e){ alert(e.message); }
+}
+
+async function deleteCoachSubmission(submissionId, playerId){
+  if(!confirm('Supprimer cette vidéo ?')) return;
+  try{
+    await callApi('deleteSubmission', { submissionId });
+    await loadCoachExercisesList(playerId);
+  }catch(e){ alert(e.message); }
 }
 
 async function loadPlayerCodeBox(playerId){
