@@ -161,6 +161,48 @@ async function uploadToSignedUrl(path, token, file) {
   return true;
 }
 
+// Extraction d'images fixes depuis une vidéo (canvas) pour le premier avis IA — aucun envoi de fichier vidéo entier, juste quelques images compressées.
+function seekToTime(video, t){
+  return new Promise((resolve) => {
+    const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+    video.addEventListener('seeked', onSeeked);
+    video.currentTime = t;
+  });
+}
+
+async function extractVideoFrames(url, count = 4){
+  const video = document.createElement('video');
+  video.crossOrigin = 'anonymous';
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  await new Promise((resolve, reject) => {
+    video.addEventListener('loadedmetadata', resolve, { once: true });
+    video.addEventListener('error', () => reject(new Error("Impossible de charger la vidéo pour l'analyse.")), { once: true });
+    video.src = url;
+  });
+  const duration = video.duration;
+  if (!isFinite(duration) || duration <= 0) throw new Error("Durée de vidéo invalide pour l'analyse.");
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.min(480, video.videoWidth || 480);
+  canvas.height = Math.round(canvas.width * (video.videoHeight || 360) / (video.videoWidth || 480));
+  const ctx = canvas.getContext('2d');
+  const ratios = [0.15, 0.4, 0.65, 0.9].slice(0, count);
+  const frames = [];
+  for (const r of ratios) {
+    await seekToTime(video, duration * r);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    let dataUrl;
+    try {
+      dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    } catch (e) {
+      throw new Error("Impossible d'extraire les images de la vidéo (restriction du navigateur).");
+    }
+    frames.push(dataUrl.split(',')[1]);
+  }
+  return frames;
+}
+
 const APP_STATE = { authenticated:false, role:null, userId:null, user:null, code:null };
 const CURRENT = { screen:'suivi', suivi:'joueur' };
 
@@ -1048,6 +1090,15 @@ async function loadCoachExercisesList(playerId){
         </div>
         ${s.note ? `<div style="font-size:12px;color:var(--w2);margin-top:8px"><b style="color:var(--w3)">Note du joueur :</b> ${s.note.replace(/</g,'&lt;')}</div>` : ''}
         <button class="ghost full" style="margin-top:10px" onclick="VIDEO_RETURN_FN=()=>openPlayerDetail('${playerId}','${(CURRENT.playerDetailName||'').replace(/'/g, "\\'")}');openSubmissionPlayer('${s.id}')">▶ Voir la vidéo</button>
+        <div id="ai-block-${s.id}">
+          ${s.ai_analysis ? `
+          <div style="margin-top:10px;padding-top:10px;border-top:.5px solid var(--border)">
+            <div style="font-size:10px;color:var(--blue);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Premier avis IA</div>
+            <div style="font-size:12px;color:var(--w2);white-space:pre-wrap">${s.ai_analysis.replace(/</g,'&lt;')}</div>
+            <button class="ghost" style="margin-top:8px;font-size:11px;padding:6px 10px" onclick="analyzeSubmission('${s.id}','${playerId}')">Relancer l'analyse</button>
+          </div>` : `
+          <button class="ghost full" style="margin-top:10px" onclick="analyzeSubmission('${s.id}','${playerId}')">✨ Analyser avec l'IA</button>`}
+        </div>
         <textarea class="finput" id="fb-${s.id}" rows="2" placeholder="Feedback pour le joueur…" style="resize:vertical;margin-top:10px">${s.coach_feedback ? s.coach_feedback.replace(/</g,'&lt;') : ''}</textarea>
         <div style="display:flex;gap:8px">
           <button class="gbtn" style="flex:1" onclick="submitCoachFeedback('${s.id}','${playerId}')">${s.status==='reviewed' ? 'Mettre à jour' : 'Marquer comme corrigé'}</button>
@@ -1075,6 +1126,19 @@ async function deleteCoachSubmission(submissionId, playerId){
     await callApi('deleteSubmission', { submissionId });
     await loadCoachExercisesList(playerId);
   }catch(e){ alert(e.message); }
+}
+
+async function analyzeSubmission(submissionId, playerId){
+  const container = document.getElementById('ai-block-'+submissionId);
+  if(container) container.innerHTML = `<div style="font-size:12px;color:var(--w3);margin-top:10px">Analyse en cours… (extraction des images puis appel IA)</div>`;
+  try{
+    const { url } = await callApi('getSubmissionVideoUrl', { submissionId });
+    const frames = await extractVideoFrames(url, 4);
+    await callApi('analyzeSubmissionVideo', { submissionId, frames });
+    await loadCoachExercisesList(playerId);
+  }catch(e){
+    if(container) container.innerHTML = `<div style="font-size:12px;color:var(--red);margin-top:10px">${e.message}</div>`;
+  }
 }
 
 async function loadPlayerCodeBox(playerId){
@@ -1256,12 +1320,35 @@ async function deleteVideo(id){
   } catch(e) { alert(e.message); }
 }
 
+/* ═══ CRITÈRES IA (réglage coach, utilisés pour le premier avis sur les vidéos) ═══ */
+async function loadAiCriteria(){
+  const el = document.getElementById('ai-criteria-input');
+  if(!el) return;
+  try{
+    const { criteria } = await callApi('getAiCriteria', {});
+    el.value = criteria || '';
+  }catch(e){
+    el.placeholder = 'Impossible de charger les critères.';
+  }
+}
+
+async function saveAiCriteria(){
+  const el = document.getElementById('ai-criteria-input');
+  const msgEl = document.getElementById('ai-criteria-msg');
+  const criteria = (el.value||'').trim();
+  try{
+    await callApi('updateAiCriteria', { criteria });
+    if(msgEl){ msgEl.textContent='Critères enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
+  }catch(e){ alert(e.message); }
+}
+
 /* ═══ PROFIL ═══ */
 function profilHTML(){
   const name = APP_STATE.user?.name || '';
   const isCoach = APP_STATE.role==='coach';
   const role = isCoach ? 'Coach' : ([APP_STATE.user?.position, APP_STATE.user?.level].filter(Boolean).join(' · ') || 'Joueur');
   const initials = (name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') || '?').toUpperCase();
+  if(isCoach) setTimeout(loadAiCriteria, 0);
   return `
   <div style="padding:28px 0 12px;display:flex;flex-direction:column;align-items:center;gap:10px">
     <div style="width:70px;height:70px;border-radius:50%;background:var(--gold3);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold2)">${initials}</div>
@@ -1272,6 +1359,14 @@ function profilHTML(){
   </div>
   <div class="sec" style="padding-left:0">Mon code d'accès</div>
   <div class="card" style="text-align:center;font-size:18px;letter-spacing:4px;color:var(--gold2);font-family:monospace">${APP_STATE.user?.accessCode || ''}</div>
+  ${isCoach ? `
+  <div class="sec" style="padding-left:0;padding-top:22px">Critères d'analyse IA</div>
+  <div class="card">
+    <div style="font-size:11px;color:var(--w3);line-height:1.5;margin-bottom:8px">Ces critères servent de grille de lecture à l'IA pour son premier avis sur les vidéos de tes joueurs. Modifie-les pour refléter ton style de coaching.</div>
+    <textarea class="finput" id="ai-criteria-input" rows="8" style="resize:vertical" placeholder="Chargement…"></textarea>
+    <div id="ai-criteria-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
+    <button class="gbtn full" onclick="saveAiCriteria()">Enregistrer les critères</button>
+  </div>` : ''}
   <div class="sec" style="padding-left:0;padding-top:22px">Compte</div>
   <div class="app-grid-2" style="padding:0">
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;border-color:var(--red-bg)" onclick="handleLogout()">
