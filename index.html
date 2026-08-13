@@ -616,8 +616,14 @@ async function loadChecklistEval(key, playerId) {
     } catch (fe) { fe._stage = 'fetch-network'; throw fe; }
     if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
     const text = await res.text();
-    const { etapes } = parseChecklistGrid(parseCSV(text));
-    el.innerHTML = renderChecklistEval(etapes);
+    if (key === '2pts') {
+      // Le format "2 points" utilise désormais la grille Avant/Après (comme Lancer franc).
+      const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
+      el.innerHTML = renderLancerFrancEval(etapes, criteres);
+    } else {
+      const { etapes } = parseChecklistGrid(parseCSV(text));
+      el.innerHTML = renderChecklistEval(etapes);
+    }
   } catch (e) {
     console.error('Erreur chargement checklist:', e);
     const stage = e._stage || 'inconnu';
@@ -729,7 +735,7 @@ function joueurHTML(){
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('2pts')">
       <div>
         <div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar par étape</div>
+        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div>
       </div>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
     </div>
@@ -1033,7 +1039,7 @@ async function openPlayerDetail(playerId, playerName) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
       </div>
       <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('2pts','${playerId}')">
-        <div><div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar par étape</div></div>
+        <div><div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
       </div>
       <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('3pts','${playerId}')">
