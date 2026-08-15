@@ -1094,20 +1094,25 @@ async function openPlayerDetail(playerId, playerName) {
     <div id="player-quiz-results" class="card">Chargement…</div>
     <div class="sec" style="padding-left:0;padding-top:22px">Disponibilités du joueur</div>
     <div id="player-availability-box" class="card">Chargement…</div>
-    <div class="sec" style="padding-left:0;padding-top:22px">Ajouter une séance au calendrier</div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Ajouter un entraînement récurrent</div>
     <div class="card">
-      <input class="finput" type="date" id="ts-date"/>
-      <div style="display:flex;gap:8px">
+      <div style="font-size:11px;color:var(--w3);line-height:1.5;margin-bottom:8px">Sélectionne le ou les jours où cet entraînement doit se répéter chaque semaine.</div>
+      ${JOURS_SEMAINE.map((jour,di) => `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid var(--border);cursor:pointer">
+        <input type="checkbox" id="ts-day-${di}"/>
+        <span style="font-size:12px;color:var(--w2)">${jour}</span>
+      </label>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:10px">
         <input class="finput" type="time" id="ts-start" style="flex:1"/>
         <input class="finput" type="time" id="ts-end" style="flex:1"/>
       </div>
-      <input class="finput" id="ts-title" placeholder="Titre de la séance"/>
+      <input class="finput" id="ts-title" placeholder="Titre de l'entraînement"/>
       <textarea class="finput" id="ts-desc" rows="2" placeholder="Description (optionnel)" style="resize:vertical"></textarea>
       <select class="finput" id="ts-video"><option value="">Aucune vidéo de la Biblio</option></select>
       <div id="ts-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
-      <button class="gbtn full" onclick="addTrainingSessionForPlayer('${playerId}')">Ajouter au calendrier</button>
+      <button class="gbtn full" onclick="addTrainingProgramForPlayer('${playerId}')">Ajouter au programme</button>
     </div>
-    <div class="sec" style="padding-left:0;padding-top:22px">Calendrier du joueur</div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Programme d'entraînement du joueur</div>
     <div id="player-sessions-list">
       <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
     </div>
@@ -1125,7 +1130,7 @@ async function openPlayerDetail(playerId, playerName) {
   await loadPlayerQuizResults(playerId);
   await loadPlayerAvailabilityBox(playerId);
   await loadPlayerVideoSelect();
-  await loadPlayerSessionsList(playerId);
+  await loadPlayerProgramList(playerId);
 }
 
 
@@ -1562,14 +1567,10 @@ async function saveQuizEditor(){
   }catch(e){ alert(e.message); }
 }
 
-/* ═══ CALENDRIER — disponibilités du joueur + séances programmées par le coach ═══ */
+/* ═══ CALENDRIER — disponibilités du joueur + programme d'entraînement récurrent ═══ */
 const JOURS_SEMAINE = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
-const CAL_STATE = { year:0, month:0, sessions:[] };
 
 async function openMyCalendar(){
-  const now = new Date();
-  CAL_STATE.year = now.getFullYear();
-  CAL_STATE.month = now.getMonth();
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -1577,13 +1578,12 @@ async function openMyCalendar(){
     </div>
     <div class="sec" style="padding-left:0;padding-top:18px">Mes disponibilités</div>
     <div id="my-availability-box" class="card">Chargement…</div>
-    <div class="sec" style="padding-left:0;padding-top:22px">Séances programmées</div>
-    <div id="my-calendar-grid" class="card">Chargement…</div>
-    <div id="my-calendar-day-detail" style="margin-top:10px"></div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Mon programme d'entraînement</div>
+    <div id="my-program-list" class="card">Chargement…</div>
     <div style="height:24px"></div>
   `;
   await loadMyAvailabilityBox();
-  await loadMyCalendarGrid();
+  await loadMyProgramList();
 }
 
 async function loadMyAvailabilityBox(){
@@ -1622,86 +1622,42 @@ async function saveMyAvailability(){
   }catch(e){ alert(e.message); }
 }
 
-async function loadMyCalendarGrid(){
-  const el = document.getElementById('my-calendar-grid');
+async function loadMyProgramList(){
+  const el = document.getElementById('my-program-list');
   if(!el) return;
   try{
-    const { sessions } = await callApi('getPlayerCalendar', {});
-    CAL_STATE.sessions = sessions||[];
-    renderCalendarGrid('my-calendar-grid', false, null);
+    const { programs } = await callApi('getPlayerProgram', {});
+    renderWeeklyProgram(el, programs||[], false, null);
   }catch(e){
-    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger le calendrier.</div>`;
+    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger le programme.</div>`;
   }
 }
 
-function calMonthLabel(y,m){
-  return new Date(y,m,1).toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
-}
-
-function renderCalendarGrid(targetElId, isCoach, playerId){
-  const el = document.getElementById(targetElId);
-  if(!el) return;
-  const y = CAL_STATE.year, m = CAL_STATE.month;
-  const first = new Date(y,m,1);
-  const startOffset = (first.getDay()+6)%7;
-  const daysInMonth = new Date(y,m+1,0).getDate();
-  const sessionsByDate = {};
-  CAL_STATE.sessions.forEach(s => { (sessionsByDate[s.session_date] = sessionsByDate[s.session_date]||[]).push(s); });
-  const navPrev = isCoach ? `calNavPlayer(-1,'${playerId}')` : `calNavMy(-1)`;
-  const navNext = isCoach ? `calNavPlayer(1,'${playerId}')` : `calNavMy(1)`;
-  let cells = '';
-  for(let i=0;i<startOffset;i++) cells += `<div></div>`;
-  for(let d=1; d<=daysInMonth; d++){
-    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const has = sessionsByDate[dateStr];
-    const clickFn = isCoach ? `showCalDay('${dateStr}',true,'${playerId}')` : `showCalDay('${dateStr}',false,null)`;
-    cells += `<div onclick="${clickFn}" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--r8);cursor:pointer;font-size:12px;color:var(--w2);${has?'background:var(--gold4);color:var(--gold2)':''}">
-      ${d}${has?`<div style="width:4px;height:4px;border-radius:50%;background:var(--gold2);margin-top:2px"></div>`:''}
-    </div>`;
-  }
-  el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <button class="ghost" style="padding:4px 10px" onclick="${navPrev}">‹</button>
-      <div style="font-size:13px;color:var(--w);text-transform:capitalize">${calMonthLabel(y,m)}</div>
-      <button class="ghost" style="padding:4px 10px" onclick="${navNext}">›</button>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:10px;color:var(--w3);text-align:center;margin-bottom:4px">
-      ${['L','M','M','J','V','S','D'].map(d=>`<div>${d}</div>`).join('')}
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>
-  `;
-}
-
-async function calNavMy(delta){
-  CAL_STATE.month += delta;
-  if(CAL_STATE.month<0){ CAL_STATE.month=11; CAL_STATE.year--; }
-  if(CAL_STATE.month>11){ CAL_STATE.month=0; CAL_STATE.year++; }
-  renderCalendarGrid('my-calendar-grid', false, null);
-}
-
-function showCalDay(dateStr, isCoach, playerId){
-  const targetId = isCoach ? 'player-cal-day-detail' : 'my-calendar-day-detail';
-  const el = document.getElementById(targetId);
-  if(!el) return;
-  const sessions = CAL_STATE.sessions.filter(s => s.session_date===dateStr);
-  const dateLabel = new Date(dateStr+'T00:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
-  if(!sessions.length){
-    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3);text-transform:capitalize">${dateLabel}</div><div style="font-size:12px;color:var(--w3);margin-top:6px">Aucune séance ce jour-là.</div></div>`;
+function renderWeeklyProgram(el, programs, isCoach, playerId){
+  if(!programs.length){
+    el.innerHTML = `<div style="font-size:12px;color:var(--w3)">${isCoach ? "Aucun entraînement programmé pour ce joueur." : "Ton coach n'a pas encore programmé d'entraînement."}</div>`;
     return;
   }
-  el.innerHTML = `<div class="card">
-    <div style="font-size:12px;color:var(--w3);text-transform:capitalize;margin-bottom:8px">${dateLabel}</div>
-    ${sessions.map(s => `
-    <div style="padding:8px 0;border-top:.5px solid var(--border)">
-      <div style="display:flex;justify-content:space-between">
-        <span style="font-size:13px;color:var(--w)">${(s.title||'').replace(/</g,'&lt;')}</span>
-        ${s.start_time?`<span style="font-size:11px;color:var(--w3)">${s.start_time}${s.end_time?'–'+s.end_time:''}</span>`:''}
-      </div>
-      ${s.description ? `<div style="font-size:12px;color:var(--w2);margin-top:4px">${s.description.replace(/</g,'&lt;')}</div>` : ''}
-      ${s.videos?.drive_url ? `<a href="${s.videos.drive_url}" target="_blank" style="font-size:12px;color:var(--gold2);margin-top:4px;display:inline-block">▶ ${(s.videos.title||'Vidéo').replace(/</g,'&lt;')}</a>` : ''}
-      ${isCoach ? `<button class="ghost" style="color:var(--red);font-size:11px;padding:4px 8px;margin-top:6px" onclick="deleteTrainingSessionFor('${s.id}','${playerId}')">Supprimer</button>` : ''}
-    </div>`).join('')}
-  </div>`;
+  const byDay = {};
+  programs.forEach(p => { (byDay[p.day_of_week] = byDay[p.day_of_week]||[]).push(p); });
+  el.innerHTML = JOURS_SEMAINE.map((jour,di) => {
+    const items = byDay[di];
+    if(!items || !items.length) return '';
+    return `
+    <div style="padding:8px 0;border-bottom:.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--gold2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${jour}</div>
+      ${items.map(p => `
+      <div style="padding:2px 0 8px 10px;border-left:2px solid var(--border2);margin-bottom:4px">
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <span style="font-size:13px;color:var(--w)">${(p.title||'').replace(/</g,'&lt;')}</span>
+          ${p.start_time?`<span style="font-size:11px;color:var(--w3);white-space:nowrap">${p.start_time}${p.end_time?'–'+p.end_time:''}</span>`:''}
+        </div>
+        ${p.description ? `<div style="font-size:12px;color:var(--w2);margin-top:3px">${p.description.replace(/</g,'&lt;')}</div>` : ''}
+        ${p.videos?.drive_url ? `<a href="${p.videos.drive_url}" target="_blank" style="font-size:12px;color:var(--gold2);margin-top:3px;display:inline-block">▶ ${(p.videos.title||'Vidéo').replace(/</g,'&lt;')}</a>` : ''}
+        ${isCoach ? `<button class="ghost" style="color:var(--red);font-size:11px;padding:3px 8px;margin-top:4px" onclick="deleteTrainingProgramFor('${p.id}','${playerId}')">Supprimer</button>` : ''}
+      </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
 async function loadPlayerAvailabilityBox(playerId){
@@ -1734,52 +1690,45 @@ async function loadPlayerVideoSelect(){
   }catch(e){ /* champ optionnel */ }
 }
 
-async function addTrainingSessionForPlayer(playerId){
+async function addTrainingProgramForPlayer(playerId){
   const msgEl = document.getElementById('ts-msg');
-  const session_date = document.getElementById('ts-date').value;
+  const days = [];
+  for(let di=0; di<7; di++){
+    const cb = document.getElementById('ts-day-'+di);
+    if(cb && cb.checked) days.push(di);
+  }
   const start_time = document.getElementById('ts-start').value;
   const end_time = document.getElementById('ts-end').value;
   const title = document.getElementById('ts-title').value.trim();
   const description = document.getElementById('ts-desc').value.trim();
   const video_id = document.getElementById('ts-video').value || null;
-  if(!session_date || !title){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent='Date et titre requis.'; } return; }
+  if(!days.length || !title){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent='Choisis au moins un jour et un titre.'; } return; }
   try{
-    await callApi('addTrainingSession', { playerId, session_date, start_time: start_time||null, end_time: end_time||null, title, description: description||null, video_id });
+    await callApi('addTrainingProgram', { playerId, days, start_time: start_time||null, end_time: end_time||null, title, description: description||null, video_id });
     document.getElementById('ts-title').value='';
     document.getElementById('ts-desc').value='';
-    if(msgEl){ msgEl.style.color='var(--green)'; msgEl.textContent='Séance ajoutée !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
-    await loadPlayerSessionsList(playerId);
+    for(let di=0; di<7; di++){ const cb=document.getElementById('ts-day-'+di); if(cb) cb.checked=false; }
+    if(msgEl){ msgEl.style.color='var(--green)'; msgEl.textContent='Entraînement ajouté !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
+    await loadPlayerProgramList(playerId);
   }catch(e){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent = e.message; } }
 }
 
-async function loadPlayerSessionsList(playerId){
+async function loadPlayerProgramList(playerId){
   const el = document.getElementById('player-sessions-list');
   if(!el) return;
   try{
-    const { sessions } = await callApi('getPlayerCalendar', { playerId });
-    CAL_STATE.sessions = sessions||[];
-    const now = new Date();
-    CAL_STATE.year = now.getFullYear();
-    CAL_STATE.month = now.getMonth();
-    el.innerHTML = `<div id="player-cal-grid" class="card"></div><div id="player-cal-day-detail" style="margin-top:10px"></div>`;
-    renderCalendarGrid('player-cal-grid', true, playerId);
+    const { programs } = await callApi('getPlayerProgram', { playerId });
+    renderWeeklyProgram(el, programs||[], true, playerId);
   }catch(e){
-    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger le calendrier.</div></div>`;
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger le programme.</div></div>`;
   }
 }
 
-async function calNavPlayer(delta, playerId){
-  CAL_STATE.month += delta;
-  if(CAL_STATE.month<0){ CAL_STATE.month=11; CAL_STATE.year--; }
-  if(CAL_STATE.month>11){ CAL_STATE.month=0; CAL_STATE.year++; }
-  renderCalendarGrid('player-cal-grid', true, playerId);
-}
-
-async function deleteTrainingSessionFor(sessionId, playerId){
-  if(!confirm('Supprimer cette séance ?')) return;
+async function deleteTrainingProgramFor(programId, playerId){
+  if(!confirm('Supprimer cet entraînement récurrent ?')) return;
   try{
-    await callApi('deleteTrainingSession', { sessionId });
-    await loadPlayerSessionsList(playerId);
+    await callApi('deleteTrainingProgram', { programId });
+    await loadPlayerProgramList(playerId);
   }catch(e){ alert(e.message); }
 }
 
