@@ -517,6 +517,7 @@ async function openLancerFrancEval(playerId) {
 const CHECKLIST_LABELS = {
   '3pts': '3 points après drive',
   '2pts': '2 points',
+  'diagnostic': 'Diagnostic général',
 };
 
 function parseChecklistGrid(rows) {
@@ -598,7 +599,7 @@ async function loadChecklistEval(key, playerId) {
     el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec ton code d'accès pour voir tes données.</div></div>`;
     return;
   }
-  const column = key === '2pts' ? 'sheet_2pts' : 'sheet_3pts';
+  const column = key === '2pts' ? 'sheet_2pts' : key === '3pts' ? 'sheet_3pts' : 'sheet_diagnostic';
   try {
     let sheets;
     try {
@@ -616,7 +617,7 @@ async function loadChecklistEval(key, playerId) {
     } catch (fe) { fe._stage = 'fetch-network'; throw fe; }
     if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
     const text = await res.text();
-    if (key === '2pts' || key === '3pts') {
+    if (key === '2pts' || key === '3pts' || key === 'diagnostic') {
       // Les formats "2 points" et "3 points" utilisent désormais la grille Avant/Après (comme Lancer franc).
       const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
       el.innerHTML = renderLancerFrancEval(etapes, criteres);
@@ -746,8 +747,33 @@ function joueurHTML(){
       </div>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
     </div>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('diagnostic')">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--w)">Diagnostic</div>
+        <div style="font-size:12px;color:var(--w3);margin-top:2px">Posture dribble, défense, course</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openVisionQuiz()">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--w)">Vision de jeu</div>
+        <div style="font-size:12px;color:var(--w3);margin-top:2px">Questionnaire e-learning</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  </div>
+  <div class="sec" style="padding-left:0;padding-top:22px">Calendrier</div>
+  <div class="app-grid-3" style="padding:0">
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openMyCalendar()">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--w)">Mon calendrier</div>
+        <div style="font-size:12px;color:var(--w3);margin-top:2px">Disponibilités et séances programmées</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
   </div>
   <div class="sec" style="padding-left:0;padding-top:22px">Exercices filmés</div>
+
   <div class="app-grid-3" style="padding:0">
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openMyExercises()">
       <div>
@@ -1047,6 +1073,10 @@ async function openPlayerDetail(playerId, playerName) {
         <div><div style="font-size:14px;font-weight:500;color:var(--w)">3 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
       </div>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('diagnostic','${playerId}')">
+        <div><div style="font-size:14px;font-weight:500;color:var(--w)">Diagnostic</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Posture dribble, défense, course</div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
     </div>
 
     <div class="app-grid-2" style="padding:0;margin-top:22px">
@@ -1060,6 +1090,27 @@ async function openPlayerDetail(playerId, playerName) {
       </div>
     </div>
     ${coachNotesShellHTML()}
+    <div class="sec" style="padding-left:0;padding-top:22px">Vision de jeu</div>
+    <div id="player-quiz-results" class="card">Chargement…</div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Disponibilités du joueur</div>
+    <div id="player-availability-box" class="card">Chargement…</div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Ajouter une séance au calendrier</div>
+    <div class="card">
+      <input class="finput" type="date" id="ts-date"/>
+      <div style="display:flex;gap:8px">
+        <input class="finput" type="time" id="ts-start" style="flex:1"/>
+        <input class="finput" type="time" id="ts-end" style="flex:1"/>
+      </div>
+      <input class="finput" id="ts-title" placeholder="Titre de la séance"/>
+      <textarea class="finput" id="ts-desc" rows="2" placeholder="Description (optionnel)" style="resize:vertical"></textarea>
+      <select class="finput" id="ts-video"><option value="">Aucune vidéo de la Biblio</option></select>
+      <div id="ts-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
+      <button class="gbtn full" onclick="addTrainingSessionForPlayer('${playerId}')">Ajouter au calendrier</button>
+    </div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Calendrier du joueur</div>
+    <div id="player-sessions-list">
+      <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
+    </div>
     <div class="sec" style="padding-left:0;padding-top:22px">Exercices filmés</div>
     <div id="coach-exercises-list">
       <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
@@ -1071,7 +1122,12 @@ async function openPlayerDetail(playerId, playerName) {
   await loadPlayerCodeBox(playerId);
   await loadCoachNotes(playerId);
   await loadCoachExercisesList(playerId);
+  await loadPlayerQuizResults(playerId);
+  await loadPlayerAvailabilityBox(playerId);
+  await loadPlayerVideoSelect();
+  await loadPlayerSessionsList(playerId);
 }
+
 
 async function loadCoachExercisesList(playerId){
   const el = document.getElementById('coach-exercises-list');
@@ -1175,6 +1231,8 @@ async function loadPlayerSheetsForm(playerId) {
       <input class="finput" id="edit-sheet-2pts" value="${sheets?.sheet_2pts || ''}" placeholder="URL CSV publiée…"/>
       <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien 3 points</div>
       <input class="finput" id="edit-sheet-3pts" value="${sheets?.sheet_3pts || ''}" placeholder="URL CSV publiée…"/>
+      <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Lien Diagnostic</div>
+      <input class="finput" id="edit-sheet-diagnostic" value="${sheets?.sheet_diagnostic || ''}" placeholder="URL CSV publiée…"/>
       <div id="sheets-save-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
       <button class="gbtn full" onclick="savePlayerSheets('${playerId}')">Enregistrer les liens</button>
     `;
@@ -1187,10 +1245,13 @@ async function savePlayerSheets(playerId) {
   const sheet_lf = document.getElementById('edit-sheet-lf').value.trim();
   const sheet_2pts = document.getElementById('edit-sheet-2pts').value.trim();
   const sheet_3pts = document.getElementById('edit-sheet-3pts').value.trim();
+  const sheet_diagnostic = document.getElementById('edit-sheet-diagnostic').value.trim();
   const msgEl = document.getElementById('sheets-save-msg');
   try {
-    await callApi('updatePlayerSheets', { playerId, sheet_lf, sheet_2pts, sheet_3pts });
+    await callApi('updatePlayerSheets', { playerId, sheet_lf, sheet_2pts, sheet_3pts, sheet_diagnostic });
   } catch(e) { alert(e.message); return; }
+  if (msgEl) { msgEl.textContent = 'Liens enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; }, 2500); }
+
   if (msgEl) { msgEl.textContent = 'Liens enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; }, 2500); }
 }
 
@@ -1327,7 +1388,403 @@ async function deleteVideo(id){
   } catch(e) { alert(e.message); }
 }
 
+/* ═══ VISION DE JEU — questionnaire e-learning ═══ */
+const QUIZ_STATE = { questions: [], answers: {} };
+let QUIZ_EDIT_STATE = { questions: [] };
+
+function quizOptionLetter(i){ return String.fromCharCode(65+i); }
+
+async function openVisionQuiz(){
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Vision de jeu</div>
+    </div>
+    <div id="vision-quiz-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement du questionnaire…</div>
+  `;
+  await loadVisionQuiz();
+}
+
+async function loadVisionQuiz(){
+  const el = document.getElementById('vision-quiz-section');
+  if(!el) return;
+  try{
+    const { questions } = await callApi('getQuizForPlayer', {});
+    if(!questions || !questions.length){
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune question disponible pour l'instant.</div></div>`;
+      return;
+    }
+    QUIZ_STATE.questions = questions;
+    QUIZ_STATE.answers = {};
+    el.innerHTML = `
+      <div class="sec" style="padding-left:0;padding-top:0">Questionnaire (${questions.length} questions)</div>
+      ${questions.map((q,qi) => `
+      <div class="card">
+        <div style="font-size:13px;color:var(--w);margin-bottom:10px">${qi+1}. ${(q.question||'').replace(/</g,'&lt;')}</div>
+        ${(q.options||[]).map((opt,oi) => `
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;font-size:12px;color:var(--w2)">
+          <input type="radio" name="quiz-q-${q.id}" value="${oi}" onchange="QUIZ_STATE.answers['${q.id}']=${oi}"/>
+          ${quizOptionLetter(oi)}. ${(opt||'').replace(/</g,'&lt;')}
+        </label>`).join('')}
+      </div>`).join('')}
+      <div id="vision-quiz-msg" style="font-size:12px;color:var(--red);margin-bottom:8px"></div>
+      <button class="gbtn full" onclick="submitVisionQuiz()">Valider mes réponses</button>
+      <div style="height:24px"></div>
+    `;
+  }catch(e){
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger le questionnaire.</div></div>`;
+  }
+}
+
+async function submitVisionQuiz(){
+  const msgEl = document.getElementById('vision-quiz-msg');
+  if(Object.keys(QUIZ_STATE.answers).length < QUIZ_STATE.questions.length){
+    if(msgEl) msgEl.textContent = 'Réponds à toutes les questions avant de valider.';
+    return;
+  }
+  try{
+    const { score, total } = await callApi('submitQuizAttempt', { answers: QUIZ_STATE.answers });
+    document.getElementById('vision-quiz-section').innerHTML = `
+      <div class="card" style="text-align:center;padding:28px 14px">
+        <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Résultat</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--gold2)">${score} / ${total}</div>
+      </div>
+      <button class="ghost full" style="margin-top:14px" onclick="openVisionQuiz()">Recommencer</button>
+      <div style="height:24px"></div>
+    `;
+  }catch(e){ if(msgEl) msgEl.textContent = e.message; }
+}
+
+async function loadPlayerQuizResults(playerId){
+  const el = document.getElementById('player-quiz-results');
+  if(!el) return;
+  try{
+    const { attempts } = await callApi('getPlayerQuizResults', { playerId });
+    if(!attempts || !attempts.length){
+      el.innerHTML = `<div style="font-size:12px;color:var(--w3)">Ce joueur n'a pas encore répondu au questionnaire.</div>`;
+      return;
+    }
+    el.innerHTML = attempts.map(a => {
+      const d = new Date(a.created_at);
+      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:.5px solid var(--border);font-size:12px">
+        <span style="color:var(--w2)">${dateStr}</span>
+        <span style="color:var(--gold2)">${a.score} / ${a.total}</span>
+      </div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger les résultats.</div>`;
+  }
+}
+
+function openQuizEditor(){
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <button onclick="nav('profil')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Questionnaire · Vision de jeu</div>
+    </div>
+    <div id="quiz-editor-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement…</div>
+  `;
+  loadQuizEditor();
+}
+
+async function loadQuizEditor(){
+  const el = document.getElementById('quiz-editor-section');
+  if(!el) return;
+  try{
+    const { questions } = await callApi('getQuizQuestions', {});
+    QUIZ_EDIT_STATE.questions = (questions||[]).map(q => ({ question: q.question, options: q.options, correct_index: q.correct_index }));
+    renderQuizEditor();
+  }catch(e){
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les questions.</div></div>`;
+  }
+}
+
+function renderQuizEditor(){
+  const el = document.getElementById('quiz-editor-section');
+  if(!el) return;
+  const qs = QUIZ_EDIT_STATE.questions;
+  el.innerHTML = `
+    <div style="font-size:11px;color:var(--w3);line-height:1.5;margin:0 0 12px">Rédige les questions du QCM "Vision de jeu". Sélectionne la bonne réponse pour chaque question.</div>
+    ${qs.map((q,qi) => `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.6px">Question ${qi+1}</div>
+        <button class="ghost" style="color:var(--red);font-size:11px;padding:4px 8px" onclick="quizEditorRemoveQuestion(${qi})">Supprimer</button>
+      </div>
+      <textarea class="finput" rows="2" style="resize:vertical" placeholder="Énoncé de la question" oninput="quizEditorUpdateField(${qi},'question',this.value)">${(q.question||'').replace(/</g,'&lt;')}</textarea>
+      ${q.options.map((opt,oi) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <input type="radio" name="correct-${qi}" ${q.correct_index===oi?'checked':''} onchange="quizEditorUpdateField(${qi},'correct_index',${oi})"/>
+        <input class="finput" style="margin:0" value="${(opt||'').replace(/</g,'&lt;')}" placeholder="Option ${quizOptionLetter(oi)}" oninput="quizEditorUpdateOption(${qi},${oi},this.value)"/>
+        ${q.options.length>2 ? `<button class="ghost" style="padding:4px 8px;font-size:11px" onclick="quizEditorRemoveOption(${qi},${oi})">✕</button>` : ''}
+      </div>`).join('')}
+      <button class="ghost" style="font-size:11px;padding:6px 10px" onclick="quizEditorAddOption(${qi})">+ Option</button>
+    </div>`).join('')}
+    <button class="ghost full" onclick="quizEditorAddQuestion()">+ Ajouter une question</button>
+    <div id="quiz-editor-msg" style="font-size:12px;color:var(--green);margin:10px 0 6px"></div>
+    <button class="gbtn full" onclick="saveQuizEditor()">Enregistrer le questionnaire</button>
+    <div style="height:24px"></div>
+  `;
+}
+
+function quizEditorAddQuestion(){
+  QUIZ_EDIT_STATE.questions.push({ question:'', options:['',''], correct_index:0 });
+  renderQuizEditor();
+}
+function quizEditorRemoveQuestion(qi){
+  QUIZ_EDIT_STATE.questions.splice(qi,1);
+  renderQuizEditor();
+}
+function quizEditorUpdateField(qi, field, value){
+  QUIZ_EDIT_STATE.questions[qi][field] = value;
+}
+function quizEditorUpdateOption(qi, oi, value){
+  QUIZ_EDIT_STATE.questions[qi].options[oi] = value;
+}
+function quizEditorAddOption(qi){
+  QUIZ_EDIT_STATE.questions[qi].options.push('');
+  renderQuizEditor();
+}
+function quizEditorRemoveOption(qi, oi){
+  const q = QUIZ_EDIT_STATE.questions[qi];
+  q.options.splice(oi,1);
+  if(q.correct_index>=q.options.length) q.correct_index = 0;
+  renderQuizEditor();
+}
+
+async function saveQuizEditor(){
+  const msgEl = document.getElementById('quiz-editor-msg');
+  const questions = QUIZ_EDIT_STATE.questions.filter(q => (q.question||'').trim() && q.options.every(o=>(o||'').trim()));
+  try{
+    await callApi('saveQuizQuestions', { questions });
+    if(msgEl){ msgEl.textContent='Questionnaire enregistré !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
+  }catch(e){ alert(e.message); }
+}
+
+/* ═══ CALENDRIER — disponibilités du joueur + séances programmées par le coach ═══ */
+const JOURS_SEMAINE = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+const CAL_STATE = { year:0, month:0, sessions:[] };
+
+async function openMyCalendar(){
+  const now = new Date();
+  CAL_STATE.year = now.getFullYear();
+  CAL_STATE.month = now.getMonth();
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Mon calendrier</div>
+    </div>
+    <div class="sec" style="padding-left:0;padding-top:18px">Mes disponibilités</div>
+    <div id="my-availability-box" class="card">Chargement…</div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Séances programmées</div>
+    <div id="my-calendar-grid" class="card">Chargement…</div>
+    <div id="my-calendar-day-detail" style="margin-top:10px"></div>
+    <div style="height:24px"></div>
+  `;
+  await loadMyAvailabilityBox();
+  await loadMyCalendarGrid();
+}
+
+async function loadMyAvailabilityBox(){
+  const el = document.getElementById('my-availability-box');
+  if(!el) return;
+  try{
+    const { slots } = await callApi('getPlayerAvailability', {});
+    const byDay = {};
+    (slots||[]).forEach(s => { byDay[s.day_of_week] = s; });
+    el.innerHTML = JOURS_SEMAINE.map((jour,di) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid var(--border)">
+        <div style="width:80px;font-size:12px;color:var(--w2)">${jour}</div>
+        <input class="finput" type="time" style="margin:0;flex:1" id="avail-start-${di}" value="${byDay[di]?.start_time||''}"/>
+        <span style="color:var(--w3);font-size:12px">à</span>
+        <input class="finput" type="time" style="margin:0;flex:1" id="avail-end-${di}" value="${byDay[di]?.end_time||''}"/>
+      </div>`).join('') + `
+      <div id="avail-msg" style="font-size:12px;color:var(--green);margin:8px 0 0"></div>
+      <button class="gbtn full" style="margin-top:10px" onclick="saveMyAvailability()">Enregistrer mes disponibilités</button>
+    `;
+  }catch(e){
+    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger tes disponibilités.</div>`;
+  }
+}
+
+async function saveMyAvailability(){
+  const msgEl = document.getElementById('avail-msg');
+  const slots = [];
+  for(let di=0; di<7; di++){
+    const start = document.getElementById('avail-start-'+di).value;
+    const end = document.getElementById('avail-end-'+di).value;
+    if(start && end) slots.push({ day_of_week: di, start_time: start, end_time: end });
+  }
+  try{
+    await callApi('setMyAvailability', { slots });
+    if(msgEl){ msgEl.textContent='Disponibilités enregistrées !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
+  }catch(e){ alert(e.message); }
+}
+
+async function loadMyCalendarGrid(){
+  const el = document.getElementById('my-calendar-grid');
+  if(!el) return;
+  try{
+    const { sessions } = await callApi('getPlayerCalendar', {});
+    CAL_STATE.sessions = sessions||[];
+    renderCalendarGrid('my-calendar-grid', false, null);
+  }catch(e){
+    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger le calendrier.</div>`;
+  }
+}
+
+function calMonthLabel(y,m){
+  return new Date(y,m,1).toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+}
+
+function renderCalendarGrid(targetElId, isCoach, playerId){
+  const el = document.getElementById(targetElId);
+  if(!el) return;
+  const y = CAL_STATE.year, m = CAL_STATE.month;
+  const first = new Date(y,m,1);
+  const startOffset = (first.getDay()+6)%7;
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const sessionsByDate = {};
+  CAL_STATE.sessions.forEach(s => { (sessionsByDate[s.session_date] = sessionsByDate[s.session_date]||[]).push(s); });
+  const navPrev = isCoach ? `calNavPlayer(-1,'${playerId}')` : `calNavMy(-1)`;
+  const navNext = isCoach ? `calNavPlayer(1,'${playerId}')` : `calNavMy(1)`;
+  let cells = '';
+  for(let i=0;i<startOffset;i++) cells += `<div></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const has = sessionsByDate[dateStr];
+    const clickFn = isCoach ? `showCalDay('${dateStr}',true,'${playerId}')` : `showCalDay('${dateStr}',false,null)`;
+    cells += `<div onclick="${clickFn}" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--r8);cursor:pointer;font-size:12px;color:var(--w2);${has?'background:var(--gold4);color:var(--gold2)':''}">
+      ${d}${has?`<div style="width:4px;height:4px;border-radius:50%;background:var(--gold2);margin-top:2px"></div>`:''}
+    </div>`;
+  }
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button class="ghost" style="padding:4px 10px" onclick="${navPrev}">‹</button>
+      <div style="font-size:13px;color:var(--w);text-transform:capitalize">${calMonthLabel(y,m)}</div>
+      <button class="ghost" style="padding:4px 10px" onclick="${navNext}">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:10px;color:var(--w3);text-align:center;margin-bottom:4px">
+      ${['L','M','M','J','V','S','D'].map(d=>`<div>${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>
+  `;
+}
+
+async function calNavMy(delta){
+  CAL_STATE.month += delta;
+  if(CAL_STATE.month<0){ CAL_STATE.month=11; CAL_STATE.year--; }
+  if(CAL_STATE.month>11){ CAL_STATE.month=0; CAL_STATE.year++; }
+  renderCalendarGrid('my-calendar-grid', false, null);
+}
+
+function showCalDay(dateStr, isCoach, playerId){
+  const targetId = isCoach ? 'player-cal-day-detail' : 'my-calendar-day-detail';
+  const el = document.getElementById(targetId);
+  if(!el) return;
+  const sessions = CAL_STATE.sessions.filter(s => s.session_date===dateStr);
+  const dateLabel = new Date(dateStr+'T00:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+  if(!sessions.length){
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3);text-transform:capitalize">${dateLabel}</div><div style="font-size:12px;color:var(--w3);margin-top:6px">Aucune séance ce jour-là.</div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card">
+    <div style="font-size:12px;color:var(--w3);text-transform:capitalize;margin-bottom:8px">${dateLabel}</div>
+    ${sessions.map(s => `
+    <div style="padding:8px 0;border-top:.5px solid var(--border)">
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-size:13px;color:var(--w)">${(s.title||'').replace(/</g,'&lt;')}</span>
+        ${s.start_time?`<span style="font-size:11px;color:var(--w3)">${s.start_time}${s.end_time?'–'+s.end_time:''}</span>`:''}
+      </div>
+      ${s.description ? `<div style="font-size:12px;color:var(--w2);margin-top:4px">${s.description.replace(/</g,'&lt;')}</div>` : ''}
+      ${s.videos?.drive_url ? `<a href="${s.videos.drive_url}" target="_blank" style="font-size:12px;color:var(--gold2);margin-top:4px;display:inline-block">▶ ${(s.videos.title||'Vidéo').replace(/</g,'&lt;')}</a>` : ''}
+      ${isCoach ? `<button class="ghost" style="color:var(--red);font-size:11px;padding:4px 8px;margin-top:6px" onclick="deleteTrainingSessionFor('${s.id}','${playerId}')">Supprimer</button>` : ''}
+    </div>`).join('')}
+  </div>`;
+}
+
+async function loadPlayerAvailabilityBox(playerId){
+  const el = document.getElementById('player-availability-box');
+  if(!el) return;
+  try{
+    const { slots } = await callApi('getPlayerAvailability', { playerId });
+    if(!slots || !slots.length){
+      el.innerHTML = `<div style="font-size:12px;color:var(--w3)">Ce joueur n'a pas encore renseigné ses disponibilités.</div>`;
+      return;
+    }
+    const byDay = {};
+    slots.forEach(s => { byDay[s.day_of_week]=s; });
+    el.innerHTML = JOURS_SEMAINE.map((jour,di) => byDay[di] ? `
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--border);font-size:12px">
+        <span style="color:var(--w2)">${jour}</span>
+        <span style="color:var(--w3)">${byDay[di].start_time} – ${byDay[di].end_time}</span>
+      </div>` : '').join('');
+  }catch(e){
+    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger les disponibilités.</div>`;
+  }
+}
+
+async function loadPlayerVideoSelect(){
+  const el = document.getElementById('ts-video');
+  if(!el) return;
+  try{
+    const { videos } = await callApi('listVideos', { category:'Tous' });
+    el.innerHTML = `<option value="">Aucune vidéo de la Biblio</option>` + (videos||[]).map(v => `<option value="${v.id}">${(v.title||'').replace(/</g,'&lt;')}</option>`).join('');
+  }catch(e){ /* champ optionnel */ }
+}
+
+async function addTrainingSessionForPlayer(playerId){
+  const msgEl = document.getElementById('ts-msg');
+  const session_date = document.getElementById('ts-date').value;
+  const start_time = document.getElementById('ts-start').value;
+  const end_time = document.getElementById('ts-end').value;
+  const title = document.getElementById('ts-title').value.trim();
+  const description = document.getElementById('ts-desc').value.trim();
+  const video_id = document.getElementById('ts-video').value || null;
+  if(!session_date || !title){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent='Date et titre requis.'; } return; }
+  try{
+    await callApi('addTrainingSession', { playerId, session_date, start_time: start_time||null, end_time: end_time||null, title, description: description||null, video_id });
+    document.getElementById('ts-title').value='';
+    document.getElementById('ts-desc').value='';
+    if(msgEl){ msgEl.style.color='var(--green)'; msgEl.textContent='Séance ajoutée !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
+    await loadPlayerSessionsList(playerId);
+  }catch(e){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent = e.message; } }
+}
+
+async function loadPlayerSessionsList(playerId){
+  const el = document.getElementById('player-sessions-list');
+  if(!el) return;
+  try{
+    const { sessions } = await callApi('getPlayerCalendar', { playerId });
+    CAL_STATE.sessions = sessions||[];
+    const now = new Date();
+    CAL_STATE.year = now.getFullYear();
+    CAL_STATE.month = now.getMonth();
+    el.innerHTML = `<div id="player-cal-grid" class="card"></div><div id="player-cal-day-detail" style="margin-top:10px"></div>`;
+    renderCalendarGrid('player-cal-grid', true, playerId);
+  }catch(e){
+    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger le calendrier.</div></div>`;
+  }
+}
+
+async function calNavPlayer(delta, playerId){
+  CAL_STATE.month += delta;
+  if(CAL_STATE.month<0){ CAL_STATE.month=11; CAL_STATE.year--; }
+  if(CAL_STATE.month>11){ CAL_STATE.month=0; CAL_STATE.year++; }
+  renderCalendarGrid('player-cal-grid', true, playerId);
+}
+
+async function deleteTrainingSessionFor(sessionId, playerId){
+  if(!confirm('Supprimer cette séance ?')) return;
+  try{
+    await callApi('deleteTrainingSession', { sessionId });
+    await loadPlayerSessionsList(playerId);
+  }catch(e){ alert(e.message); }
+}
+
 /* ═══ CRITÈRES IA (réglage coach, utilisés pour le premier avis sur les vidéos) ═══ */
+
 async function loadAiCriteria(){
   const el = document.getElementById('ai-criteria-input');
   if(!el) return;
@@ -1373,8 +1830,17 @@ function profilHTML(){
     <textarea class="finput" id="ai-criteria-input" rows="8" style="resize:vertical" placeholder="Chargement…"></textarea>
     <div id="ai-criteria-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
     <button class="gbtn full" onclick="saveAiCriteria()">Enregistrer les critères</button>
+  </div>
+  <div class="sec" style="padding-left:0;padding-top:22px">Vision de jeu</div>
+  <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="openQuizEditor()">
+    <div>
+      <div style="font-size:14px;font-weight:500;color:var(--w)">Questionnaire e-learning</div>
+      <div style="font-size:12px;color:var(--w3);margin-top:2px">Gérer les questions du QCM</div>
+    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
   </div>` : ''}
   <div class="sec" style="padding-left:0;padding-top:22px">Compte</div>
+
   <div class="app-grid-2" style="padding:0">
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;border-color:var(--red-bg)" onclick="handleLogout()">
       <span style="font-size:14px;color:var(--red)">Déconnexion</span>
