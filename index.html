@@ -203,8 +203,324 @@ async function extractVideoFrames(url, count = 4){
   return frames;
 }
 
-const APP_STATE = { authenticated:false, role:null, userId:null, user:null, code:null };
+const APP_STATE = { authenticated:false, role:null, userId:null, user:null, code:null, language:null };
 const CURRENT = { screen:'suivi', suivi:'joueur' };
+
+/* ==========================================================
+   I18N — dictionnaire FR->EN appliqué en post-traitement sur
+   tout innerHTML / textContent assigné pendant que
+   APP_STATE.language === 'en'. Les Google Sheets (fiches
+   d'évaluation) restent en français, hors périmètre.
+========================================================== */
+const I18N_DICT = {
+  // Nav
+  "Suivi ": "Tracked ",
+  "Suivi": "Tracking",
+  "Biblio": "Library",
+  "Profil": "Profile",
+  "Bibliothèque": "Library",
+  // Access screen
+  "Entre ton code d'accès": "Enter your access code",
+  "Ex: J52WZY": "e.g. J52WZY",
+  "Entrer": "Enter",
+  "Le code doit contenir 6 caractères.": "The code must contain 6 characters.",
+  "Vérification…": "Checking…",
+  "Code invalide. Vérifie et réessaie.": "Invalid code. Check it and try again.",
+  // Generic loading / states
+  "Chargement des données…": "Loading data…",
+  "Chargement des joueurs…": "Loading players…",
+  "Chargement des vidéos…": "Loading videos…",
+  "Chargement de la vidéo…": "Loading video…",
+  "Chargement…": "Loading…",
+  // Suivi joueur
+  "Évaluation technique · Lancer franc": "Technical evaluation · Free throw",
+  "Évaluation technique · ": "Technical evaluation · ",
+  "Évaluation technique": "Technical evaluation",
+  "Lancer franc": "Free throw",
+  "Radar, notes et commentaires": "Radar, scores and comments",
+  "Posture dribble, défense, course": "Dribble posture, defense, running form",
+  "Diagnostic général": "General diagnostic",
+  "Vision de jeu": "Game vision",
+  "Questionnaire e-learning": "E-learning quiz",
+  "Calendrier": "Calendar",
+  "Mon calendrier": "My calendar",
+  "Disponibilités et séances programmées": "Availability and scheduled sessions",
+  "Exercices filmés": "Filmed exercises",
+  "Mes vidéos": "My videos",
+  "Filme-toi et envoie au coach": "Film yourself and send it to your coach",
+  "3 points après drive": "3-pointers after drive",
+  "2 points": "2-pointers",
+  "3 points": "3-pointers",
+  // My exercises
+  "Mes exercices filmés": "My filmed exercises",
+  "Envoyer une nouvelle vidéo": "Send a new video",
+  "Nom de l'exercice (ex: Tir en course)": "Exercise name (e.g. Shot on the move)",
+  "Note pour le coach (optionnel)": "Note for your coach (optional)",
+  "Vidéo visible uniquement par toi et ton coach. 50 Mo max.": "Video visible only to you and your coach. 50 MB max.",
+  "Envoyer la vidéo": "Send video",
+  "Mes envois": "My submissions",
+  "Nom de l'exercice requis.": "Exercise name required.",
+  "Sélectionne ou filme une vidéo.": "Select or film a video.",
+  "Vidéo trop lourde (50 Mo max).": "Video too large (50 MB max).",
+  "Envoi en cours…": "Sending…",
+  "Aucune vidéo envoyée pour l'instant.": "No videos sent yet.",
+  "Corrigé": "Reviewed",
+  "En attente": "Pending",
+  "Premier avis IA": "First AI review",
+  "Retour du coach :": "Coach feedback:",
+  "▶ Revoir ma vidéo": "▶ Watch my video",
+  "Supprimer cette vidéo ?": "Delete this video?",
+  "Impossible de charger tes vidéos.": "Couldn't load your videos.",
+  "Vidéo de l'exercice": "Exercise video",
+  // Coach dashboard
+  "Vue d'ensemble": "Overview",
+  "Liste joueurs": "Player list",
+  "+ Ajouter un joueur": "+ Add a player",
+  "Connecte-toi avec ton code coach pour voir tes joueurs.": "Log in with your coach code to see your players.",
+  "Aucun joueur rattaché pour l'instant. Ajoute ton premier joueur ci-dessous.": "No players linked yet. Add your first player below.",
+  "Joueur": "Player",
+  "Sans lien Sheets": "Missing Sheets link",
+  "Sans suivi (14j+)": "No notes (14d+)",
+  "Vidéos à corriger": "Videos to review",
+  "Aucun suivi": "No notes",
+  "Sheets à configurer": "Sheets to configure",
+  "Impossible de charger la liste des joueurs.": "Couldn't load the player list.",
+  // Add player
+  "Ajouter un joueur": "Add a player",
+  "Prénom": "First name",
+  "Nom": "Last name",
+  "Poste (ex: Ailier)": "Position (e.g. Forward)",
+  "Niveau (ex: U18)": "Level (e.g. U18)",
+  "Créer le joueur": "Create player",
+  "Prénom et nom requis.": "First and last name required.",
+  "Joueur créé": "Player created",
+  " — code d'accès :": " — access code:",
+  "Lien direct (pré-remplit le code) :": "Direct link (pre-fills the code):",
+  "Copier le lien": "Copy link",
+  "Lien copié !": "Link copied!",
+  "Fermer": "Close",
+  // Player detail
+  "Code d'accès": "Access code",
+  "Liens Google Sheets": "Google Sheets links",
+  "Suivi coach": "Coach notes",
+  "Disponibilités du joueur": "Player availability",
+  "Ajouter un entraînement récurrent": "Add a recurring training session",
+  "Sélectionne le ou les jours où cet entraînement doit se répéter chaque semaine.": "Select the day(s) this training should repeat each week.",
+  "Titre de l'entraînement": "Training title",
+  "Description (optionnel)": "Description (optional)",
+  "Aucune vidéo de la Biblio": "No video from the Library",
+  "Ajouter au programme": "Add to program",
+  "Programme d'entraînement du joueur": "Player's training program",
+  "Impossible de charger le code d'accès.": "Couldn't load the access code.",
+  // Sheets links form
+  "Lien Lancer franc": "Free throw link",
+  "Lien 2 points": "2 points link",
+  "Lien 3 points": "3 points link",
+  "Lien Diagnostic": "Diagnostic link",
+  "URL CSV publiée…": "Published CSV URL…",
+  "Enregistrer les liens": "Save links",
+  "Liens enregistrés !": "Links saved!",
+  "Impossible de charger les liens de ce joueur.": "Couldn't load this player's links.",
+  // Coach notes
+  "Diagnostic après entraînement…": "Notes after training…",
+  "Ajouter le diagnostic": "Add note",
+  "Aucun diagnostic enregistré pour l'instant.": "No notes recorded yet.",
+  "Supprimer ce diagnostic ?": "Delete this note?",
+  "Impossible de charger le suivi coach.": "Couldn't load coach notes.",
+  // Coach exercise review
+  "Aucune vidéo envoyée par ce joueur pour l'instant.": "This player hasn't sent any videos yet.",
+  "Note du joueur :": "Player's note:",
+  "▶ Voir la vidéo": "▶ Watch video",
+  "Relancer l'analyse": "Re-run analysis",
+  "✨ Analyser avec l'IA": "✨ Analyze with AI",
+  "Feedback pour le joueur…": "Feedback for the player…",
+  "Mettre à jour": "Update",
+  "Marquer comme corrigé": "Mark as reviewed",
+  "Impossible de charger les vidéos.": "Couldn't load the videos.",
+  "Analyse en cours… (extraction des images puis appel IA)": "Analyzing… (extracting frames, then calling the AI)",
+  // Biblio
+  "+ Ajouter une vidéo": "+ Add a video",
+  "Tous": "All",
+  "Tir": "Shooting",
+  "Dribble": "Dribbling",
+  "Finition": "Finishing",
+  "Défense": "Defense",
+  "Physique": "Fitness",
+  "Autre": "Other",
+  " Ajoute ta première vidéo avec le bouton ci-dessus.": " Add your first video with the button above.",
+  " dans la catégorie « ": " in the “",
+  " »": "” category",
+  " pour l'instant.": " yet.",
+  "Aucune vidéo": "No videos",
+  "Ouvrir dans Google Drive ↗": "Open in Google Drive ↗",
+  "Lien Google Drive non reconnu. Vérifie qu'il ressemble à https://drive.google.com/file/d/…/view": "Google Drive link not recognized. Make sure it looks like https://drive.google.com/file/d/…/view",
+  "Ajouter une vidéo": "Add a video",
+  "Titre (ex: Crossover explosion)": "Title (e.g. Explosive crossover)",
+  "Lien Google Drive de la vidéo…": "Video's Google Drive link…",
+  "Dans Drive : clic droit sur la vidéo → Partager → Accès général : « Tous les utilisateurs qui ont le lien » → Copier le lien. Sans ça, les joueurs ne pourront pas la lire.": "In Drive: right-click the video → Share → General access: “Anyone with the link” → Copy link. Without this, players won't be able to watch it.",
+  "Le titre est requis.": "Title is required.",
+  "Colle un lien Google Drive valide (https://drive.google.com/file/d/…).": "Paste a valid Google Drive link (https://drive.google.com/file/d/…).",
+  "Supprimer cette vidéo de la bibliothèque ? (le fichier reste dans ton Drive)": "Remove this video from the library? (the file stays in your Drive)",
+  "Ajouter la vidéo": "Add video",
+  // Vision de jeu (quiz)
+  "Chargement du questionnaire…": "Loading quiz…",
+  "Aucune question disponible pour l'instant.": "No questions available yet.",
+  "Questionnaire (${questions.length} questions)": "Quiz (${questions.length} questions)",
+  "Valider mes réponses": "Submit my answers",
+  "Réponds à toutes les questions avant de valider.": "Answer all questions before submitting.",
+  "Résultat": "Result",
+  "Recommencer": "Try again",
+  "Impossible de charger le questionnaire.": "Couldn't load the quiz.",
+  "Ce joueur n'a pas encore répondu au questionnaire.": "This player hasn't taken the quiz yet.",
+  "Impossible de charger les résultats.": "Couldn't load results.",
+  "Questionnaire · Vision de jeu": "Quiz · Game vision",
+  "Rédige les questions du QCM \"Vision de jeu\". Sélectionne la bonne réponse pour chaque question.": "Write the questions for the \"Game vision\" quiz. Select the correct answer for each question.",
+  "Question ": "Question ",
+  "Supprimer": "Delete",
+  "Énoncé de la question": "Question text",
+  "Option ": "Option ",
+  "+ Option": "+ Option",
+  "+ Ajouter une question": "+ Add a question",
+  "Questionnaire enregistré !": "Quiz saved!",
+  "Enregistrer le questionnaire": "Save quiz",
+  "Impossible de charger les questions.": "Couldn't load the questions.",
+  // Calendar
+  "Lundi": "Monday",
+  "Mardi": "Tuesday",
+  "Mercredi": "Wednesday",
+  "Jeudi": "Thursday",
+  "Vendredi": "Friday",
+  "Samedi": "Saturday",
+  "Dimanche": "Sunday",
+  "Mes disponibilités": "My availability",
+  "Mon programme d'entraînement": "My training program",
+  ">à<": ">to<",
+  "Enregistrer mes disponibilités": "Save my availability",
+  "Disponibilités enregistrées !": "Availability saved!",
+  "Impossible de charger tes disponibilités.": "Couldn't load your availability.",
+  "Aucun entraînement programmé pour ce joueur.": "No training scheduled for this player.",
+  "Ton coach n'a pas encore programmé d'entraînement.": "Your coach hasn't scheduled any training yet.",
+  "Impossible de charger le programme.": "Couldn't load the program.",
+  "Ce joueur n'a pas encore renseigné ses disponibilités.": "This player hasn't set their availability yet.",
+  "Impossible de charger les disponibilités.": "Couldn't load availability.",
+  "Choisis au moins un jour et un titre.": "Choose at least one day and a title.",
+  "Entraînement ajouté !": "Training added!",
+  "Supprimer cet entraînement récurrent ?": "Delete this recurring training?",
+  // AI criteria
+  "Critères d'analyse IA": "AI analysis criteria",
+  "Ces critères servent de grille de lecture à l'IA pour son premier avis sur les vidéos de tes joueurs. Modifie-les pour refléter ton style de coaching.": "These criteria act as a reading grid for the AI's first review of your players' videos. Edit them to reflect your coaching style.",
+  "Enregistrer les critères": "Save criteria",
+  "Critères enregistrés !": "Criteria saved!",
+  "Impossible de charger les critères.": "Couldn't load the criteria.",
+  "Gérer les questions du QCM": "Manage the quiz questions",
+  // Profil
+  "Mon code d'accès": "My access code",
+  "Compte": "Account",
+  "Déconnexion": "Log out",
+  "Langue": "Language",
+  "Coach": "Coach",
+  // Server-side error strings (mirrored from the Edge Function, shown via e.message)
+  "Accès refusé.": "Access denied.",
+  "Code invalide.": "Invalid code.",
+  "Code invalide ou expiré.": "Invalid or expired code.",
+  "Joueur introuvable.": "Player not found.",
+  "Vidéo introuvable.": "Video not found.",
+  "Entraînement introuvable.": "Training session not found.",
+  "Action inconnue.": "Unknown action.",
+  "Titre et lien requis.": "Title and link required.",
+  "Note vide.": "Note is empty.",
+  "Format de disponibilités invalide.": "Invalid availability format.",
+  "Chaque créneau doit avoir un jour, une heure de début et de fin.": "Each slot must have a day, a start time, and an end time.",
+  "Joueur, jour(s) et titre requis.": "Player, day(s), and title required.",
+  "Jour de la semaine invalide.": "Invalid day of week.",
+  "Liste de questions invalide.": "Invalid question list.",
+  "Chaque question doit avoir un énoncé, au moins 2 options et une réponse correcte.": "Each question must have text, at least 2 options, and a correct answer.",
+  "Réponses manquantes.": "Answers missing.",
+  "Aucun coach associé.": "No coach linked.",
+  "Aucune question disponible.": "No questions available.",
+  "Données insuffisantes pour lancer une analyse.": "Not enough data to run an analysis.",
+  "Maximum 6 images autorisées.": "Maximum 6 images allowed.",
+  "Clé Anthropic non configurée côté serveur.": "Anthropic key not configured on the server.",
+  "Impossible de contacter le service IA.": "Couldn't reach the AI service.",
+  "Erreur du service IA.": "AI service error.",
+  "Réponse IA vide.": "Empty AI response.",
+  "Langue invalide.": "Invalid language.",
+  "Méthode non autorisée.": "Method not allowed.",
+  "Corps de requête invalide.": "Invalid request body.",
+  "Action manquante.": "Missing action.",
+};
+
+// Trier les clés par longueur décroissante pour que les phrases longues et
+// spécifiques soient remplacées avant les fragments génériques plus courts.
+const I18N_ENTRIES = Object.entries(I18N_DICT).sort((a, b) => b[0].length - a[0].length);
+
+function tr(str) {
+  if (APP_STATE.language !== 'en' || typeof str !== 'string' || !str) return str;
+  let out = str;
+  for (const [fr, en] of I18N_ENTRIES) {
+    if (out.indexOf(fr) !== -1) out = out.split(fr).join(en);
+  }
+  return out;
+}
+
+// Traduction transparente de tout innerHTML / textContent assigné pendant
+// que la langue active est l'anglais — couvre l'intégralité de l'app sans
+// devoir modifier chaque site d'affectation individuellement.
+(function () {
+  const ihDesc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  Object.defineProperty(Element.prototype, 'innerHTML', {
+    configurable: true,
+    enumerable: true,
+    get: function () { return ihDesc.get.call(this); },
+    set: function (html) { ihDesc.set.call(this, tr(html)); },
+  });
+  const tcDesc = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+  Object.defineProperty(Node.prototype, 'textContent', {
+    configurable: true,
+    enumerable: true,
+    get: function () { return tcDesc.get.call(this); },
+    set: function (text) { tcDesc.set.call(this, tr(text)); },
+  });
+})();
+
+function LOCALE() { return APP_STATE.language === 'en' ? 'en-US' : 'fr-FR'; }
+
+/* ============ CHOIX DE LA LANGUE (première connexion) ============ */
+function languageChoiceHTML() {
+  return `
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);max-width:420px;margin:0 auto;padding:24px">
+    <div style="width:52px;height:52px;border-radius:14px;background:var(--gold3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.3" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold);letter-spacing:3px;margin-bottom:4px">BIZON TRAINING</div>
+    <div style="font-size:12px;color:var(--w3);margin-bottom:24px;text-align:center">Choisis ta langue&nbsp;/&nbsp;Choose your language</div>
+    <button class="gbtn full" style="max-width:240px;margin-bottom:10px" onclick="chooseLanguage('fr')">Français</button>
+    <button class="ghost full" style="max-width:240px" onclick="chooseLanguage('en')">English</button>
+  </div>`;
+}
+
+function showLanguageChoice() {
+  document.getElementById('app-shell').style.display = 'none';
+  const root = document.getElementById('auth-root');
+  root.style.display = 'block';
+  root.innerHTML = languageChoiceHTML();
+}
+
+async function chooseLanguage(lang) {
+  APP_STATE.language = lang;
+  try { await callApi('setLanguage', { language: lang }); } catch (e) { /* on continue quand même */ }
+  document.getElementById('auth-root').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'flex';
+  nav('suivi');
+}
+
+async function switchLanguage(lang) {
+  if (APP_STATE.language === lang) return;
+  APP_STATE.language = lang;
+  try { await callApi('setLanguage', { language: lang }); } catch (e) { /* on continue quand même */ }
+  render();
+}
+
 
 /* ============ ACCÈS PAR CODE (remplace login email/mot de passe) ============ */
 function genAccessCode(){
@@ -278,8 +594,13 @@ async function enterApp(profile){
     position:profile.position,
     level:profile.level
   };
-  CURRENT.suivi = APP_STATE.role==='coach' ? 'coach' : 'joueur';
+    APP_STATE.language = profile.language || null;
+CURRENT.suivi = APP_STATE.role==='coach' ? 'coach' : 'joueur';
   CURRENT.screen='suivi';
+  if(!APP_STATE.language){
+    showLanguageChoice();
+    return;
+  }
   document.getElementById('auth-root').style.display='none';
   document.getElementById('app-shell').style.display='flex';
   nav('suivi');
@@ -287,7 +608,7 @@ async function enterApp(profile){
 
 function handleLogout(){
   localStorage.removeItem('bizon_access_code');
-  APP_STATE.authenticated=false; APP_STATE.role=null; APP_STATE.user=null; APP_STATE.userId=null; APP_STATE.code=null;
+  APP_STATE.authenticated=false; APP_STATE.role=null; APP_STATE.user=null; APP_STATE.userId=null; APP_STATE.code=null; APP_STATE.language=null;
   document.getElementById('app-shell').style.display='none';
   // Nettoie le ?code=XXXXXX de l'URL pour éviter une reconnexion auto involontaire
   const url=new URL(window.location.href);
@@ -667,7 +988,7 @@ async function loadCoachNotes(playerId){
     }
     el.innerHTML = notes.map(n=>{
       const d = new Date(n.created_at);
-      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) + ' · ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      const dateStr = d.toLocaleDateString(LOCALE(), { day:'2-digit', month:'short', year:'numeric' }) + ' · ' + d.toLocaleTimeString(LOCALE(), { hour:'2-digit', minute:'2-digit' });
       return `
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
@@ -691,15 +1012,15 @@ async function submitCoachNote(){
     await callApi('addCoachNote', { playerId, note });
     ta.value='';
     await loadCoachNotes(playerId);
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 async function removeCoachNote(noteId, playerId){
-  if(!confirm('Supprimer ce diagnostic ?')) return;
+  if(!confirm(tr('Supprimer ce diagnostic ?'))) return;
   try{
     await callApi('deleteCoachNote', { noteId });
     await loadCoachNotes(playerId);
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 /* ═══ SUIVI ═══ */
@@ -847,7 +1168,7 @@ async function loadMyExercisesList(){
     }
     el.innerHTML = submissions.map(s=>{
       const d = new Date(s.created_at);
-      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+      const dateStr = d.toLocaleDateString(LOCALE(), { day:'2-digit', month:'short', year:'numeric' });
       const statusTag = s.status==='reviewed' ? `<span class="tag g" style="font-size:10px">Corrigé</span>` : `<span class="tag a" style="font-size:10px">En attente</span>`;
       return `
       <div class="card">
@@ -873,11 +1194,11 @@ async function loadMyExercisesList(){
 }
 
 async function deleteMySubmission(id){
-  if(!confirm('Supprimer cette vidéo ?')) return;
+  if(!confirm(tr('Supprimer cette vidéo ?'))) return;
   try{
     await callApi('deleteSubmission', { submissionId:id });
     await loadMyExercisesList();
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 async function openSubmissionPlayer(id){
@@ -902,6 +1223,11 @@ async function openSubmissionPlayer(id){
 function relativeDaysFR(dateStr){
   if(!dateStr) return null;
   const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if(APP_STATE.language==='en'){
+    if(days<=0) return 'today';
+    if(days===1) return 'yesterday';
+    return `${days}d ago`;
+  }
   if(days<=0) return "aujourd'hui";
   if(days===1) return "hier";
   return `il y a ${days} j`;
@@ -1145,7 +1471,7 @@ async function loadCoachExercisesList(playerId){
     }
     el.innerHTML = submissions.map(s=>{
       const d = new Date(s.created_at);
-      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+      const dateStr = d.toLocaleDateString(LOCALE(), { day:'2-digit', month:'short', year:'numeric' });
       const statusTag = s.status==='reviewed' ? `<span class="tag g" style="font-size:10px">Corrigé</span>` : `<span class="tag a" style="font-size:10px">En attente</span>`;
       return `
       <div class="card">
@@ -1185,15 +1511,15 @@ async function submitCoachFeedback(submissionId, playerId){
   try{
     await callApi('markSubmissionReviewed', { submissionId, coach_feedback });
     await loadCoachExercisesList(playerId);
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 async function deleteCoachSubmission(submissionId, playerId){
-  if(!confirm('Supprimer cette vidéo ?')) return;
+  if(!confirm(tr('Supprimer cette vidéo ?'))) return;
   try{
     await callApi('deleteSubmission', { submissionId });
     await loadCoachExercisesList(playerId);
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 async function analyzeSubmission(submissionId, playerId){
@@ -1254,7 +1580,7 @@ async function savePlayerSheets(playerId) {
   const msgEl = document.getElementById('sheets-save-msg');
   try {
     await callApi('updatePlayerSheets', { playerId, sheet_lf, sheet_2pts, sheet_3pts, sheet_diagnostic });
-  } catch(e) { alert(e.message); return; }
+  } catch(e) { alert(tr(e.message)); return; }
   if (msgEl) { msgEl.textContent = 'Liens enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; }, 2500); }
 
   if (msgEl) { msgEl.textContent = 'Liens enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; }, 2500); }
@@ -1386,11 +1712,11 @@ async function createVideo(){
 }
 
 async function deleteVideo(id){
-  if(!confirm('Supprimer cette vidéo de la bibliothèque ? (le fichier reste dans ton Drive)')) return;
+  if(!confirm(tr('Supprimer cette vidéo de la bibliothèque ? (le fichier reste dans ton Drive)'))) return;
   try {
     await callApi('deleteVideo', { videoId: id });
     loadVideos();
-  } catch(e) { alert(e.message); }
+  } catch(e) { alert(tr(e.message)); }
 }
 
 /* ═══ VISION DE JEU — questionnaire e-learning ═══ */
@@ -1471,7 +1797,7 @@ async function loadPlayerQuizResults(playerId){
     }
     el.innerHTML = attempts.map(a => {
       const d = new Date(a.created_at);
-      const dateStr = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+      const dateStr = d.toLocaleDateString(LOCALE(), { day:'2-digit', month:'short', year:'numeric' });
       return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:.5px solid var(--border);font-size:12px">
         <span style="color:var(--w2)">${dateStr}</span>
         <span style="color:var(--gold2)">${a.score} / ${a.total}</span>
@@ -1564,7 +1890,7 @@ async function saveQuizEditor(){
   try{
     await callApi('saveQuizQuestions', { questions });
     if(msgEl){ msgEl.textContent='Questionnaire enregistré !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 /* ═══ CALENDRIER — disponibilités du joueur + programme d'entraînement récurrent ═══ */
@@ -1597,7 +1923,7 @@ async function loadMyAvailabilityBox(){
       <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid var(--border)">
         <div style="width:80px;font-size:12px;color:var(--w2)">${jour}</div>
         <input class="finput" type="time" style="margin:0;flex:1" id="avail-start-${di}" value="${byDay[di]?.start_time||''}"/>
-        <span style="color:var(--w3);font-size:12px">à</span>
+        <span style="color:var(--w3);font-size:12px">${APP_STATE.language==='en'?'to':'à'}</span>
         <input class="finput" type="time" style="margin:0;flex:1" id="avail-end-${di}" value="${byDay[di]?.end_time||''}"/>
       </div>`).join('') + `
       <div id="avail-msg" style="font-size:12px;color:var(--green);margin:8px 0 0"></div>
@@ -1619,7 +1945,7 @@ async function saveMyAvailability(){
   try{
     await callApi('setMyAvailability', { slots });
     if(msgEl){ msgEl.textContent='Disponibilités enregistrées !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 async function loadMyProgramList(){
@@ -1725,11 +2051,11 @@ async function loadPlayerProgramList(playerId){
 }
 
 async function deleteTrainingProgramFor(programId, playerId){
-  if(!confirm('Supprimer cet entraînement récurrent ?')) return;
+  if(!confirm(tr('Supprimer cet entraînement récurrent ?'))) return;
   try{
     await callApi('deleteTrainingProgram', { programId });
     await loadPlayerProgramList(playerId);
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 /* ═══ CRITÈRES IA (réglage coach, utilisés pour le premier avis sur les vidéos) ═══ */
@@ -1752,7 +2078,7 @@ async function saveAiCriteria(){
   try{
     await callApi('updateAiCriteria', { criteria });
     if(msgEl){ msgEl.textContent='Critères enregistrés !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
-  }catch(e){ alert(e.message); }
+  }catch(e){ alert(tr(e.message)); }
 }
 
 /* ═══ PROFIL ═══ */
@@ -1788,7 +2114,13 @@ function profilHTML(){
     </div>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
   </div>` : ''}
-  <div class="sec" style="padding-left:0;padding-top:22px">Compte</div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Langue</div>
+  <div class="card" style="display:flex;gap:8px">
+    <button class="${APP_STATE.language==='en' ? 'ghost' : 'gbtn'}" style="flex:1" onclick="switchLanguage('fr')">Français</button>
+    <button class="${APP_STATE.language==='en' ? 'gbtn' : 'ghost'}" style="flex:1" onclick="switchLanguage('en')">English</button>
+  </div>
+
+<div class="sec" style="padding-left:0;padding-top:22px">Compte</div>
 
   <div class="app-grid-2" style="padding:0">
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;border-color:var(--red-bg)" onclick="handleLogout()">
