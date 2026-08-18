@@ -653,6 +653,9 @@ function nav(s){
 function render(){
   const c=document.getElementById('content');
   c.scrollTop=0;
+  document.querySelector('#nt-suivi span').textContent = 'Suivi';
+  document.querySelector('#nt-biblio span').textContent = 'Biblio';
+  document.querySelector('#nt-profil span').textContent = 'Profil';
   if(CURRENT.screen==='suivi') c.innerHTML=suiviHTML();
   else if(CURRENT.screen==='biblio') c.innerHTML=biblioHTML();
   else if(CURRENT.screen==='profil') c.innerHTML=profilHTML();
