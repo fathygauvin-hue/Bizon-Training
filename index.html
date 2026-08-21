@@ -2164,7 +2164,7 @@ const CourtGeometry = (function(D){
   function threePointPath(){
     const R = D.threePointRadius.toFixed(4);
     const ty = tangentY.toFixed(4);
-    return 'M ' + (-straightX) + ' 0 L ' + (-straightX) + ' ' + ty + ' A ' + R + ' ' + R + ' 0 0 1 ' + straightX + ' ' + ty + ' L ' + straightX + ' 0';
+    return 'M ' + (-straightX) + ' 0 L ' + (-straightX) + ' ' + ty + ' A ' + R + ' ' + R + ' 0 0 0 ' + straightX + ' ' + ty + ' L ' + straightX + ' 0';
   }
   return {
     dims: D, halfWidth, keyHalfWidth, straightX, tangentY, topOfArcY, basket,
