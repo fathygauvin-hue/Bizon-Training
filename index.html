@@ -2434,11 +2434,11 @@ async function loadPlayerShootingBox(playerId, playerName){
 
 
 
-const IRONMAN_EXERCISES = [
-  { name: "Pompes", gif: "https://cdn.pixabay.com/animation/2025/08/09/09/04/09-04-54-470_512.gif" },
-  { name: "Squats sautés", gif: "https://cdn.pixabay.com/animation/2025/08/09/10/43/10-43-32-186_512.gif" },
-  { name: "Crunchs", gif: "https://cdn.pixabay.com/animation/2025/08/09/17/21/17-21-43-694_512.gif" },
-];
+const IRONMAN_EXERCISES = {
+  pompes: { name: "Pompes", muscle: "Pectoraux", svg: '<svg viewBox="0 0 130 100" width="72" height="55"><line x1="100" y1="55" x2="122" y2="85" stroke="var(--w2)" stroke-width="12" stroke-linecap="round"/><line x1="34" y1="40" x2="38" y2="90" stroke="var(--w2)" stroke-width="12" stroke-linecap="round"/><line x1="55" y1="48" x2="100" y2="55" stroke="var(--w2)" stroke-width="14" stroke-linecap="round"/><line x1="34" y1="40" x2="55" y2="48" stroke="var(--red)" stroke-width="16" stroke-linecap="round"/><circle cx="22" cy="32" r="11" fill="var(--w2)"/></svg>' },
+  squats: { name: "Squats sautés", muscle: "Quadriceps / fessiers", svg: '<svg viewBox="0 0 130 120" width="72" height="66"><circle cx="65" cy="18" r="11" fill="var(--w2)"/><line x1="65" y1="29" x2="65" y2="58" stroke="var(--w2)" stroke-width="12" stroke-linecap="round"/><line x1="65" y1="35" x2="35" y2="25" stroke="var(--w2)" stroke-width="10" stroke-linecap="round"/><line x1="65" y1="35" x2="95" y2="25" stroke="var(--w2)" stroke-width="10" stroke-linecap="round"/><line x1="65" y1="58" x2="42" y2="82" stroke="var(--red)" stroke-width="15" stroke-linecap="round"/><line x1="65" y1="58" x2="88" y2="82" stroke="var(--red)" stroke-width="15" stroke-linecap="round"/><line x1="42" y1="82" x2="38" y2="108" stroke="var(--w2)" stroke-width="11" stroke-linecap="round"/><line x1="88" y1="82" x2="92" y2="108" stroke="var(--w2)" stroke-width="11" stroke-linecap="round"/></svg>' },
+  crunchs: { name: "Crunchs", muscle: "Abdominaux", svg: '<svg viewBox="0 0 130 120" width="72" height="66"><line x1="95" y1="55" x2="115" y2="75" stroke="var(--w2)" stroke-width="11" stroke-linecap="round"/><line x1="78" y1="78" x2="95" y2="55" stroke="var(--w2)" stroke-width="13" stroke-linecap="round"/><line x1="36" y1="60" x2="78" y2="78" stroke="var(--red)" stroke-width="16" stroke-linecap="round"/><line x1="28" y1="55" x2="15" y2="40" stroke="var(--w2)" stroke-width="9" stroke-linecap="round"/><circle cx="28" cy="55" r="10" fill="var(--w2)"/></svg>' },
+};
 
 let IRONMAN_CTX = null;
 
@@ -2482,7 +2482,7 @@ async function refreshIronmanHub(){
       const d = new Date(active.started_at).toLocaleDateString('fr-FR');
       html += '<div class="sec" style="padding-left:0;padding-top:18px">Séance en cours</div><div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="resumeIronman()"><div><div style="font-size:14px;font-weight:500;color:var(--w)">Reprendre la séance</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Démarrée le '+d+'</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>';
     } else {
-      html += '<div class="sec" style="padding-left:0;padding-top:18px">Nouvelle séance</div><div class="card"><div style="font-size:11px;color:var(--w3);line-height:1.5;margin-bottom:10px">Circuit pyramidal en 19 paliers : course (allers-retours terrain) et renforcement (pompes / squats sautés / crunchs), en descente puis en remontée.</div><button class="gbtn full" onclick="startOrResumeIronman()">Commencer</button></div>';
+      html += '<div class="sec" style="padding-left:0;padding-top:18px">Nouvelle séance</div><div class="card"><div style="font-size:11px;color:var(--w3);line-height:1.5;margin-bottom:10px">Circuit pyramidal en 37 paliers : course (allers-retours terrain) et renforcement (pompes, squats sautés, crunchs), chaque série validée séparément, en descente puis en remontée.</div><button class="gbtn full" onclick="startOrResumeIronman()">Commencer</button></div>';
     }
     html += '<div class="sec" style="padding-left:0;padding-top:22px">Historique</div>';
     if(!sessions.length){
@@ -2510,7 +2510,7 @@ function enterIronmanStation(session, splits, stations){
   const currentIndex = splits.length + 1;
   ironmanStopTimer();
   IRONMAN_CTX = { session, stations, currentIndex, startedAtMs: new Date(session.started_at).getTime(), timerInterval: null };
-  if(currentIndex > 19){ const backId = _regShootingBack(openIronmanHub); return renderIronmanSummary(session, backId); }
+  if(currentIndex > stations.length){ const backId = _regShootingBack(openIronmanHub); return renderIronmanSummary(session, backId); }
   renderIronmanStation();
   ironmanStartTimer();
 }
@@ -2518,22 +2518,24 @@ function enterIronmanStation(session, splits, stations){
 function renderIronmanStation(){
   const { stations, currentIndex } = IRONMAN_CTX;
   const station = stations[currentIndex - 1];
-  const phase = currentIndex <= 10 ? 'Descente' : (currentIndex <= 12 ? 'Point bas' : 'Remontée');
+  const total = stations.length;
+  const phase = currentIndex <= 20 ? 'Descente' : (currentIndex <= 24 ? 'Point bas' : 'Remontée');
   const dotsRow = stations.map((st,i) => '<div style="width:'+(i+1===currentIndex?'8px':'5px')+';height:'+(i+1===currentIndex?'8px':'5px')+';border-radius:50%;background:'+(i+1<currentIndex?'var(--gold)':(i+1===currentIndex?'var(--gold2)':'var(--border2)'))+'"></div>').join('');
-  let body;
+  let body, btnLabel;
   if(station.type === 'course'){
     body = '<div style="text-align:center;padding:20px 0"><div style="font-size:40px;margin-bottom:8px">🏃</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--gold);letter-spacing:1px">'+station.target+' allers-retours</div><div style="font-size:12px;color:var(--w3);margin-top:6px">Longueur de terrain de basket</div></div>';
+    btnLabel = 'Course terminée';
   } else {
-    body = '<div style="display:flex;flex-direction:column;gap:12px;padding:8px 0">' + IRONMAN_EXERCISES.map(ex => {
-      return '<div style="display:flex;align-items:center;gap:12px;background:var(--s3);border-radius:var(--r12);padding:10px"><img src="'+ex.gif+'" style="width:64px;height:64px;object-fit:cover;border-radius:var(--r8);background:var(--s2)" loading="lazy"/><div><div style="font-size:14px;font-weight:500;color:var(--w)">'+ex.name+'</div><div style="font-size:12px;color:var(--w3);margin-top:2px">'+station.target+' répétitions</div></div></div>';
-    }).join('') + '</div>';
+    const ex = IRONMAN_EXERCISES[station.type];
+    body = '<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 0">'+ex.svg+'<div style="text-align:center"><div style="font-size:16px;font-weight:600;color:var(--w)">'+ex.name+'</div><div style="font-size:12px;color:var(--red);margin-top:2px">'+ex.muscle+'</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--gold);margin-top:6px">'+station.target+' répétitions</div></div></div>';
+    btnLabel = 'Série terminée';
   }
   document.getElementById('content').innerHTML =
     '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)"><button onclick="confirmCancelIronman()" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button><div style="font-size:14px;font-weight:500;color:var(--w)">Iron Man</div></div>' +
-    '<div style="padding:14px 0 4px;text-align:center;font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px">'+phase+' · Palier '+currentIndex+'/19</div>' +
+    '<div style="padding:14px 0 4px;text-align:center;font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px">'+phase+' · Palier '+currentIndex+'/'+total+'</div>' +
     '<div id="ironman-chrono" style="text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:36px;color:var(--gold);padding:6px 0">00:00</div>' +
     '<div class="card">' + body +
-      '<button class="gbtn full" style="margin-top:8px" onclick="submitIronmanStation()">Palier terminé</button>' +
+      '<button class="gbtn full" style="margin-top:8px" onclick="submitIronmanStation()">'+btnLabel+'</button>' +
     '</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;padding:16px 24px 8px">'+dotsRow+'</div>';
 }
@@ -2569,7 +2571,7 @@ function renderIronmanSummary(session, backId){
   const t = ironmanFormatTime(session.total_duration_seconds || 0);
   document.getElementById('content').innerHTML =
     '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)"><div style="font-size:14px;font-weight:500;color:var(--w)">Iron Man — Résumé</div></div>' +
-    '<div class="card" style="text-align:center;margin-top:16px"><div style="font-size:12px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Temps total</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:48px;color:var(--gold)">'+t+'</div><div style="font-size:12px;color:var(--w3);margin-top:10px">Circuit complet : 19 paliers</div></div>' +
+    '<div class="card" style="text-align:center;margin-top:16px"><div style="font-size:12px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Temps total</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:48px;color:var(--gold)">'+t+'</div><div style="font-size:12px;color:var(--w3);margin-top:10px">Circuit complet : 37 paliers</div></div>' +
     '<button class="gbtn full" style="margin-top:16px" onclick="goShootingBackId(\''+backId+'\')">Terminé</button>';
 }
 
