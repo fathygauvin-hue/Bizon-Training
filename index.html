@@ -43,6 +43,8 @@ a{color:inherit;text-decoration:none}
 .nt.on svg{stroke:var(--gold)}
 .nt.on span{color:var(--gold)}
 .sec{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gold);letter-spacing:2px;padding:18px 16px 8px}
+.acc-head{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gold);letter-spacing:2px;padding:18px 16px 8px;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none}
+.acc-arrow{display:inline-block;font-size:12px;transition:transform .15s}
 .card{background:var(--s2);border:.5px solid var(--border);border-radius:var(--r12);padding:14px;margin:0 14px 10px}
 .pill{display:inline-flex;align-items:center;background:var(--gold4);border:.5px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--gold2);font-weight:500}
 .tag{display:inline-flex;align-items:center;border-radius:var(--r8);padding:2px 8px;font-size:11px;font-weight:500}
@@ -1385,6 +1387,15 @@ function showPlayerCreatedModal(p){
 
 // Page dédiée : détail d'un joueur pour le coach — accès aux 3 évaluations
 // et gestion du code d'accès + des liens Google Sheets de ce joueur.
+function toggleAcc(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? 'block' : 'none';
+  const arrow = document.getElementById(id+'-arrow');
+  if(arrow) arrow.textContent = isHidden ? '▾' : '▸';
+}
+
 async function openPlayerDetail(playerId, playerName) {
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
@@ -1412,7 +1423,8 @@ async function openPlayerDetail(playerId, playerName) {
       </div>
     </div>
 
-    <div class="app-grid-2" style="padding:0;margin-top:22px">
+    <div class="acc-head" onclick="toggleAcc('acc-code')"><span class="acc-arrow" id="acc-code-arrow">▸</span>Code d'accès &amp; Google Sheets</div>
+    <div class="app-grid-2" id="acc-code" style="padding:0;margin-top:6px;display:none">
       <div>
         <div class="sec" style="padding-left:0">Code d'accès</div>
         <div id="player-code-box" class="card">Chargement…</div>
@@ -1423,12 +1435,16 @@ async function openPlayerDetail(playerId, playerName) {
       </div>
     </div>
     ${coachNotesShellHTML()}
-    <div class="sec" style="padding-left:0;padding-top:22px">Séances de tir</div><div id="player-shooting-box" class="card">Chargement…</div><div class="sec" style="padding-left:0;padding-top:22px">Iron Man</div><div id="player-ironman-box" class="card">Chargement…</div>
-    <div class="sec" style="padding-left:0;padding-top:22px">Vision de jeu</div>
-    <div id="player-quiz-results" class="card">Chargement…</div>
-    <div class="sec" style="padding-left:0;padding-top:22px">Disponibilités du joueur</div>
-    <div id="player-availability-box" class="card">Chargement…</div>
-    <div class="sec" style="padding-left:0;padding-top:22px">Ajouter un entraînement récurrent</div>
+    <div class="acc-head" onclick="toggleAcc('acc-shooting')"><span class="acc-arrow" id="acc-shooting-arrow">▸</span>Séances de tir</div>
+    <div id="acc-shooting" style="display:none"><div id="player-shooting-box" class="card">Chargement…</div></div>
+    <div class="acc-head" onclick="toggleAcc('acc-ironman')"><span class="acc-arrow" id="acc-ironman-arrow">▸</span>Iron Man</div>
+    <div id="acc-ironman" style="display:none"><div id="player-ironman-box" class="card">Chargement…</div></div>
+    <div class="acc-head" onclick="toggleAcc('acc-quiz')"><span class="acc-arrow" id="acc-quiz-arrow">▸</span>Vision de jeu</div>
+    <div id="acc-quiz" style="display:none"><div id="player-quiz-results" class="card">Chargement…</div></div>
+    <div class="acc-head" onclick="toggleAcc('acc-avail')"><span class="acc-arrow" id="acc-avail-arrow">▸</span>Disponibilités du joueur</div>
+    <div id="acc-avail" style="display:none"><div id="player-availability-box" class="card">Chargement…</div></div>
+    <div class="acc-head" onclick="toggleAcc('acc-addtraining')"><span class="acc-arrow" id="acc-addtraining-arrow">▸</span>Ajouter un entraînement récurrent</div>
+    <div id="acc-addtraining" style="display:none">
     <div class="card">
       <div style="font-size:11px;color:var(--w3);line-height:1.5;margin-bottom:8px">Sélectionne le ou les jours où cet entraînement doit se répéter chaque semaine.</div>
       ${JOURS_SEMAINE.map((jour,di) => `
@@ -1446,13 +1462,16 @@ async function openPlayerDetail(playerId, playerName) {
       <div id="ts-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
       <button class="gbtn full" onclick="addTrainingProgramForPlayer('${playerId}')">Ajouter au programme</button>
     </div>
+    </div>
     <div class="sec" style="padding-left:0;padding-top:22px">Programme d'entraînement du joueur</div>
     <div id="player-sessions-list">
       <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
     </div>
-    <div class="sec" style="padding-left:0;padding-top:22px">Exercices filmés</div>
+    <div class="acc-head" onclick="toggleAcc('acc-exercises')"><span class="acc-arrow" id="acc-exercises-arrow">▸</span>Exercices filmés</div>
+    <div id="acc-exercises" style="display:none">
     <div id="coach-exercises-list">
       <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
+    </div>
     </div>
     <div style="height:24px"></div>`;
   CURRENT.playerDetailId = playerId;
