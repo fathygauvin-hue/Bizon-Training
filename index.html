@@ -2333,20 +2333,18 @@ async function resumeShooting(){
 
 function enterShootingStation(session, entries, stations){
   const currentIndex = entries.length + 1;
-  SHOOTING_CTX = { session, stations, currentIndex, liveMade: 0, liveAttempted: 0 };
+  SHOOTING_CTX = { session, stations, currentIndex };
   if(currentIndex > 12){ const backId = _regShootingBack(openShootingHub); return renderShootingSummary(session, entries, backId); }
   renderShootingSession();
 }
 
 function renderShootingSession(){
-  const { session, stations, currentIndex, liveMade, liveAttempted } = SHOOTING_CTX;
+  const { session, stations, currentIndex } = SHOOTING_CTX;
   const station = stations[currentIndex-1];
   const spot = shootingSpotByKey(shootingBaseKey(station.key));
   const pass = currentIndex <= 6 ? 1 : 2;
   const passLabel = pass === 1 ? 'Tour 1/2 · Aller' : 'Tour 2/2 · Retour';
   const dotsRow = stations.map((st,i) => '<div style="width:'+(i+1===currentIndex?'10px':'7px')+';height:'+(i+1===currentIndex?'10px':'7px')+';border-radius:50%;background:'+(i+1<currentIndex?'var(--gold)':(i+1===currentIndex?'var(--gold2)':'var(--border2)'))+'"></div>').join('');
-  const pct = ShootingStatistics.pctLabel(liveMade, liveAttempted);
-  const remaining = SHOOTING_TARGET_PER_SPOT - liveAttempted;
   document.getElementById('content').innerHTML =
     '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)"><button onclick="confirmCancelShooting()" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button><div style="font-size:14px;font-weight:500;color:var(--w)">Séance de tir</div></div>' +
     '<div style="padding:16px 0 4px;text-align:center;font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px">'+passLabel+' · Station '+currentIndex+'/12</div>' +
@@ -2354,30 +2352,23 @@ function renderShootingSession(){
     '<div class="card" style="text-align:center">' +
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:var(--w3);letter-spacing:2px">SPOT '+spot.index+'</div>' +
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--gold);letter-spacing:1px;margin-bottom:10px">'+station.label+'</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">' +
-        '<div><div style="font-size:20px;font-weight:600;color:var(--w)">'+liveAttempted+'</div><div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:.5px">Tentés</div></div>' +
-        '<div><div style="font-size:20px;font-weight:600;color:var(--w)">'+liveMade+'</div><div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:.5px">Réussis</div></div>' +
-        '<div><div style="font-size:20px;font-weight:600;color:var(--gold)">'+pct+'</div><div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:.5px">Réussite</div></div>' +
-      '</div>' +
-      '<div style="font-size:11px;color:var(--w3);margin-bottom:10px">'+remaining+' tir'+(remaining>1?'s':'')+' restant'+(remaining>1?'s':'')+' sur '+SHOOTING_TARGET_PER_SPOT+'</div>' +
-      '<div style="display:flex;gap:10px">' +
-        '<button onclick="recordShot(false)" style="flex:1;padding:16px 10px;border-radius:var(--r12);border:1px solid var(--red-bg);background:var(--red-bg);color:var(--red);font-family:\'Inter\',sans-serif;font-weight:600;font-size:14px;cursor:pointer">✕ RATÉ</button>' +
-        '<button onclick="recordShot(true)" style="flex:1;padding:16px 10px;border-radius:var(--r12);border:1px solid var(--green-bg);background:var(--green-bg);color:var(--green);font-family:\'Inter\',sans-serif;font-weight:600;font-size:14px;cursor:pointer">✓ RÉUSSI</button>' +
-      '</div>' +
+      '<div style="font-size:12px;color:var(--w3);margin-bottom:10px">'+SHOOTING_TARGET_PER_SPOT+' tirs — combien de réussis ?</div>' +
+      '<input id="shot-count-input" class="finput" type="number" inputmode="numeric" min="0" max="'+SHOOTING_TARGET_PER_SPOT+'" placeholder="0-'+SHOOTING_TARGET_PER_SPOT+'" style="text-align:center" />' +
+      '<button class="gbtn full" onclick="submitShootingStation()">Valider</button>' +
     '</div>' +
     '<div style="display:flex;gap:5px;justify-content:center;padding:16px 0 8px">'+dotsRow+'</div>';
 }
 
-async function recordShot(made){
+async function submitShootingStation(){
   if(!SHOOTING_CTX) return;
-  SHOOTING_CTX.liveAttempted++;
-  if(made) SHOOTING_CTX.liveMade++;
-  if(SHOOTING_CTX.liveAttempted < SHOOTING_TARGET_PER_SPOT){
-    renderShootingSession();
+  const input = document.getElementById('shot-count-input');
+  const val = Number(input.value);
+  if(!Number.isInteger(val) || val < 0 || val > SHOOTING_TARGET_PER_SPOT){
+    alert(tr('Entre un nombre entier entre 0 et ' + SHOOTING_TARGET_PER_SPOT + '.'));
     return;
   }
   try{
-    const r = await callApi('recordShootingStation', { session_id: SHOOTING_CTX.session.id, made: SHOOTING_CTX.liveMade, attempted: SHOOTING_CTX.liveAttempted });
+    const r = await callApi('recordShootingStation', { session_id: SHOOTING_CTX.session.id, made: val, attempted: SHOOTING_TARGET_PER_SPOT });
     if(r.done){
       const detail = await callApi('getShootingSessionDetail', { session_id: r.session.id });
       const backId = _regShootingBack(openShootingHub);
