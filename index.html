@@ -1182,7 +1182,7 @@ function openMyExercises(){
       <input class="finput" id="ex-name" placeholder="Nom de l'exercice (ex: Tir en course)"/>
       <textarea class="finput" id="ex-note" rows="2" placeholder="Note pour le coach (optionnel)" style="resize:vertical"></textarea>
       <input type="file" accept="video/*" id="ex-file" class="finput" style="padding:8px"/>
-      <div style="font-size:11px;color:var(--w3);margin-bottom:8px">Vidéo visible uniquement par toi et ton coach. 50 Mo max.</div>
+      <div style="font-size:11px;color:var(--w3);margin-bottom:8px">Vidéo visible uniquement par toi et ton coach. Compression automatique si besoin (max 500 Mo).</div>
       <div id="ex-upload-error" style="color:var(--red);font-size:12px;margin-bottom:8px"></div>
       <button class="gbtn full" id="ex-upload-btn" onclick="submitExerciseVideo()">Envoyer la vidéo</button>
     </div>
@@ -1194,6 +1194,70 @@ function openMyExercises(){
   loadMyExercisesList();
 }
 
+let __ffmpegInstance = null;
+async function loadScriptOnce(src){
+  if(document.querySelector('script[src="'+src+'"]')) return;
+  await new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = ()=>reject(new Error('Impossible de charger '+src));
+    document.head.appendChild(s);
+  });
+}
+async function getFFmpeg(){
+  if(__ffmpegInstance) return __ffmpegInstance;
+  await loadScriptOnce('ffmpeg-vendor/ffmpeg.js');
+  await loadScriptOnce('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
+  const { FFmpeg } = window.FFmpegWASM;
+  const { toBlobURL } = window.FFmpegUtil;
+  const ffmpeg = new FFmpeg();
+  const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+  await ffmpeg.load({
+    coreURL: await toBlobURL(base+'/ffmpeg-core.js', 'text/javascript'),
+    wasmURL: await toBlobURL(base+'/ffmpeg-core.wasm', 'application/wasm'),
+  });
+  __ffmpegInstance = ffmpeg;
+  return ffmpeg;
+}
+
+function getVideoDuration(file){
+  return new Promise((resolve)=>{
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.onloadedmetadata = ()=>{ URL.revokeObjectURL(v.src); resolve(v.duration||30); };
+    v.onerror = ()=> resolve(30);
+    v.src = URL.createObjectURL(file);
+  });
+}
+
+async function compressVideoIfNeeded(file, onProgress){
+  const SAFE_LIMIT = 48*1024*1024;
+  const SANITY_CAP = 500*1024*1024;
+  if(file.size <= SAFE_LIMIT) return file;
+  if(file.size > SANITY_CAP) throw new Error('Vidéo beaucoup trop volumineuse (max 500 Mo).');
+  onProgress && onProgress('Préparation de la compression…');
+  const ffmpeg = await getFFmpeg();
+  const duration = await getVideoDuration(file);
+  const targetBytes = 40*1024*1024;
+  let videoKbps = Math.floor((targetBytes*8)/duration/1000*0.9);
+  videoKbps = Math.max(300, Math.min(2500, videoKbps));
+  const { fetchFile } = window.FFmpegUtil;
+  const inName = 'input.'+(file.name.split('.').pop()||'mp4');
+  await ffmpeg.writeFile(inName, await fetchFile(file));
+  const onProg = ({progress})=>{ onProgress && onProgress('Compression… '+Math.round(Math.min(1,progress)*100)+'%'); };
+  ffmpeg.on('progress', onProg);
+  try{
+    await ffmpeg.exec(['-i', inName, '-vf', "scale='min(1280,iw)':-2", '-c:v','libx264','-preset','veryfast','-b:v', videoKbps+'k', '-maxrate', Math.round(videoKbps*1.2)+'k', '-bufsize', Math.round(videoKbps*2)+'k', '-c:a','aac','-b:a','96k','-movflags','+faststart','output.mp4']);
+  } finally {
+    ffmpeg.off('progress', onProg);
+  }
+  const data = await ffmpeg.readFile('output.mp4');
+  await ffmpeg.deleteFile(inName).catch(()=>{});
+  await ffmpeg.deleteFile('output.mp4').catch(()=>{});
+  const blob = new Blob([data.buffer], { type: 'video/mp4' });
+  const newName = file.name.replace(/\.[^.]+$/, '') + '_compressed.mp4';
+  return new File([blob], newName, { type: 'video/mp4' });
+}
+
 async function submitExerciseVideo(){
   const nameInput = document.getElementById('ex-name');
   const noteInput = document.getElementById('ex-note');
@@ -1202,13 +1266,17 @@ async function submitExerciseVideo(){
   const btn = document.getElementById('ex-upload-btn');
   const exerciseName = (nameInput.value||'').trim();
   const note = (noteInput.value||'').trim();
-  const file = fileInput.files[0];
+  let file = fileInput.files[0];
   if(!exerciseName){ errEl.textContent="Nom de l'exercice requis."; return; }
   if(!file){ errEl.textContent='Sélectionne ou filme une vidéo.'; return; }
-  if(file.size > 50*1024*1024){ errEl.textContent='Vidéo trop lourde (50 Mo max).'; return; }
+  if(file.size > 500*1024*1024){ errEl.textContent='Vidéo beaucoup trop volumineuse (max 500 Mo).'; return; }
   errEl.textContent='';
   btn.disabled = true; btn.textContent = 'Envoi en cours…';
   try{
+    if(file.size > 48*1024*1024){
+      file = await compressVideoIfNeeded(file, (msg)=>{ btn.textContent = msg; });
+    }
+    btn.textContent = 'Envoi en cours…';
     const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
     const { path, token } = await callApi('requestVideoUpload', { exerciseName, note, fileExt: ext });
     await uploadToSignedUrl(path, token, file);
