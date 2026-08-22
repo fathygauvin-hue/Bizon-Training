@@ -731,34 +731,37 @@ function parseLancerFrancGrid(rows) {
 }
 
 function radarSVGDual(etapes) {
-  const cx = 150, cy = 150, r = 105, n = etapes.length;
+  const cx = 160, cy = 160, n = etapes.length;
   if (!n) return '';
-  const full = Math.PI * 2 / n, gap = Math.min(0.06, full * 0.18);
+  const outerR = 95, outerW = 20, innerR = 62, innerW = 13;
+  const full = Math.PI * 2 / n, gap = Math.min(0.05, full * 0.15);
   const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
-  const wedge = (rad, a0, a1, fill) => {
-    if (rad <= 0.5) return '';
-    const x0 = cx + rad * Math.cos(a0), y0 = cy + rad * Math.sin(a0);
-    const x1 = cx + rad * Math.cos(a1), y1 = cy + rad * Math.sin(a1);
-    return `<path d="M${cx},${cy} L${x0},${y0} A${rad},${rad} 0 0,1 ${x1},${y1} Z" fill="${fill}"/>`;
+  const pt = (r, a) => `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+  const ring = (r0, r1, a0, a1, fill) => {
+    const large = (a1 - a0) > Math.PI ? 1 : 0;
+    return `<path d="M${pt(r0,a0)} L${pt(r1,a0)} A${r1},${r1} 0 ${large},1 ${pt(r1,a1)} L${pt(r0,a1)} A${r0},${r0} 0 ${large},0 ${pt(r0,a0)} Z" fill="${fill}"/>`;
   };
-  let grid = '', wedges = '', labels = '';
-  for (let g = 1; g <= 4; g++) {
-    const gr = r * g / 4; let gp = '';
-    for (let i = 0; i <= n; i++) { const a = full * i - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
-    grid += `<polygon points="${gp}" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.5"/>`;
-  }
+  let bg = '', segs = '', labels = '';
   etapes.forEach((e, i) => {
     const aC = full * i - Math.PI / 2;
     const a0 = aC - full / 2 + gap / 2, a1 = aC + full / 2 - gap / 2;
-    const aMid = a0 + (a1 - a0) / 2, innerGap = gap * 0.35;
-    const rvA = r * ((e.moyenneAvant || 0) / 5), rvP = r * ((e.moyenneApres || 0) / 5);
-    wedges += wedge(rvA, a0, aMid - innerGap, 'rgba(140,140,132,0.55)');
-    wedges += wedge(rvP, aMid + innerGap, a1, tierColor(e.moyenneApres || 0));
-    const lx = cx + (r + 26) * Math.cos(aC), ly = cy + (r + 26) * Math.sin(aC);
-    const val = `${(e.moyenneAvant || 0).toFixed(1)}→${(e.moyenneApres || 0).toFixed(1)}`;
-    labels += `<text x="${lx}" y="${ly - 5}" text-anchor="middle" dominant-baseline="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="0.3">${e.etape}</text><text x="${lx}" y="${ly + 6}" text-anchor="middle" dominant-baseline="middle" fill="${tierColor(e.moyenneApres || 0)}" font-size="8" font-family="Inter" font-weight="600">${val}</text>`;
+    bg += ring(outerR, outerR + outerW, a0, a1, 'rgba(255,255,255,0.04)');
+    bg += ring(innerR, innerR + innerW, a0, a1, 'rgba(255,255,255,0.04)');
+    const apres = e.moyenneApres || 0, avant = e.moyenneAvant || 0;
+    segs += ring(outerR, outerR + outerW * Math.min(1, apres / 5), a0, a1, tierColor(apres));
+    segs += ring(innerR, innerR + innerW * Math.min(1, avant / 5), a0, a1, 'rgba(140,140,132,0.85)');
+    const deg = aC * 180 / Math.PI, flip = deg > 90 || deg < -90;
+    const labelR = outerR + outerW + 10;
+    const lx = cx + labelR * Math.cos(aC), ly = cy + labelR * Math.sin(aC);
+    const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
+    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#8c8c84" font-size="7.5" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})">${e.etape}</text>`;
   });
-  return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}${wedges}${labels}</svg>`;
+  const avgApres = etapes.reduce((a, e) => a + (e.moyenneApres || 0), 0) / n;
+  return `<svg width="320" height="320" viewBox="0 0 320 320">${bg}${segs}
+    <circle cx="${cx}" cy="${cy}" r="${innerR - 8}" fill="#1f1f1c"/>
+    <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="${tierColor(avgApres)}" font-size="26" font-weight="700" font-family="Inter">${avgApres.toFixed(1)}</text>
+    <text x="${cx}" y="${cy + 15}" text-anchor="middle" fill="#8c8c84" font-size="9" font-family="Inter" letter-spacing="0.5">/ 5</text>
+    ${labels}</svg>`;
 }
 
 function renderLancerFrancEval(etapes, criteres) {
@@ -892,29 +895,35 @@ function parseChecklistGrid(rows) {
 }
 
 function radarSVGSingle(etapes) {
-  const cx = 150, cy = 150, r = 105, n = etapes.length;
+  const cx = 160, cy = 160, n = etapes.length;
   if (!n) return '';
-  const full = Math.PI * 2 / n, gap = Math.min(0.06, full * 0.18);
+  const outerR = 85, outerW = 26;
+  const full = Math.PI * 2 / n, gap = Math.min(0.05, full * 0.15);
   const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
-  let grid = '', wedges = '', labels = '';
-  for (let g = 1; g <= 4; g++) {
-    const gr = r * g / 4; let gp = '';
-    for (let i = 0; i <= n; i++) { const a = full * i - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
-    grid += `<polygon points="${gp}" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.5"/>`;
-  }
+  const pt = (r, a) => `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+  const ring = (r0, r1, a0, a1, fill) => {
+    const large = (a1 - a0) > Math.PI ? 1 : 0;
+    return `<path d="M${pt(r0,a0)} L${pt(r1,a0)} A${r1},${r1} 0 ${large},1 ${pt(r1,a1)} L${pt(r0,a1)} A${r0},${r0} 0 ${large},0 ${pt(r0,a0)} Z" fill="${fill}"/>`;
+  };
+  let bg = '', segs = '', labels = '';
   etapes.forEach((e, i) => {
     const aC = full * i - Math.PI / 2;
     const a0 = aC - full / 2 + gap / 2, a1 = aC + full / 2 - gap / 2;
-    const rv = r * ((e.moyenne || 0) / 5);
-    if (rv > 0.5) {
-      const x0 = cx + rv * Math.cos(a0), y0 = cy + rv * Math.sin(a0);
-      const x1 = cx + rv * Math.cos(a1), y1 = cy + rv * Math.sin(a1);
-      wedges += `<path d="M${cx},${cy} L${x0},${y0} A${rv},${rv} 0 0,1 ${x1},${y1} Z" fill="${tierColor(e.moyenne || 0)}"/>`;
-    }
-    const lx = cx + (r + 26) * Math.cos(aC), ly = cy + (r + 26) * Math.sin(aC);
-    labels += `<text x="${lx}" y="${ly - 5}" text-anchor="middle" dominant-baseline="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="0.3">${e.etape}</text><text x="${lx}" y="${ly + 6}" text-anchor="middle" dominant-baseline="middle" fill="${tierColor(e.moyenne || 0)}" font-size="8" font-family="Inter" font-weight="600">${(e.moyenne || 0).toFixed(1)}</text>`;
+    bg += ring(outerR, outerR + outerW, a0, a1, 'rgba(255,255,255,0.04)');
+    const v = e.moyenne || 0;
+    segs += ring(outerR, outerR + outerW * Math.min(1, v / 5), a0, a1, tierColor(v));
+    const deg = aC * 180 / Math.PI, flip = deg > 90 || deg < -90;
+    const labelR = outerR + outerW + 10;
+    const lx = cx + labelR * Math.cos(aC), ly = cy + labelR * Math.sin(aC);
+    const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
+    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#8c8c84" font-size="7.5" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})">${e.etape}</text>`;
   });
-  return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}${wedges}${labels}</svg>`;
+  const avg = etapes.reduce((a, e) => a + (e.moyenne || 0), 0) / n;
+  return `<svg width="320" height="320" viewBox="0 0 320 320">${bg}${segs}
+    <circle cx="${cx}" cy="${cy}" r="${outerR - 10}" fill="#1f1f1c"/>
+    <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="${tierColor(avg)}" font-size="26" font-weight="700" font-family="Inter">${avg.toFixed(1)}</text>
+    <text x="${cx}" y="${cy + 15}" text-anchor="middle" fill="#8c8c84" font-size="9" font-family="Inter" letter-spacing="0.5">/ 5</text>
+    ${labels}</svg>`;
 }
 
 function renderChecklistEval(etapes) {
