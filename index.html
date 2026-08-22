@@ -733,26 +733,32 @@ function parseLancerFrancGrid(rows) {
 function radarSVGDual(etapes) {
   const cx = 150, cy = 150, r = 105, n = etapes.length;
   if (!n) return '';
-  let grid = '', polyAvant = '', polyApres = '', labels = '';
+  const full = Math.PI * 2 / n, gap = Math.min(0.06, full * 0.18);
+  const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
+  const wedge = (rad, a0, a1, fill) => {
+    if (rad <= 0.5) return '';
+    const x0 = cx + rad * Math.cos(a0), y0 = cy + rad * Math.sin(a0);
+    const x1 = cx + rad * Math.cos(a1), y1 = cy + rad * Math.sin(a1);
+    return `<path d="M${cx},${cy} L${x0},${y0} A${rad},${rad} 0 0,1 ${x1},${y1} Z" fill="${fill}"/>`;
+  };
+  let grid = '', wedges = '', labels = '';
   for (let g = 1; g <= 4; g++) {
     const gr = r * g / 4; let gp = '';
-    for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
+    for (let i = 0; i <= n; i++) { const a = full * i - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
     grid += `<polygon points="${gp}" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.5"/>`;
   }
-  for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; grid += `<line x1="${cx}" y1="${cy}" x2="${cx + r * Math.cos(a)}" y2="${cy + r * Math.sin(a)}" stroke="rgba(201,162,39,0.08)" stroke-width="0.5"/>`; }
   etapes.forEach((e, i) => {
-    const a = Math.PI * 2 * i / n - Math.PI / 2;
-    const rvA = r * (e.moyenneAvant / 5), xA = cx + rvA * Math.cos(a), yA = cy + rvA * Math.sin(a);
-    const rvP = r * (e.moyenneApres / 5), xP = cx + rvP * Math.cos(a), yP = cy + rvP * Math.sin(a);
-    const lx = cx + (r + 26) * Math.cos(a), ly = cy + (r + 26) * Math.sin(a);
-    polyAvant += `${xA},${yA} `;
-    polyApres += `${xP},${yP} `;
-    labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="0.3">${e.etape}</text>`;
+    const aC = full * i - Math.PI / 2;
+    const a0 = aC - full / 2 + gap / 2, a1 = aC + full / 2 - gap / 2;
+    const aMid = a0 + (a1 - a0) / 2, innerGap = gap * 0.35;
+    const rvA = r * ((e.moyenneAvant || 0) / 5), rvP = r * ((e.moyenneApres || 0) / 5);
+    wedges += wedge(rvA, a0, aMid - innerGap, 'rgba(140,140,132,0.55)');
+    wedges += wedge(rvP, aMid + innerGap, a1, tierColor(e.moyenneApres || 0));
+    const lx = cx + (r + 26) * Math.cos(aC), ly = cy + (r + 26) * Math.sin(aC);
+    const val = `${(e.moyenneAvant || 0).toFixed(1)}→${(e.moyenneApres || 0).toFixed(1)}`;
+    labels += `<text x="${lx}" y="${ly - 5}" text-anchor="middle" dominant-baseline="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="0.3">${e.etape}</text><text x="${lx}" y="${ly + 6}" text-anchor="middle" dominant-baseline="middle" fill="${tierColor(e.moyenneApres || 0)}" font-size="8" font-family="Inter" font-weight="600">${val}</text>`;
   });
-  return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}
-    <polygon points="${polyAvant}" fill="rgba(250,249,246,0.08)" stroke="#8c8c84" stroke-width="1.5"/>
-    <polygon points="${polyApres}" fill="rgba(201,162,39,0.25)" stroke="#C9A227" stroke-width="1.5"/>
-    ${labels}</svg>`;
+  return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}${wedges}${labels}</svg>`;
 }
 
 function renderLancerFrancEval(etapes, criteres) {
@@ -762,9 +768,11 @@ function renderLancerFrancEval(etapes, criteres) {
   <div class="app-grid-2" style="padding:0">
     <div>
       <div class="card" style="display:flex;justify-content:center;margin:0">${radarSVGDual(etapes)}</div>
-      <div style="display:flex;gap:14px;padding:10px 0 0;font-size:11px;color:var(--w3)">
+      <div style="display:flex;gap:10px;padding:10px 0 0;font-size:10px;color:var(--w3);flex-wrap:wrap">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#8c8c84;margin-right:5px"></span>Avant</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C9A227;margin-right:5px"></span>Après</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7BC47A;margin-right:5px"></span>Après ≥4</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E7C34B;margin-right:5px"></span>Après 2.5-4</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E07070;margin-right:5px"></span>Après <2.5</span>
       </div>
     </div>
     <div>
@@ -886,28 +894,41 @@ function parseChecklistGrid(rows) {
 function radarSVGSingle(etapes) {
   const cx = 150, cy = 150, r = 105, n = etapes.length;
   if (!n) return '';
-  let grid = '', poly = '', labels = '';
+  const full = Math.PI * 2 / n, gap = Math.min(0.06, full * 0.18);
+  const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
+  let grid = '', wedges = '', labels = '';
   for (let g = 1; g <= 4; g++) {
     const gr = r * g / 4; let gp = '';
-    for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
+    for (let i = 0; i <= n; i++) { const a = full * i - Math.PI / 2; gp += `${cx + gr * Math.cos(a)},${cy + gr * Math.sin(a)} `; }
     grid += `<polygon points="${gp}" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.5"/>`;
   }
-  for (let i = 0; i < n; i++) { const a = Math.PI * 2 * i / n - Math.PI / 2; grid += `<line x1="${cx}" y1="${cy}" x2="${cx + r * Math.cos(a)}" y2="${cy + r * Math.sin(a)}" stroke="rgba(201,162,39,0.08)" stroke-width="0.5"/>`; }
   etapes.forEach((e, i) => {
-    const a = Math.PI * 2 * i / n - Math.PI / 2;
-    const rv = r * (e.moyenne / 5), x = cx + rv * Math.cos(a), y = cy + rv * Math.sin(a);
-    const lx = cx + (r + 26) * Math.cos(a), ly = cy + (r + 26) * Math.sin(a);
-    poly += `${x},${y} `;
-    labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="0.3">${e.etape}</text>`;
+    const aC = full * i - Math.PI / 2;
+    const a0 = aC - full / 2 + gap / 2, a1 = aC + full / 2 - gap / 2;
+    const rv = r * ((e.moyenne || 0) / 5);
+    if (rv > 0.5) {
+      const x0 = cx + rv * Math.cos(a0), y0 = cy + rv * Math.sin(a0);
+      const x1 = cx + rv * Math.cos(a1), y1 = cy + rv * Math.sin(a1);
+      wedges += `<path d="M${cx},${cy} L${x0},${y0} A${rv},${rv} 0 0,1 ${x1},${y1} Z" fill="${tierColor(e.moyenne || 0)}"/>`;
+    }
+    const lx = cx + (r + 26) * Math.cos(aC), ly = cy + (r + 26) * Math.sin(aC);
+    labels += `<text x="${lx}" y="${ly - 5}" text-anchor="middle" dominant-baseline="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="0.3">${e.etape}</text><text x="${lx}" y="${ly + 6}" text-anchor="middle" dominant-baseline="middle" fill="${tierColor(e.moyenne || 0)}" font-size="8" font-family="Inter" font-weight="600">${(e.moyenne || 0).toFixed(1)}</text>`;
   });
-  return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}<polygon points="${poly}" fill="rgba(201,162,39,0.25)" stroke="#C9A227" stroke-width="1.5"/>${labels}</svg>`;
+  return `<svg width="300" height="300" viewBox="0 0 300 300">${grid}${wedges}${labels}</svg>`;
 }
 
 function renderChecklistEval(etapes) {
   if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
   return `
   <div class="app-grid-2" style="padding:0">
-    <div class="card" style="display:flex;justify-content:center;margin:0">${radarSVGSingle(etapes)}</div>
+    <div>
+      <div class="card" style="display:flex;justify-content:center;margin:0">${radarSVGSingle(etapes)}</div>
+      <div style="display:flex;gap:10px;padding:10px 0 0;font-size:10px;color:var(--w3);flex-wrap:wrap;justify-content:center">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7BC47A;margin-right:5px"></span>≥4</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E7C34B;margin-right:5px"></span>2.5-4</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E07070;margin-right:5px"></span><2.5</span>
+      </div>
+    </div>
     <div>
       <div class="sec" style="padding-left:0;padding-top:0">Détail par étape</div>
       <div class="card" style="margin:0">
