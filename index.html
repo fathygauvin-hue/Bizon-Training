@@ -731,42 +731,31 @@ function parseLancerFrancGrid(rows) {
 }
 
 function radarSVGDual(etapes) {
-  const cx = 240, cy = 240, n = etapes.length;
+  const cx = 170, cy = 170, n = etapes.length;
   if (!n) return '';
-  const outerR = 88, outerW = 20, innerR = 56, innerW = 12;
-  const full = Math.PI * 2 / n, gap = Math.min(0.05, full * 0.15);
+  const outerR = 118, outerW = 26, innerR = 78, innerW = 18;
   const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
-  const pt = (r, a) => `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
-  const ring = (r0, r1, a0, a1, fill) => {
-    const large = (a1 - a0) > Math.PI ? 1 : 0;
-    return `<path d="M${pt(r0,a0)} L${pt(r1,a0)} A${r1},${r1} 0 ${large},1 ${pt(r1,a1)} L${pt(r0,a1)} A${r0},${r0} 0 ${large},0 ${pt(r0,a0)} Z" fill="${fill}"/>`;
-  };
-  let bg = '', segs = '', labels = '';
-  etapes.forEach((e, i) => {
-    const aC = full * i - Math.PI / 2;
-    const a0 = aC - full / 2 + gap / 2, a1 = aC + full / 2 - gap / 2;
-    bg += ring(outerR, outerR + outerW, a0, a1, 'rgba(255,255,255,0.07)');
-    bg += ring(innerR, innerR + innerW, a0, a1, 'rgba(255,255,255,0.07)');
-    const apres = e.moyenneApres || 0, avant = e.moyenneAvant || 0;
-    segs += ring(outerR, outerR + outerW * Math.min(1, apres / 5), a0, a1, tierColor(apres));
-    segs += ring(innerR, innerR + innerW * Math.min(1, avant / 5), a0, a1, '#8c8c84');
-    const deg = aC * 180 / Math.PI, flip = deg > 90 || deg < -90;
-    const stagger = (i % 2) * 14;
-    const labelR = outerR + outerW + 10 + stagger;
-    const lx = cx + labelR * Math.cos(aC), ly = cy + labelR * Math.sin(aC);
-    const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
-    const fs = e.etape.length > 24 ? 6.8 : e.etape.length > 17 ? 7.6 : 8.5;
-    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#a8a8a0" font-size="${fs}" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})"><title>${e.etape} — Avant ${avant.toFixed(1)} → Après ${apres.toFixed(1)}</title>${e.etape}</text>`;
-  });
   const avgApres = etapes.reduce((a, e) => a + (e.moyenneApres || 0), 0) / n;
-  return `<svg width="480" height="480" viewBox="0 0 480 480" style="width:100%;max-width:480px;height:auto;display:block">${bg}${segs}
-    <circle cx="${cx}" cy="${cy}" r="${innerR - 8}" fill="#1f1f1c"/>
-    <text x="${cx}" y="${cy - 22}" text-anchor="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="1">MOYENNE</text>
-    <text x="${cx}" y="${cy - 2}" text-anchor="middle" fill="${tierColor(avgApres)}" font-size="26" font-weight="700" font-family="Inter">${avgApres.toFixed(1)}</text>
-    <text x="${cx}" y="${cy + 17}" text-anchor="middle" fill="#8c8c84" font-size="9" font-family="Inter" letter-spacing="0.5">/ 5</text>
-    ${labels}</svg>`;
+  const avgAvant = etapes.reduce((a, e) => a + (e.moyenneAvant || 0), 0) / n;
+  const arcRing = (r, w, pct, color, cap) => {
+    const c = 2 * Math.PI * r;
+    const dash = c * Math.max(0, Math.min(1, pct));
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" stroke-dasharray="${dash} ${c}" stroke-linecap="${cap}" transform="rotate(-90 ${cx} ${cy})"/>`;
+  };
+  const bgRing = (r, w) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="${w}"/>`;
+  const delta = avgApres - avgAvant;
+  const deltaTxt = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+  const deltaColor = delta > 0 ? '#7BC47A' : delta < 0 ? '#E07070' : '#8c8c84';
+  return `<svg width="340" height="340" viewBox="0 0 340 340" style="width:100%;max-width:340px;height:auto;display:block;margin:0 auto">
+    ${bgRing(outerR, outerW)}${bgRing(innerR, innerW)}
+    ${arcRing(innerR, innerW, avgAvant / 5, '#8c8c84', 'butt')}
+    ${arcRing(outerR, outerW, avgApres / 5, tierColor(avgApres), 'round')}
+    <text x="${cx}" y="${cy - 28}" text-anchor="middle" fill="#8c8c84" font-size="10" font-family="Inter" letter-spacing="1.5">MOYENNE APRÈS</text>
+    <text x="${cx}" y="${cy + 8}" text-anchor="middle" fill="${tierColor(avgApres)}" font-size="46" font-weight="700" font-family="Inter">${avgApres.toFixed(1)}</text>
+    <text x="${cx}" y="${cy + 30}" text-anchor="middle" fill="#8c8c84" font-size="12" font-family="Inter" letter-spacing="0.5">/ 5</text>
+    <text x="${cx}" y="${cy + 54}" text-anchor="middle" fill="${deltaColor}" font-size="12" font-weight="600" font-family="Inter">${deltaTxt} vs avant (${avgAvant.toFixed(1)})</text>
+  </svg>`;
 }
-
 function renderLancerFrancEval(etapes, criteres) {
   if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
   const comments = (criteres || []).filter(c => c.commentAvant || c.commentApres);
@@ -898,40 +887,25 @@ function parseChecklistGrid(rows) {
 }
 
 function radarSVGSingle(etapes) {
-  const cx = 240, cy = 240, n = etapes.length;
+  const cx = 150, cy = 150, n = etapes.length;
   if (!n) return '';
-  const outerR = 78, outerW = 24;
-  const full = Math.PI * 2 / n, gap = Math.min(0.05, full * 0.15);
+  const outerR = 108, outerW = 30;
   const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
-  const pt = (r, a) => `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
-  const ring = (r0, r1, a0, a1, fill) => {
-    const large = (a1 - a0) > Math.PI ? 1 : 0;
-    return `<path d="M${pt(r0,a0)} L${pt(r1,a0)} A${r1},${r1} 0 ${large},1 ${pt(r1,a1)} L${pt(r0,a1)} A${r0},${r0} 0 ${large},0 ${pt(r0,a0)} Z" fill="${fill}"/>`;
-  };
-  let bg = '', segs = '', labels = '';
-  etapes.forEach((e, i) => {
-    const aC = full * i - Math.PI / 2;
-    const a0 = aC - full / 2 + gap / 2, a1 = aC + full / 2 - gap / 2;
-    bg += ring(outerR, outerR + outerW, a0, a1, 'rgba(255,255,255,0.07)');
-    const v = e.moyenne || 0;
-    segs += ring(outerR, outerR + outerW * Math.min(1, v / 5), a0, a1, tierColor(v));
-    const deg = aC * 180 / Math.PI, flip = deg > 90 || deg < -90;
-    const stagger = (i % 2) * 14;
-    const labelR = outerR + outerW + 10 + stagger;
-    const lx = cx + labelR * Math.cos(aC), ly = cy + labelR * Math.sin(aC);
-    const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
-    const fs = e.etape.length > 24 ? 6.8 : e.etape.length > 17 ? 7.6 : 8.5;
-    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#a8a8a0" font-size="${fs}" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})"><title>${e.etape} — ${v.toFixed(1)} / 5</title>${e.etape}</text>`;
-  });
   const avg = etapes.reduce((a, e) => a + (e.moyenne || 0), 0) / n;
-  return `<svg width="480" height="480" viewBox="0 0 480 480" style="width:100%;max-width:480px;height:auto;display:block">${bg}${segs}
-    <circle cx="${cx}" cy="${cy}" r="${outerR - 10}" fill="#1f1f1c"/>
-    <text x="${cx}" y="${cy - 22}" text-anchor="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="1">MOYENNE</text>
-    <text x="${cx}" y="${cy - 2}" text-anchor="middle" fill="${tierColor(avg)}" font-size="26" font-weight="700" font-family="Inter">${avg.toFixed(1)}</text>
-    <text x="${cx}" y="${cy + 17}" text-anchor="middle" fill="#8c8c84" font-size="9" font-family="Inter" letter-spacing="0.5">/ 5</text>
-    ${labels}</svg>`;
+  const arcRing = (r, w, pct, color, cap) => {
+    const c = 2 * Math.PI * r;
+    const dash = c * Math.max(0, Math.min(1, pct));
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" stroke-dasharray="${dash} ${c}" stroke-linecap="${cap}" transform="rotate(-90 ${cx} ${cy})"/>`;
+  };
+  const bgRing = (r, w) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="${w}"/>`;
+  return `<svg width="300" height="300" viewBox="0 0 300 300" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto">
+    ${bgRing(outerR, outerW)}
+    ${arcRing(outerR, outerW, avg / 5, tierColor(avg), 'round')}
+    <text x="${cx}" y="${cy - 20}" text-anchor="middle" fill="#8c8c84" font-size="10" font-family="Inter" letter-spacing="1.5">MOYENNE</text>
+    <text x="${cx}" y="${cy + 16}" text-anchor="middle" fill="${tierColor(avg)}" font-size="46" font-weight="700" font-family="Inter">${avg.toFixed(1)}</text>
+    <text x="${cx}" y="${cy + 40}" text-anchor="middle" fill="#8c8c84" font-size="12" font-family="Inter" letter-spacing="0.5">/ 5</text>
+  </svg>`;
 }
-
 function renderChecklistEval(etapes) {
   if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
   return `
