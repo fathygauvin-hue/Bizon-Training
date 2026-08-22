@@ -1810,6 +1810,14 @@ const QUIZ_STATE = { questions: [], answers: {} };
 let QUIZ_EDIT_STATE = { questions: [] };
 
 function quizOptionLetter(i){ return String.fromCharCode(65+i); }
+function quizVideoEmbed(url){
+  if(!url) return '';
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+  if(yt){
+    return '<div style="position:relative;padding-top:56.25%;margin-bottom:10px;border-radius:var(--r12);overflow:hidden;background:#000"><iframe src="https://www.youtube.com/embed/'+yt[1]+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen></iframe></div>';
+  }
+  return '<video src="'+url+'" controls playsinline style="width:100%;border-radius:var(--r12);background:#000;margin-bottom:10px;max-height:280px"></video>';
+}
 
 async function openVisionQuiz(){
   document.getElementById('content').innerHTML = `
@@ -1837,6 +1845,7 @@ async function loadVisionQuiz(){
       <div class="sec" style="padding-left:0;padding-top:0">Questionnaire (${questions.length} questions)</div>
       ${questions.map((q,qi) => `
       <div class="card">
+        ${quizVideoEmbed(q.video_url)}
         <div style="font-size:13px;color:var(--w);margin-bottom:10px">${qi+1}. ${(q.question||'').replace(/</g,'&lt;')}</div>
         ${(q.options||[]).map((opt,oi) => `
         <label style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;font-size:12px;color:var(--w2)">
@@ -1930,6 +1939,15 @@ function renderQuizEditor(){
         <button class="ghost" style="color:var(--red);font-size:11px;padding:4px 8px" onclick="quizEditorRemoveQuestion(${qi})">Supprimer</button>
       </div>
       <textarea class="finput" rows="2" style="resize:vertical" placeholder="Énoncé de la question" oninput="quizEditorUpdateField(${qi},'question',this.value)">${(q.question||'').replace(/</g,'&lt;')}</textarea>
+      <input class="finput" style="margin:8px 0" placeholder="Lien vidéo (YouTube ou mp4) — optionnel" value="${(q.video_url||'').replace(/"/g,'&quot;')}" oninput="quizEditorUpdateField(${qi},'video_url',this.value)"/>
+      <select class="finput" style="margin:0 0 10px" onchange="quizEditorUpdateField(${qi},'poste',this.value)">
+        <option value="" ${!q.poste?'selected':''}>Poste indicatif — tous postes</option>
+        <option value="Meneur" ${q.poste==='Meneur'?'selected':''}>Meneur</option>
+        <option value="Arrière" ${q.poste==='Arrière'?'selected':''}>Arrière</option>
+        <option value="Ailier" ${q.poste==='Ailier'?'selected':''}>Ailier</option>
+        <option value="Ailier fort" ${q.poste==='Ailier fort'?'selected':''}>Ailier fort</option>
+        <option value="Pivot" ${q.poste==='Pivot'?'selected':''}>Pivot</option>
+      </select>
       ${q.options.map((opt,oi) => `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <input type="radio" name="correct-${qi}" ${q.correct_index===oi?'checked':''} onchange="quizEditorUpdateField(${qi},'correct_index',${oi})"/>
@@ -1946,7 +1964,7 @@ function renderQuizEditor(){
 }
 
 function quizEditorAddQuestion(){
-  QUIZ_EDIT_STATE.questions.push({ question:'', options:['',''], correct_index:0 });
+  QUIZ_EDIT_STATE.questions.push({ question:'', options:['',''], correct_index:0, video_url:'', poste:'' });
   renderQuizEditor();
 }
 function quizEditorRemoveQuestion(qi){
