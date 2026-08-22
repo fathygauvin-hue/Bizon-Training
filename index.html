@@ -731,30 +731,52 @@ function parseLancerFrancGrid(rows) {
 }
 
 function radarSVGDual(etapes) {
-  const cx = 170, cy = 170, n = etapes.length;
+  const cx = 240, cy = 240, n = etapes.length, maxR = 100;
   if (!n) return '';
-  const outerR = 118, outerW = 26, innerR = 78, innerW = 18;
   const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
+  const angle = i => (Math.PI * 2 / n) * i - Math.PI / 2;
+  const ptAt = (r, i) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+  let grid = '';
+  for (let ring = 1; ring <= 4; ring++) {
+    let pts = '';
+    for (let i = 0; i < n; i++) { const [x, y] = ptAt(maxR * ring / 4, i); pts += x + ',' + y + ' '; }
+    grid += '<polygon points="' + pts + '" fill="none" stroke="rgba(255,255,255,0.06)"/>';
+  }
+  let spokes = '';
+  for (let i = 0; i < n; i++) { const [x, y] = ptAt(maxR, i); spokes += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="rgba(255,255,255,0.05)"/>'; }
   const avgApres = etapes.reduce((a, e) => a + (e.moyenneApres || 0), 0) / n;
   const avgAvant = etapes.reduce((a, e) => a + (e.moyenneAvant || 0), 0) / n;
-  const arcRing = (r, w, pct, color, cap) => {
-    const c = 2 * Math.PI * r;
-    const dash = c * Math.max(0, Math.min(1, pct));
-    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" stroke-dasharray="${dash} ${c}" stroke-linecap="${cap}" transform="rotate(-90 ${cx} ${cy})"/>`;
-  };
-  const bgRing = (r, w) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="${w}"/>`;
-  const delta = avgApres - avgAvant;
-  const deltaTxt = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+  let avantPts = '', apresPts = '';
+  etapes.forEach((e, i) => {
+    const [ax, ay] = ptAt(maxR * Math.min(1, (e.moyenneAvant || 0) / 5), i); avantPts += ax + ',' + ay + ' ';
+    const [px, py] = ptAt(maxR * Math.min(1, (e.moyenneApres || 0) / 5), i); apresPts += px + ',' + py + ' ';
+  });
+  let dots = '';
+  etapes.forEach((e, i) => {
+    const [ax, ay] = ptAt(maxR * Math.min(1, (e.moyenneAvant || 0) / 5), i);
+    const [px, py] = ptAt(maxR * Math.min(1, (e.moyenneApres || 0) / 5), i);
+    dots += '<circle cx="' + ax + '" cy="' + ay + '" r="3" fill="#8c8c84"/>';
+    dots += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="' + tierColor(e.moyenneApres || 0) + '"><title>' + e.etape + ' — Avant ' + (e.moyenneAvant || 0).toFixed(1) + ' → Après ' + (e.moyenneApres || 0).toFixed(1) + '</title></circle>';
+  });
+  let labels = '';
+  etapes.forEach((e, i) => {
+    const ang = angle(i), deg = ang * 180 / Math.PI, flip = deg > 90 || deg < -90;
+    const stagger = (i % 2) * 14, labelR = maxR + 18 + stagger;
+    const lx = cx + labelR * Math.cos(ang), ly = cy + labelR * Math.sin(ang);
+    const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
+    const fs = e.etape.length > 24 ? 6.8 : e.etape.length > 17 ? 7.6 : 8.5;
+    labels += '<text x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '" dominant-baseline="middle" fill="#a8a8a0" font-size="' + fs + '" font-family="Inter" letter-spacing="0.2" transform="rotate(' + labelDeg + ' ' + lx + ' ' + ly + ')">' + e.etape + '</text>';
+  });
+  const delta = avgApres - avgAvant, deltaTxt = (delta >= 0 ? '+' : '') + delta.toFixed(1);
   const deltaColor = delta > 0 ? '#7BC47A' : delta < 0 ? '#E07070' : '#8c8c84';
-  return `<svg width="340" height="340" viewBox="0 0 340 340" style="width:100%;max-width:340px;height:auto;display:block;margin:0 auto">
-    ${bgRing(outerR, outerW)}${bgRing(innerR, innerW)}
-    ${arcRing(innerR, innerW, avgAvant / 5, '#8c8c84', 'butt')}
-    ${arcRing(outerR, outerW, avgApres / 5, tierColor(avgApres), 'round')}
-    <text x="${cx}" y="${cy - 28}" text-anchor="middle" fill="#8c8c84" font-size="10" font-family="Inter" letter-spacing="1.5">MOYENNE APRÈS</text>
-    <text x="${cx}" y="${cy + 8}" text-anchor="middle" fill="${tierColor(avgApres)}" font-size="46" font-weight="700" font-family="Inter">${avgApres.toFixed(1)}</text>
-    <text x="${cx}" y="${cy + 30}" text-anchor="middle" fill="#8c8c84" font-size="12" font-family="Inter" letter-spacing="0.5">/ 5</text>
-    <text x="${cx}" y="${cy + 54}" text-anchor="middle" fill="${deltaColor}" font-size="12" font-weight="600" font-family="Inter">${deltaTxt} vs avant (${avgAvant.toFixed(1)})</text>
-  </svg>`;
+  return '<div style="text-align:center;width:100%">' +
+    '<div style="font-size:10px;color:#8c8c84;letter-spacing:1.5px;margin-bottom:2px">MOYENNE APRÈS</div>' +
+    '<div style="font-size:24px;font-weight:700;color:' + tierColor(avgApres) + '">' + avgApres.toFixed(1) + '<span style="font-size:12px;color:#8c8c84;font-weight:400"> / 5</span></div>' +
+    '<div style="font-size:11px;font-weight:600;color:' + deltaColor + ';margin-bottom:6px">' + deltaTxt + ' vs avant (' + avgAvant.toFixed(1) + ')</div>' +
+    '<svg width="480" height="480" viewBox="0 0 480 480" style="width:100%;max-width:480px;height:auto;display:block;margin:0 auto">' + grid + spokes +
+    '<polygon points="' + avantPts + '" fill="#8c8c84" fill-opacity="0.08" stroke="#8c8c84" stroke-width="1.5" stroke-dasharray="4,3"/>' +
+    '<polygon points="' + apresPts + '" fill="' + tierColor(avgApres) + '" fill-opacity="0.12" stroke="' + tierColor(avgApres) + '" stroke-width="2"/>' +
+    dots + labels + '</svg></div>';
 }
 function renderLancerFrancEval(etapes, criteres) {
   if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
@@ -887,24 +909,42 @@ function parseChecklistGrid(rows) {
 }
 
 function radarSVGSingle(etapes) {
-  const cx = 150, cy = 150, n = etapes.length;
+  const cx = 240, cy = 240, n = etapes.length, maxR = 100;
   if (!n) return '';
-  const outerR = 108, outerW = 30;
   const tierColor = v => v >= 4 ? '#7BC47A' : v >= 2.5 ? '#E7C34B' : '#E07070';
+  const angle = i => (Math.PI * 2 / n) * i - Math.PI / 2;
+  const ptAt = (r, i) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+  let grid = '';
+  for (let ring = 1; ring <= 4; ring++) {
+    let pts = '';
+    for (let i = 0; i < n; i++) { const [x, y] = ptAt(maxR * ring / 4, i); pts += x + ',' + y + ' '; }
+    grid += '<polygon points="' + pts + '" fill="none" stroke="rgba(255,255,255,0.06)"/>';
+  }
+  let spokes = '';
+  for (let i = 0; i < n; i++) { const [x, y] = ptAt(maxR, i); spokes += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="rgba(255,255,255,0.05)"/>'; }
   const avg = etapes.reduce((a, e) => a + (e.moyenne || 0), 0) / n;
-  const arcRing = (r, w, pct, color, cap) => {
-    const c = 2 * Math.PI * r;
-    const dash = c * Math.max(0, Math.min(1, pct));
-    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" stroke-dasharray="${dash} ${c}" stroke-linecap="${cap}" transform="rotate(-90 ${cx} ${cy})"/>`;
-  };
-  const bgRing = (r, w) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="${w}"/>`;
-  return `<svg width="300" height="300" viewBox="0 0 300 300" style="width:100%;max-width:300px;height:auto;display:block;margin:0 auto">
-    ${bgRing(outerR, outerW)}
-    ${arcRing(outerR, outerW, avg / 5, tierColor(avg), 'round')}
-    <text x="${cx}" y="${cy - 20}" text-anchor="middle" fill="#8c8c84" font-size="10" font-family="Inter" letter-spacing="1.5">MOYENNE</text>
-    <text x="${cx}" y="${cy + 16}" text-anchor="middle" fill="${tierColor(avg)}" font-size="46" font-weight="700" font-family="Inter">${avg.toFixed(1)}</text>
-    <text x="${cx}" y="${cy + 40}" text-anchor="middle" fill="#8c8c84" font-size="12" font-family="Inter" letter-spacing="0.5">/ 5</text>
-  </svg>`;
+  let pts2 = '';
+  etapes.forEach((e, i) => { const [x, y] = ptAt(maxR * Math.min(1, (e.moyenne || 0) / 5), i); pts2 += x + ',' + y + ' '; });
+  let dots = '';
+  etapes.forEach((e, i) => {
+    const [x, y] = ptAt(maxR * Math.min(1, (e.moyenne || 0) / 5), i);
+    dots += '<circle cx="' + x + '" cy="' + y + '" r="4" fill="' + tierColor(e.moyenne || 0) + '"><title>' + e.etape + ' — ' + (e.moyenne || 0).toFixed(1) + '</title></circle>';
+  });
+  let labels = '';
+  etapes.forEach((e, i) => {
+    const ang = angle(i), deg = ang * 180 / Math.PI, flip = deg > 90 || deg < -90;
+    const stagger = (i % 2) * 14, labelR = maxR + 18 + stagger;
+    const lx = cx + labelR * Math.cos(ang), ly = cy + labelR * Math.sin(ang);
+    const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
+    const fs = e.etape.length > 24 ? 6.8 : e.etape.length > 17 ? 7.6 : 8.5;
+    labels += '<text x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '" dominant-baseline="middle" fill="#a8a8a0" font-size="' + fs + '" font-family="Inter" letter-spacing="0.2" transform="rotate(' + labelDeg + ' ' + lx + ' ' + ly + ')">' + e.etape + '</text>';
+  });
+  return '<div style="text-align:center;width:100%">' +
+    '<div style="font-size:10px;color:#8c8c84;letter-spacing:1.5px;margin-bottom:2px">MOYENNE</div>' +
+    '<div style="font-size:24px;font-weight:700;color:' + tierColor(avg) + ';margin-bottom:6px">' + avg.toFixed(1) + '<span style="font-size:12px;color:#8c8c84;font-weight:400"> / 5</span></div>' +
+    '<svg width="480" height="480" viewBox="0 0 480 480" style="width:100%;max-width:480px;height:auto;display:block;margin:0 auto">' + grid + spokes +
+    '<polygon points="' + pts2 + '" fill="' + tierColor(avg) + '" fill-opacity="0.12" stroke="' + tierColor(avg) + '" stroke-width="2"/>' +
+    dots + labels + '</svg></div>';
 }
 function renderChecklistEval(etapes) {
   if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
