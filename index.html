@@ -45,6 +45,8 @@ a{color:inherit;text-decoration:none}
 .sec{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gold);letter-spacing:2px;padding:18px 16px 8px}
 .acc-head{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gold);letter-spacing:2px;padding:18px 16px 8px;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none}
 .acc-arrow{display:inline-block;font-size:12px;transition:transform .15s}
+.skel-bar{display:inline-block;width:70px;height:11px;border-radius:5px;vertical-align:middle;background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 37%,var(--s2) 63%);background-size:400% 100%;animation:skel-pulse 1.4s ease infinite}
+@keyframes skel-pulse{0%{background-position:100% 0}100%{background-position:0 0}}
 .card{background:var(--s2);border:.5px solid var(--border);border-radius:var(--r12);padding:14px;margin:0 14px 10px}
 .pill{display:inline-flex;align-items:center;background:var(--gold4);border:.5px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--gold2);font-weight:500}
 .tag{display:inline-flex;align-items:center;border-radius:var(--r8);padding:2px 8px;font-size:11px;font-weight:500}
@@ -981,7 +983,7 @@ function coachNotesShellHTML(){
     <textarea class="finput" id="new-coach-note" rows="3" placeholder="Diagnostic après entraînement…" style="resize:vertical;margin-bottom:8px"></textarea>
     <button class="gbtn full" onclick="submitCoachNote()">Ajouter le diagnostic</button>
   </div>
-  <div id="coach-notes-list">Chargement…</div>
+  <div id="coach-notes-list"><span class="skel-bar"></span></div>
   <div style="height:24px"></div>`;
 }
 
@@ -991,7 +993,7 @@ async function loadCoachNotes(playerId){
   try{
     const { notes } = await callApi('getCoachNotes', { playerId });
     if(!notes || !notes.length){
-      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun diagnostic enregistré pour l'instant.</div></div>`;
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun diagnostic enregistré pour l'instant. <span style="color:var(--gold2)">Ajoute le premier ci-dessus ↑</span></div></div>`;
       return;
     }
     el.innerHTML = notes.map(n=>{
@@ -1136,7 +1138,7 @@ function openMyExercises(){
     </div>
     <div class="sec" style="padding-left:0;padding-top:20px">Mes envois</div>
     <div id="my-exercises-list">
-      <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
+      <div class="card"><div style="font-size:12px;color:var(--w3)"><span class="skel-bar"></span></div></div>
     </div>
     <div style="height:24px"></div>`;
   loadMyExercisesList();
@@ -1172,7 +1174,7 @@ async function loadMyExercisesList(){
   try{
     const { submissions } = await callApi('listMySubmissions', {});
     if(!submissions || !submissions.length){
-      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune vidéo envoyée pour l'instant.</div></div>`;
+      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune vidéo envoyée pour l'instant. <span style="color:var(--gold2)">Envoie ta première vidéo ci-dessus ↑</span></div></div>`;
       return;
     }
     el.innerHTML = submissions.map(s=>{
@@ -1247,7 +1249,7 @@ function coachHTML(){
   return `
   <div class="sec" style="padding-left:0;padding-top:24px">Vue d'ensemble</div>
   <div id="coach-stats" class="app-grid-3" style="padding:0">
-    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--w3);font-size:12px">Chargement…</div>
+    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--w3);font-size:12px"><span class="skel-bar"></span></div>
   </div>
   <div class="sec" style="padding-left:0;padding-top:16px">Liste joueurs</div>
   <div id="coach-players-list" class="app-grid-3" style="padding:0">
@@ -1269,7 +1271,12 @@ async function loadCoachPlayers() {
     return;
   }
   try {
-    const { players } = await callApi('listPlayers', {});
+    const { players: rawPlayers } = await callApi('listPlayers', {});
+    const players = (rawPlayers || []).slice().sort((a, b) => {
+      const da = a.last_note_at ? (Date.now() - new Date(a.last_note_at).getTime()) : Infinity;
+      const db = b.last_note_at ? (Date.now() - new Date(b.last_note_at).getTime()) : Infinity;
+      return db - da;
+    });
 
     if (!players || !players.length) {
       el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Aucun joueur rattaché pour l'instant. Ajoute ton premier joueur ci-dessous.</div></div>`;
@@ -1427,22 +1434,22 @@ async function openPlayerDetail(playerId, playerName) {
     <div class="app-grid-2" id="acc-code" style="padding:0;margin-top:6px;display:none">
       <div>
         <div class="sec" style="padding-left:0">Code d'accès</div>
-        <div id="player-code-box" class="card">Chargement…</div>
+        <div id="player-code-box" class="card"><span class="skel-bar"></span></div>
       </div>
       <div>
         <div class="sec" style="padding-left:0">Liens Google Sheets</div>
-        <div id="player-sheets-form" class="card">Chargement…</div>
+        <div id="player-sheets-form" class="card"><span class="skel-bar"></span></div>
       </div>
     </div>
     ${coachNotesShellHTML()}
     <div class="acc-head" onclick="toggleAcc('acc-shooting')"><span class="acc-arrow" id="acc-shooting-arrow">▸</span>Séances de tir</div>
-    <div id="acc-shooting" style="display:none"><div id="player-shooting-box" class="card">Chargement…</div></div>
+    <div id="acc-shooting" style="display:none"><div id="player-shooting-box" class="card"><span class="skel-bar"></span></div></div>
     <div class="acc-head" onclick="toggleAcc('acc-ironman')"><span class="acc-arrow" id="acc-ironman-arrow">▸</span>Iron Man</div>
-    <div id="acc-ironman" style="display:none"><div id="player-ironman-box" class="card">Chargement…</div></div>
+    <div id="acc-ironman" style="display:none"><div id="player-ironman-box" class="card"><span class="skel-bar"></span></div></div>
     <div class="acc-head" onclick="toggleAcc('acc-quiz')"><span class="acc-arrow" id="acc-quiz-arrow">▸</span>Vision de jeu</div>
-    <div id="acc-quiz" style="display:none"><div id="player-quiz-results" class="card">Chargement…</div></div>
+    <div id="acc-quiz" style="display:none"><div id="player-quiz-results" class="card"><span class="skel-bar"></span></div></div>
     <div class="acc-head" onclick="toggleAcc('acc-avail')"><span class="acc-arrow" id="acc-avail-arrow">▸</span>Disponibilités du joueur</div>
-    <div id="acc-avail" style="display:none"><div id="player-availability-box" class="card">Chargement…</div></div>
+    <div id="acc-avail" style="display:none"><div id="player-availability-box" class="card"><span class="skel-bar"></span></div></div>
     <div class="acc-head" onclick="toggleAcc('acc-addtraining')"><span class="acc-arrow" id="acc-addtraining-arrow">▸</span>Ajouter un entraînement récurrent</div>
     <div id="acc-addtraining" style="display:none">
     <div class="card">
@@ -1465,12 +1472,12 @@ async function openPlayerDetail(playerId, playerName) {
     </div>
     <div class="sec" style="padding-left:0;padding-top:22px">Programme d'entraînement du joueur</div>
     <div id="player-sessions-list">
-      <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
+      <div class="card"><div style="font-size:12px;color:var(--w3)"><span class="skel-bar"></span></div></div>
     </div>
     <div class="acc-head" onclick="toggleAcc('acc-exercises')"><span class="acc-arrow" id="acc-exercises-arrow">▸</span>Exercices filmés</div>
     <div id="acc-exercises" style="display:none">
     <div id="coach-exercises-list">
-      <div class="card"><div style="font-size:12px;color:var(--w3)">Chargement…</div></div>
+      <div class="card"><div style="font-size:12px;color:var(--w3)"><span class="skel-bar"></span></div></div>
     </div>
     </div>
     <div style="height:24px"></div>`;
@@ -1843,7 +1850,7 @@ function openQuizEditor(){
       <button onclick="nav('profil')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
       <div style="font-size:14px;font-weight:500;color:var(--w)">Questionnaire · Vision de jeu</div>
     </div>
-    <div id="quiz-editor-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement…</div>
+    <div id="quiz-editor-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px"><span class="skel-bar"></span></div>
   `;
   loadQuizEditor();
 }
@@ -1932,9 +1939,9 @@ async function openMyCalendar(){
       <div style="font-size:14px;font-weight:500;color:var(--w)">Mon calendrier</div>
     </div>
     <div class="sec" style="padding-left:0;padding-top:18px">Mes disponibilités</div>
-    <div id="my-availability-box" class="card">Chargement…</div>
+    <div id="my-availability-box" class="card"><span class="skel-bar"></span></div>
     <div class="sec" style="padding-left:0;padding-top:22px">Mon programme d'entraînement</div>
-    <div id="my-program-list" class="card">Chargement…</div>
+    <div id="my-program-list" class="card"><span class="skel-bar"></span></div>
     <div style="height:24px"></div>
   `;
   await loadMyAvailabilityBox();
@@ -2308,7 +2315,7 @@ function _regShootingBack(fn){ const id = 'b'+Math.random().toString(36).slice(2
 function goShootingBackId(id){ const fn = window.__shootingBackFns[id]; if(fn) fn(); else nav('suivi'); }
 
 async function openShootingHub(){
-  document.getElementById('content').innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)"><button onclick="nav(\'suivi\')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button><div style="font-size:14px;font-weight:500;color:var(--w)">Séance de tir</div></div><div id="shooting-hub-body" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement…</div>';
+  document.getElementById('content').innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)"><button onclick="nav(\'suivi\')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button><div style="font-size:14px;font-weight:500;color:var(--w)">Séance de tir</div></div><div id="shooting-hub-body" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px"><span class="skel-bar"></span></div>';
   await refreshShootingHub();
 }
 
@@ -2432,7 +2439,7 @@ function renderShootingSummary(session, entries, backId){
 }
 
 async function viewShootingSessionDetail(sessionId, backId){
-  document.getElementById('content').innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement…</div>';
+  document.getElementById('content').innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px"><span class="skel-bar"></span></div>';
   try{ const { session, entries } = await callApi('getShootingSessionDetail', { session_id: sessionId }); renderShootingSummary(session, entries, backId); }catch(e){ alert(tr(e.message)); goShootingBackId(backId); }
 }
 
@@ -2484,7 +2491,7 @@ function ironmanStartTimer(){
 }
 
 async function openIronmanHub(){
-  document.getElementById('content').innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)"><button onclick="nav(\'suivi\')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button><div style="font-size:14px;font-weight:500;color:var(--w)">Iron Man</div></div><div id="ironman-hub-body" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement…</div>';
+  document.getElementById('content').innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)"><button onclick="nav(\'suivi\')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button><div style="font-size:14px;font-weight:500;color:var(--w)">Iron Man</div></div><div id="ironman-hub-body" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px"><span class="skel-bar"></span></div>';
   await refreshIronmanHub();
 }
 
@@ -2595,7 +2602,7 @@ function renderIronmanSummary(session, backId){
 }
 
 async function viewIronmanSessionDetail(sessionId, backId){
-  document.getElementById('content').innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement…</div>';
+  document.getElementById('content').innerHTML = '<div style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px"><span class="skel-bar"></span></div>';
   try{ const { session } = await callApi('getIronmanSessionDetail', { session_id: sessionId }); renderIronmanSummary(session, backId); }catch(e){ alert(tr(e.message)); goShootingBackId(backId); }
 }
 
