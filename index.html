@@ -731,7 +731,7 @@ function parseLancerFrancGrid(rows) {
 }
 
 function radarSVGDual(etapes) {
-  const cx = 170, cy = 170, n = etapes.length;
+  const cx = 240, cy = 240, n = etapes.length;
   if (!n) return '';
   const outerR = 88, outerW = 20, innerR = 56, innerW = 12;
   const full = Math.PI * 2 / n, gap = Math.min(0.05, full * 0.15);
@@ -751,15 +751,15 @@ function radarSVGDual(etapes) {
     segs += ring(outerR, outerR + outerW * Math.min(1, apres / 5), a0, a1, tierColor(apres));
     segs += ring(innerR, innerR + innerW * Math.min(1, avant / 5), a0, a1, '#8c8c84');
     const deg = aC * 180 / Math.PI, flip = deg > 90 || deg < -90;
-    const stagger = (i % 2) * 12;
+    const stagger = (i % 2) * 14;
     const labelR = outerR + outerW + 10 + stagger;
     const lx = cx + labelR * Math.cos(aC), ly = cy + labelR * Math.sin(aC);
     const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
-    const short = e.etape.length > 18 ? e.etape.slice(0, 17) + '…' : e.etape;
-    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#a8a8a0" font-size="8.5" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})"><title>${e.etape} — Avant ${avant.toFixed(1)} → Après ${apres.toFixed(1)}</title>${short}</text>`;
+    const fs = e.etape.length > 24 ? 6.8 : e.etape.length > 17 ? 7.6 : 8.5;
+    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#a8a8a0" font-size="${fs}" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})"><title>${e.etape} — Avant ${avant.toFixed(1)} → Après ${apres.toFixed(1)}</title>${e.etape}</text>`;
   });
   const avgApres = etapes.reduce((a, e) => a + (e.moyenneApres || 0), 0) / n;
-  return `<svg width="340" height="340" viewBox="0 0 340 340">${bg}${segs}
+  return `<svg width="480" height="480" viewBox="0 0 480 480" style="width:100%;max-width:480px;height:auto;display:block">${bg}${segs}
     <circle cx="${cx}" cy="${cy}" r="${innerR - 8}" fill="#1f1f1c"/>
     <text x="${cx}" y="${cy - 22}" text-anchor="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="1">MOYENNE</text>
     <text x="${cx}" y="${cy - 2}" text-anchor="middle" fill="${tierColor(avgApres)}" font-size="26" font-weight="700" font-family="Inter">${avgApres.toFixed(1)}</text>
@@ -898,7 +898,7 @@ function parseChecklistGrid(rows) {
 }
 
 function radarSVGSingle(etapes) {
-  const cx = 170, cy = 170, n = etapes.length;
+  const cx = 240, cy = 240, n = etapes.length;
   if (!n) return '';
   const outerR = 78, outerW = 24;
   const full = Math.PI * 2 / n, gap = Math.min(0.05, full * 0.15);
@@ -916,15 +916,15 @@ function radarSVGSingle(etapes) {
     const v = e.moyenne || 0;
     segs += ring(outerR, outerR + outerW * Math.min(1, v / 5), a0, a1, tierColor(v));
     const deg = aC * 180 / Math.PI, flip = deg > 90 || deg < -90;
-    const stagger = (i % 2) * 12;
+    const stagger = (i % 2) * 14;
     const labelR = outerR + outerW + 10 + stagger;
     const lx = cx + labelR * Math.cos(aC), ly = cy + labelR * Math.sin(aC);
     const labelDeg = flip ? deg + 180 : deg, anchor = flip ? 'end' : 'start';
-    const short = e.etape.length > 18 ? e.etape.slice(0, 17) + '…' : e.etape;
-    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#a8a8a0" font-size="8.5" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})"><title>${e.etape} — ${v.toFixed(1)} / 5</title>${short}</text>`;
+    const fs = e.etape.length > 24 ? 6.8 : e.etape.length > 17 ? 7.6 : 8.5;
+    labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="#a8a8a0" font-size="${fs}" font-family="Inter" letter-spacing="0.2" transform="rotate(${labelDeg} ${lx} ${ly})"><title>${e.etape} — ${v.toFixed(1)} / 5</title>${e.etape}</text>`;
   });
   const avg = etapes.reduce((a, e) => a + (e.moyenne || 0), 0) / n;
-  return `<svg width="340" height="340" viewBox="0 0 340 340">${bg}${segs}
+  return `<svg width="480" height="480" viewBox="0 0 480 480" style="width:100%;max-width:480px;height:auto;display:block">${bg}${segs}
     <circle cx="${cx}" cy="${cy}" r="${outerR - 10}" fill="#1f1f1c"/>
     <text x="${cx}" y="${cy - 22}" text-anchor="middle" fill="#8c8c84" font-size="8" font-family="Inter" letter-spacing="1">MOYENNE</text>
     <text x="${cx}" y="${cy - 2}" text-anchor="middle" fill="${tierColor(avg)}" font-size="26" font-weight="700" font-family="Inter">${avg.toFixed(1)}</text>
