@@ -670,9 +670,106 @@ function render(){
   document.querySelector('#nt-suivi span').textContent = 'Suivi';
   document.querySelector('#nt-biblio span').textContent = 'Biblio';
   document.querySelector('#nt-profil span').textContent = 'Profil';
-  if(CURRENT.screen==='suivi') c.innerHTML=suiviHTML();
+  if(CURRENT.screen==='suivi'){
+    c.innerHTML=suiviHTML();
+    if(APP_STATE.role!=='coach') loadPlayerHome();
+  }
   else if(CURRENT.screen==='biblio') c.innerHTML=biblioHTML();
   else if(CURRENT.screen==='profil') c.innerHTML=profilHTML();
+}
+
+/* ═══ ACCUEIL JOUEUR — résumé dernière évaluation + prochaine séance + retour coach ═══ */
+async function loadPlayerHome(){
+  loadHomeEvalCard();
+  loadHomeSessionCard();
+  loadHomeCoachCard();
+}
+
+async function loadHomeEvalCard(){
+  const el = document.getElementById('home-eval-card');
+  if(!el) return;
+  try{
+    const { sheets } = await callApi('getSheetLinks', { playerId: APP_STATE.userId });
+    if(!sheets?.sheet_lf){
+      el.innerHTML = '<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dernière évaluation</div><div style="font-size:12px;color:var(--w3)">Pas encore d\'évaluation.</div>';
+      return;
+    }
+    const res = await fetch(sheets.sheet_lf);
+    const text = await res.text();
+    const { etapes } = parseLancerFrancGrid(parseCSV(text));
+    if(!etapes.length){
+      el.innerHTML = '<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dernière évaluation</div><div style="font-size:12px;color:var(--w3)">Pas encore d\'évaluation.</div>';
+      return;
+    }
+    const avgApres = etapes.reduce((a,e)=>a+(e.moyenneApres||0),0) / etapes.length;
+    const avgAvant = etapes.reduce((a,e)=>a+(e.moyenneAvant||0),0) / etapes.length;
+    const delta = avgApres - avgAvant;
+    const tierColor = avgApres >= 4 ? 'var(--green)' : avgApres >= 2.5 ? 'var(--gold2)' : 'var(--red)';
+    const deltaTxt = delta === 0 ? '' : (delta > 0 ? '+' : '') + delta.toFixed(1);
+    const deltaColor = delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : 'var(--w3)';
+    el.style.cursor = 'pointer';
+    el.onclick = () => openLancerFrancEval();
+    el.innerHTML = `<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Lancer franc</div>
+      <div style="display:flex;align-items:baseline;gap:6px">
+        <div style="font-family:var(--font-num);font-weight:800;font-size:32px;color:${tierColor};line-height:1">${avgApres.toFixed(1)}</div>
+        <div style="font-size:12px;color:var(--w3)">/5</div>
+      </div>
+      ${deltaTxt ? `<div style="font-size:11px;color:${deltaColor};margin-top:2px">${deltaTxt} vs avant</div>` : ''}`;
+  }catch(e){
+    el.innerHTML = '<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dernière évaluation</div><div style="font-size:12px;color:var(--w3)">Indisponible.</div>';
+  }
+}
+
+async function loadHomeSessionCard(){
+  const el = document.getElementById('home-session-card');
+  if(!el) return;
+  try{
+    const { programs } = await callApi('getPlayerProgram', {});
+    if(!programs || !programs.length){
+      el.innerHTML = '<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Prochaine séance</div><div style="font-size:12px;color:var(--w3)">Aucune séance programmée.</div>';
+      return;
+    }
+    const byDay = {};
+    programs.forEach(p => { (byDay[p.day_of_week] = byDay[p.day_of_week]||[]).push(p); });
+    const now = new Date();
+    const todayIdx = (now.getDay() + 6) % 7;
+    const nowHM = now.toTimeString().slice(0,5);
+    let found = null, foundOffset = 0;
+    for(let off=0; off<8 && !found; off++){
+      const di = (todayIdx + off) % 7;
+      const items = (byDay[di]||[]).slice().sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||''));
+      for(const it of items){
+        if(off===0 && it.start_time && it.start_time.slice(0,5) < nowHM) continue;
+        found = it; foundOffset = off; break;
+      }
+    }
+    if(!found){
+      el.innerHTML = '<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Prochaine séance</div><div style="font-size:12px;color:var(--w3)">Aucune séance à venir.</div>';
+      return;
+    }
+    const dayLabel = foundOffset===0 ? "Aujourd'hui" : foundOffset===1 ? 'Demain' : JOURS_SEMAINE[(todayIdx+foundOffset)%7];
+    el.innerHTML = `<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Prochaine séance</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--w);letter-spacing:.5px">${dayLabel}</div>
+      <div style="font-size:12px;color:var(--gold2);margin-top:2px">${found.start_time?found.start_time.slice(0,5):''}${found.end_time?'–'+found.end_time.slice(0,5):''}</div>
+      <div style="font-size:12px;color:var(--w2);margin-top:2px">${(found.title||'').replace(/</g,'&lt;')}</div>`;
+  }catch(e){
+    el.innerHTML = '<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Prochaine séance</div><div style="font-size:12px;color:var(--w3)">Indisponible.</div>';
+  }
+}
+
+async function loadHomeCoachCard(){
+  const el = document.getElementById('home-coach-card');
+  if(!el) return;
+  try{
+    const { notes } = await callApi('getCoachNotes', { playerId: APP_STATE.userId });
+    if(!notes || !notes.length) return;
+    const n = notes[notes.length-1].created_at ? notes.reduce((a,b)=> new Date(a.created_at)>new Date(b.created_at)?a:b) : notes[0];
+    const d = new Date(n.created_at);
+    const dateStr = d.toLocaleDateString(LOCALE(), { day:'2-digit', month:'short' });
+    el.style.display = 'block';
+    el.innerHTML = `<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Retour du coach · ${dateStr}</div>
+      <div style="font-size:13px;color:var(--w2);white-space:pre-wrap">${(n.note||'').replace(/</g,'&lt;')}</div>`;
+  }catch(e){ /* silencieux */ }
 }
 
 /* ═══ ÉVALUATION TECHNIQUE — LANCER FRANC (import Google Sheets publié en CSV) ═══ */
@@ -1107,6 +1204,11 @@ function joueurHTML(){
     <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">${role}</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--w);letter-spacing:1.5px;line-height:1.05">SALUT ${firstName}</div>
   </div>
+  <div class="app-grid-2" style="padding:0 14px;margin-bottom:2px">
+    <div class="card" id="home-eval-card" style="margin:0"><span class="skel-bar"></span></div>
+    <div class="card" id="home-session-card" style="margin:0"><span class="skel-bar"></span></div>
+  </div>
+  <div class="card" id="home-coach-card" style="margin:12px 14px 4px;display:none"></div>
   <div class="sec" style="padding-left:14px">Évaluation technique</div>
   <div class="app-grid-3" style="padding:0">
     <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openLancerFrancEval()"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎯</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
