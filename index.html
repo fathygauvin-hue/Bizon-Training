@@ -1583,12 +1583,172 @@ function toggleAcc(id){
   if(arrow) arrow.textContent = isHidden ? '▾' : '▸';
 }
 
+/* ═══ OBJECTIF DE LA SEMAINE (coach) ═══ */
+function fmtObjDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString(LOCALE(), { day:'2-digit', month:'short' });
+}
+function objectiveHistoryHTML(history){
+  if(!history || !history.length) return '';
+  return `<div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px">Objectifs précédents</div>` +
+    history.slice(0,5).map(o => {
+      const ok = o.status === 'achieved';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:.5px solid var(--border);gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <div style="width:18px;height:18px;border-radius:50%;flex-shrink:0;background:${ok?'var(--green)':'var(--s3)'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#0a0a0a">${ok?'✓':''}</div>
+          <div style="font-size:13px;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(o.criterion||'').replace(/</g,'&lt;')} à ${Number(o.target_value).toFixed(1)}</div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:${ok?'var(--green)':'var(--red)'};white-space:nowrap">${ok?'Atteint':'Manqué'}${o.final_value!=null?' · '+Number(o.final_value).toFixed(1):''}</div>
+      </div>`;
+    }).join('');
+}
+
+async function loadCoachObjectiveBox(playerId, playerName){
+  const el = document.getElementById('coach-objective-box');
+  if(!el) return;
+  try{
+    const { active, history } = await callApi('getObjectives', { playerId });
+    const first = (playerName||'').split(' ')[0];
+    if(!active){
+      el.innerHTML = `<div style="font-size:13px;color:var(--w2);margin-bottom:10px">Aucun objectif en cours pour ${first}.</div>
+        <button class="gbtn full" onclick="openSetObjective('${playerId}','${(playerName||'').replace(/'/g,"\\'")}')">Fixer l'objectif de la semaine</button>
+        ${objectiveHistoryHTML(history)}`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:6px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>En cours · depuis le ${fmtObjDate(active.created_at)}
+      </div>
+      <div style="font-size:18px;font-weight:600;color:var(--w);margin-bottom:8px">Passer <span style="text-transform:lowercase">${(active.criterion||'').replace(/</g,'&lt;')}</span> à ${Number(active.target_value).toFixed(1)} / 5</div>
+      <div style="font-size:12px;color:var(--w3)">${active.start_value!=null?'Départ '+Number(active.start_value).toFixed(1)+' · ':''}${active.sessions_planned||0} séance${(active.sessions_planned||0)>1?'s':''} de tir prévue${(active.sessions_planned||0)>1?'s':''}${active.note?' · '+active.note.replace(/</g,'&lt;'):''}</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="gbtn" style="flex:1;min-width:120px" onclick="closeObjectiveUI('${active.id}','achieved','${playerId}','${(playerName||'').replace(/'/g,"\\'")}')">✓ Atteint</button>
+        <button class="ghost" style="flex:1;min-width:120px" onclick="closeObjectiveUI('${active.id}','missed','${playerId}','${(playerName||'').replace(/'/g,"\\'")}')">Manqué</button>
+        <button class="ghost" style="flex:1;min-width:120px" onclick="openSetObjective('${playerId}','${(playerName||'').replace(/'/g,"\\'")}')">Nouvel objectif</button>
+      </div>
+      ${objectiveHistoryHTML(history)}`;
+  }catch(e){
+    el.innerHTML = `<div style="font-size:12px;color:var(--red)">Impossible de charger l'objectif.</div>`;
+  }
+}
+
+async function closeObjectiveUI(objectiveId, status, playerId, playerName){
+  const v = prompt(tr(status==='achieved' ? 'Valeur atteinte (ex: 3.6) — optionnel' : 'Valeur finale (ex: 3.2) — optionnel'));
+  if(v === null) return;
+  const num = parseFloat(String(v).replace(',','.'));
+  try{
+    await callApi('closeObjective', { objectiveId, status, final_value: isNaN(num) ? null : num });
+    await loadCoachObjectiveBox(playerId, playerName);
+  }catch(e){ alert(tr(e.message)); }
+}
+
+let OBJ_CTX = null;
+async function openSetObjective(playerId, playerName){
+  const first = (playerName||'').split(' ')[0];
+  const weekOf = new Date().toLocaleDateString(LOCALE(), { day:'2-digit', month:'long' });
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 0 6px">
+      <button onclick="openPlayerDetail('${playerId}','${(playerName||'').replace(/'/g,"\\'")}')" style="width:44px;height:44px;border-radius:50%;background:var(--s2);border:.5px solid var(--border);color:var(--gold);font-size:22px;cursor:pointer;line-height:1;flex-shrink:0">‹</button>
+      <div>
+        <div style="font-size:18px;font-weight:600;color:var(--w)">Objectif de ${first}</div>
+        <div style="font-size:12px;color:var(--w3)">Semaine du ${weekOf}</div>
+      </div>
+    </div>
+    <div class="sec" style="padding-left:0;padding-top:18px">Critère le plus faible</div>
+    <div id="obj-criteria"><div class="card"><span class="skel-bar"></span></div></div>
+    <div class="sec" style="padding-left:0;padding-top:18px">Cible à atteindre</div>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between">
+      <button class="ghost" style="width:46px;height:46px;border-radius:50%;font-size:20px;padding:0" onclick="objStep(-0.5)">−</button>
+      <div style="text-align:center"><div id="obj-target" style="font-family:var(--font-num);font-weight:800;font-size:34px;color:var(--w);line-height:1">3.5</div><div style="font-size:11px;color:var(--w3)">sur 5</div></div>
+      <button class="ghost" style="width:46px;height:46px;border-radius:50%;font-size:20px;padding:0;background:var(--gold4);color:var(--gold2)" onclick="objStep(0.5)">+</button>
+    </div>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <div><div style="font-size:14px;color:var(--w)"><span id="obj-sessions">2</span> séances de tir</div><div style="font-size:11px;color:var(--w3)">prévues cette semaine</div></div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="ghost" style="width:34px;height:34px;border-radius:50%;padding:0" onclick="objSessions(-1)">−</button>
+        <button class="ghost" style="width:34px;height:34px;border-radius:50%;padding:0" onclick="objSessions(1)">+</button>
+      </div>
+    </div>
+    <div class="card"><textarea class="finput" id="obj-note" rows="2" placeholder="Consigne pour ${first} (optionnel)" style="margin:0;resize:vertical"></textarea></div>
+    <div id="obj-history" class="card" style="display:none"></div>
+    <button class="gbtn full" style="margin-top:14px;padding:14px" onclick="submitObjective()">Envoyer l'objectif à ${first}</button>
+    <div style="height:24px"></div>`;
+  OBJ_CTX = { playerId, playerName, criteria: [], selected: null, target: 3.5, sessions: 2 };
+  // Historique
+  try{
+    const { history } = await callApi('getObjectives', { playerId });
+    const h = document.getElementById('obj-history');
+    if(h && history && history.length){ h.style.display='block'; h.innerHTML = objectiveHistoryHTML(history).replace('margin:14px 0 6px','margin:0 0 6px'); }
+  }catch(e){}
+  // Critères depuis le Sheet Lancer franc
+  const box = document.getElementById('obj-criteria');
+  try{
+    const { sheets } = await callApi('getSheetLinks', { playerId });
+    let etapes = [];
+    if(sheets?.sheet_lf){
+      const res = await fetch(sheets.sheet_lf);
+      const text = await res.text();
+      etapes = parseLancerFrancGrid(parseCSV(text)).etapes;
+    }
+    if(!etapes.length){
+      OBJ_CTX.criteria = [];
+      box.innerHTML = `<div class="card"><input class="finput" id="obj-free-crit" placeholder="Critère à travailler (ex: Relâché du poignet)" style="margin:0"/><div style="font-size:11px;color:var(--w3);margin-top:6px">Aucune évaluation Lancer franc trouvée : saisis le critère librement.</div></div>`;
+      return;
+    }
+    const scored = etapes.filter(e => (e.moyenneApres||0) > 0);
+    const sorted = (scored.length ? scored : etapes).slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0));
+    OBJ_CTX.criteria = sorted;
+    objSelect(0);
+  }catch(e){
+    box.innerHTML = `<div class="card"><input class="finput" id="obj-free-crit" placeholder="Critère à travailler" style="margin:0"/></div>`;
+  }
+}
+function objSelect(i){
+  OBJ_CTX.selected = i;
+  const crit = OBJ_CTX.criteria[i];
+  const cur = crit.moyenneApres || 0;
+  OBJ_CTX.target = Math.min(5, Math.round((cur + 0.5) * 2) / 2);
+  const t = document.getElementById('obj-target'); if(t) t.textContent = OBJ_CTX.target.toFixed(1);
+  const box = document.getElementById('obj-criteria');
+  box.innerHTML = OBJ_CTX.criteria.slice(0,5).map((c,idx) => {
+    const on = idx === i;
+    return `<div class="card" onclick="objSelect(${idx})" style="cursor:pointer;display:flex;align-items:center;gap:12px;${on?'border:1px solid var(--gold);background:var(--gold4);':''}">
+      <div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1.5px solid ${on?'var(--gold2)':'var(--border2)'};background:${on?'var(--gold2)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#0a0a0a">${on?'✓':''}</div>
+      <div><div style="font-size:14px;font-weight:500;color:var(--w)">${c.etape.replace(/</g,'&lt;')}</div><div style="font-size:12px;color:${on?'var(--gold2)':'var(--w3)'}">${(c.moyenneApres||0).toFixed(1)} / 5${idx===0?' · le plus bas de sa grille':''}</div></div>
+    </div>`;
+  }).join('');
+}
+function objStep(d){ OBJ_CTX.target = Math.max(0.5, Math.min(5, OBJ_CTX.target + d)); document.getElementById('obj-target').textContent = OBJ_CTX.target.toFixed(1); }
+function objSessions(d){ OBJ_CTX.sessions = Math.max(0, Math.min(7, OBJ_CTX.sessions + d)); document.getElementById('obj-sessions').textContent = OBJ_CTX.sessions; }
+async function submitObjective(){
+  if(!OBJ_CTX) return;
+  let criterion, start_value = null;
+  if(OBJ_CTX.criteria.length && OBJ_CTX.selected !== null){
+    const c = OBJ_CTX.criteria[OBJ_CTX.selected];
+    criterion = c.etape; start_value = c.moyenneApres || null;
+  } else {
+    criterion = (document.getElementById('obj-free-crit')?.value || '').trim();
+  }
+  if(!criterion){ alert(tr('Choisis un critère.')); return; }
+  const note = (document.getElementById('obj-note')?.value || '').trim();
+  try{
+    await callApi('setObjective', { playerId: OBJ_CTX.playerId, criterion, start_value, target_value: OBJ_CTX.target, sessions_planned: OBJ_CTX.sessions, note });
+    openPlayerDetail(OBJ_CTX.playerId, OBJ_CTX.playerName);
+  }catch(e){ alert(tr(e.message)); }
+}
+
 async function openPlayerDetail(playerId, playerName) {
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
       <div style="font-size:14px;font-weight:500;color:var(--w)">${playerName}</div>
     </div>
+
+    <div class="sec" style="padding-left:0;padding-top:20px">Objectif de la semaine</div>
+    <div id="coach-objective-box" class="card" style="margin:0 0 4px"><span class="skel-bar"></span></div>
 
     <div class="sec" style="padding-left:0;padding-top:20px">Évaluation technique</div>
     <div class="app-grid-3" style="padding:0">
@@ -1663,6 +1823,7 @@ async function openPlayerDetail(playerId, playerName) {
     <div style="height:24px"></div>`;
   CURRENT.playerDetailId = playerId;
   CURRENT.playerDetailName = playerName;
+  loadCoachObjectiveBox(playerId, playerName);
   await loadPlayerSheetsForm(playerId);
   await loadPlayerCodeBox(playerId);
   await loadCoachNotes(playerId);
