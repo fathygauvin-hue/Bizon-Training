@@ -90,6 +90,20 @@ select.finput{cursor:pointer}
   .app-grid-3{grid-template-columns:repeat(3,1fr)}
   .stats-grid{grid-template-columns:repeat(4,1fr)!important}
 }
+/* ===== FORMAT WEB : rail de navigation a gauche ===== */
+#rail-foot{display:none}
+@media (min-width:1000px){
+  .app-frame{display:grid;grid-template-columns:252px 1fr;grid-template-rows:auto 1fr auto;height:100vh;min-height:100vh}
+  #topbar{grid-column:1;grid-row:1;height:auto;background:transparent;border-bottom:none;padding:24px 18px 12px;flex-shrink:0}
+  #topbar .bar-inner{justify-content:flex-start;padding:0;height:auto;max-width:none}
+  #botnav{grid-column:1;grid-row:2;height:auto;background:transparent;border-top:none;padding:6px 12px;align-self:start;flex-shrink:0}
+  #botnav .botnav-inner{flex-direction:column;align-items:stretch;gap:4px;max-width:none}
+  .nt{flex:none;flex-direction:row;justify-content:flex-start;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--r16)}
+  .nt span{font-size:13.5px;letter-spacing:.3px;text-transform:none;font-weight:500}
+  .nt.on{background:var(--s2)}
+  #content{grid-column:2;grid-row:1 / span 3;min-height:0;max-width:1180px;padding:0 30px 20px;border-left:.5px solid var(--border)}
+  #rail-foot{display:block;grid-column:1;grid-row:3;align-self:end;padding:12px 12px 18px}
+}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .overlay{min-height:600px;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:20px}
 .modal{background:var(--s1);border:.5px solid var(--border2);border-radius:var(--r24);padding:20px;width:100%;max-width:420px}
@@ -125,6 +139,7 @@ select.finput{cursor:pointer}
         </div>
       </div>
     </div>
+    <div id="rail-foot"><div id="rail-streak"></div></div>
   </div>
 </div>
 
@@ -680,10 +695,59 @@ function render(){
 
 /* ═══ ACCUEIL JOUEUR — objectif, évaluation, séance, retour coach ═══ */
 async function loadPlayerHome(){
+  loadPlayerStreak();
   loadHomeObjective();
   loadHomeEvalCard();
   loadHomeSessionCard();
   loadHomeCoachCard();
+}
+
+function weekKey(d){ const t=new Date(d); const day=(t.getDay()+6)%7; t.setDate(t.getDate()-day); t.setHours(0,0,0,0); return t.getTime(); }
+async function loadPlayerStreak(){
+  const railEl = document.getElementById('rail-streak');
+  try{
+    const [sh, im, subs] = await Promise.all([
+      callApi('listShootingSessions', {}).catch(()=>({sessions:[]})),
+      callApi('listIronmanSessions', {}).catch(()=>({sessions:[]})),
+      callApi('listMySubmissions', {}).catch(()=>({submissions:[]})),
+    ]);
+    const dates = []
+      .concat((sh.sessions||[]).map(s=>s.created_at||s.started_at))
+      .concat((im.sessions||[]).map(s=>s.created_at||s.started_at))
+      .filter(Boolean);
+    const weeks = new Set(dates.map(d=>weekKey(d)));
+    // série : nombre de semaines consécutives actives en remontant depuis cette semaine (ou la précédente)
+    let streak = 0;
+    let cur = weekKey(new Date());
+    if(!weeks.has(cur)) cur -= 7*86400000;
+    while(weeks.has(cur)){ streak++; cur -= 7*86400000; }
+    const thisWeek = weekKey(new Date());
+    const doneThisWeek = dates.filter(d=>weekKey(d)===thisWeek).length;
+    const vidsThisWeek = (subs.submissions||[]).filter(s=>weekKey(s.created_at)===thisWeek).length;
+    window.__STREAK = { streak, doneThisWeek, vidsThisWeek };
+    if(railEl){
+      const dots = Array.from({length:5}, (_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<Math.min(streak,5)?'var(--orange)':'var(--s3)'}"></div>`).join('');
+      railEl.innerHTML = `<div class="card" style="margin:0;padding:14px">
+        <div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Série</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px">
+          <div style="font-family:var(--font-num);font-weight:800;font-size:28px;color:var(--w);line-height:1">${streak}</div>
+          <div style="font-size:12px;color:var(--w3)">semaine${streak>1?'s':''} d'affilée</div>
+        </div>
+        <div style="display:flex;gap:4px">${dots}</div>
+      </div>`;
+    }
+    const el = document.getElementById('home-week-stats');
+    if(el){
+      el.innerHTML = `
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:var(--w);line-height:1">${doneThisWeek}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">séance${doneThisWeek>1?'s':''} cette semaine</div></div>
+          <div style="width:.5px;background:var(--border)"></div>
+          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:${vidsThisWeek?'var(--orange)':'var(--w)'};line-height:1">${vidsThisWeek}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">vidéo${vidsThisWeek>1?'s':''} envoyée${vidsThisWeek>1?'s':''}</div></div>
+          <div style="width:.5px;background:var(--border)"></div>
+          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:var(--gold2);line-height:1">${streak}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">semaine${streak>1?'s':''} d'affilée</div></div>
+        </div>`;
+    }
+  }catch(e){ /* silencieux */ }
 }
 
 async function loadHomeObjective(){
@@ -1283,6 +1347,7 @@ function joueurHTML(){
   </div>
 
   <div id="home-objective" class="card" style="margin:0 14px 12px"><span class="skel-bar"></span></div>
+  <div id="home-week-stats" class="card" style="margin:0 14px 12px"><span class="skel-bar"></span></div>
 
   <div class="app-grid-2" style="padding:0 14px">
     <div class="card" id="home-eval-card" style="margin:0"><span class="skel-bar"></span></div>
