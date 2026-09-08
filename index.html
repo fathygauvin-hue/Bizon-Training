@@ -49,7 +49,7 @@ a{color:inherit;text-decoration:none}
 .acc-arrow{display:inline-block;font-size:12px;transition:transform .15s}
 .skel-bar{display:inline-block;width:70px;height:11px;border-radius:5px;vertical-align:middle;background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 37%,var(--s2) 63%);background-size:400% 100%;animation:skel-pulse 1.4s ease infinite}
 @keyframes skel-pulse{0%{background-position:100% 0}100%{background-position:0 0}}
-.card{background:var(--s2);border:.5px solid var(--border);border-radius:var(--r20);padding:14px;margin:0 14px 10px}
+.card{background:var(--s2);border:.5px solid var(--border);border-radius:var(--r20);padding:16px;margin:0 14px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.22)}
 .pill{display:inline-flex;align-items:center;background:var(--gold4);border:.5px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--gold2);font-weight:500}
 .tag{display:inline-flex;align-items:center;border-radius:var(--r12);padding:2px 8px;font-size:11px;font-weight:500}
 .tag.g{background:var(--green-bg);color:var(--green)}
@@ -105,7 +105,7 @@ select.finput{cursor:pointer}
   <div class="app-frame">
     <div id="topbar">
       <div class="bar-inner">
-        <div class="logo" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);letter-spacing:2.5px">Bizon Training</div>
+        <div class="logo" style="display:flex;align-items:center;gap:8px;font-family:'Bebas Neue',sans-serif;font-size:23px;color:var(--gold);letter-spacing:2.5px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Bizon Training</div>
       </div>
     </div>
     <div id="content"></div>
@@ -1100,19 +1100,14 @@ function suiviHTML(){
 
 function joueurHTML(){
   const name = APP_STATE.user?.name || '';
+  const firstName = (name.split(' ')[0] || name || '').toUpperCase();
   const role = [APP_STATE.user?.position, APP_STATE.user?.level].filter(Boolean).join(' · ') || 'Joueur';
-  const initials = (name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') || '?').toUpperCase();
   return `
-  <div style="padding:24px 0 0">
-    <div class="card" style="display:flex;gap:12px;align-items:center;margin:0 14px 18px">
-      <div class="avatar" style="width:52px;height:52px;font-size:15px">${initials}</div>
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:500;color:var(--w)">${name}</div>
-        <div style="font-size:12px;color:var(--w3);margin:2px 0">${role}</div>
-      </div>
-    </div>
+  <div style="padding:26px 14px 20px">
+    <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">${role}</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--w);letter-spacing:1.5px;line-height:1.05">SALUT ${firstName}</div>
   </div>
-  <div class="sec" style="padding-left:0">Évaluation technique</div>
+  <div class="sec" style="padding-left:14px">Évaluation technique</div>
   <div class="app-grid-3" style="padding:0">
     <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openLancerFrancEval()"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎯</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
     <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openChecklistEval('2pts')"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏀</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
