@@ -77,7 +77,7 @@ a{color:inherit;text-decoration:none}
 .tabs{display:flex;gap:6px;padding:10px 14px 4px;overflow-x:auto}
 .tabs::-webkit-scrollbar{display:none}
 .tb{flex-shrink:0;padding:6px 16px;border-radius:20px;border:.5px solid var(--border);background:var(--s2);color:var(--w3);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s}
-.tb.on{background:var(--gold4);border-color:var(--border2);color:var(--gold2)}
+.tb.on{background:var(--gold2);border-color:transparent;color:#0a0a0a;font-weight:600}
 .finput{background:var(--s3);border:.5px solid var(--border);border-radius:var(--r8);padding:10px 12px;color:var(--w);font-family:'Inter',sans-serif;font-size:13px;width:100%;outline:none;margin-bottom:8px}
 .finput:focus{border-color:var(--border2)}
 textarea.finput{resize:none;line-height:1.5}
@@ -100,6 +100,24 @@ select.finput{cursor:pointer}
 .home-col .card{margin:0}
 /* ===== FORMAT WEB : rail de navigation a gauche ===== */
 #rail-foot{display:none}
+/* bouton camera flottant */
+#fab{position:fixed;right:18px;bottom:88px;z-index:60;display:none;align-items:center;gap:10px;cursor:pointer}
+#fab .fab-lbl{background:var(--s2);border:.5px solid var(--border);border-radius:20px;padding:7px 13px;font-size:12.5px;color:var(--w2);font-family:var(--font-btn);font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#fab .fab-btn{width:58px;height:58px;border-radius:50%;background:var(--orange);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 10px rgba(240,138,90,.13),0 10px 26px rgba(0,0,0,.5)}
+/* bandeaux etat (hors ligne / envoi) */
+#app-banners{position:fixed;left:0;right:0;top:68px;z-index:55;pointer-events:none;padding:0 14px;display:flex;flex-direction:column;gap:8px;max-width:620px;margin:0 auto}
+#app-banners>*{pointer-events:auto}
+.banner{display:flex;align-items:flex-start;gap:11px;background:var(--s2);border:.5px solid var(--border);border-radius:var(--r16);padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.banner .bt{font-size:13.5px;font-weight:500;color:var(--w)}
+.banner .bs{font-size:11.5px;color:var(--w3);margin-top:2px}
+.upl-track{height:6px;background:var(--s3);border-radius:4px;overflow:hidden;margin-top:9px}
+.upl-fill{height:100%;background:var(--orange);border-radius:4px;transition:width .25s}
+.dim{opacity:.4;pointer-events:none;filter:grayscale(.5)}
+/* squelettes a la forme du contenu */
+.sk{background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 37%,var(--s2) 63%);background-size:400% 100%;animation:skel-pulse 1.4s ease infinite;border-radius:8px}
+.sk.l{height:11px;margin-bottom:9px}
+.sk.c{border-radius:50%}
+.sk.b{border-radius:var(--r16)}
 @media (min-width:1000px){
   .app-frame{display:grid;grid-template-columns:252px 1fr;grid-template-rows:auto 1fr auto;height:100vh;min-height:100vh}
   #topbar{grid-column:1;grid-row:1;height:auto;background:transparent;border-bottom:none;padding:24px 18px 12px;flex-shrink:0}
@@ -111,6 +129,10 @@ select.finput{cursor:pointer}
   .nt.on{background:var(--s2)}
   #content{grid-column:2;grid-row:1 / span 3;min-height:0;max-width:1180px;padding:0 30px 20px;border-left:.5px solid var(--border)}
   #rail-foot{display:block;grid-column:1;grid-row:3;align-self:end;padding:12px 12px 18px}
+  #fab{right:26px;bottom:26px}
+  #app-banners{top:16px;left:auto;right:24px;margin:0;max-width:390px;padding:0}
+  #home-week-stats{display:none}
+  #home-cta{display:none}
 }
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .overlay{min-height:600px;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -128,6 +150,7 @@ select.finput{cursor:pointer}
     <div id="topbar">
       <div class="bar-inner">
         <div class="logo" style="display:flex;align-items:center;gap:9px"><img id="topbar-logo" alt="" style="height:26px;width:auto"/><span style="font-family:'Bebas Neue',sans-serif;font-size:23px;color:var(--gold);letter-spacing:2.5px">Bizon Training</span></div>
+        <div id="topbar-streak"></div>
       </div>
     </div>
     <div id="content"></div>
@@ -153,6 +176,13 @@ select.finput{cursor:pointer}
     </div>
     <div id="rail-foot"><div id="rail-streak"></div><div id="rail-user"></div></div>
   </div>
+  <div id="app-banners"></div>
+  <div id="fab" onclick="openMyExercises()" title="Filmer un exercice">
+    <div class="fab-lbl">Filmer</div>
+    <button class="fab-btn" aria-label="Filmer un exercice">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>
+    </button>
+  </div>
 </div>
 
 <script>
@@ -165,20 +195,53 @@ const SUPABASE_URL = "https://shwtjplbjirgkgjtxrap.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_tZk7-W_5TusA_hMtrtvhhA_9Fedr8cP";
 const EDGE_FN_URL = "https://shwtjplbjirgkgjtxrap.supabase.co/functions/v1/api";
 
+const NET = { offline: (typeof navigator !== 'undefined' && navigator.onLine === false), lastSync: Number(localStorage.getItem('bzc_last') || 0) || null };
+const CACHEABLE = /^(get|list)/;
+function cacheKey(action, payload){ try { return 'bzc_' + action + '_' + JSON.stringify(payload); } catch(e){ return 'bzc_' + action; } }
+function isNetworkError(e){
+  return (e instanceof TypeError) || /Failed to fetch|NetworkError|Load failed|network/i.test(e && e.message || '');
+}
+function setOffline(v){
+  if(NET.offline === v) return;
+  NET.offline = v;
+  if(typeof renderBanners === 'function') renderBanners();
+  if(!v && typeof pumpUploads === 'function') pumpUploads();
+  if(typeof render === 'function' && typeof CURRENT !== 'undefined' && CURRENT.screen === 'biblio') render();
+}
 async function callApi(action, payload = {}) {
   const code = APP_STATE.code || localStorage.getItem('bizon_access_code') || '';
-  const res = await fetch(EDGE_FN_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-      'apikey': SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify({ action, code, ...payload }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-  return data;
+  const key = cacheKey(action, payload);
+  try {
+    const res = await fetch(EDGE_FN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ action, code, ...payload }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    setOffline(false);
+    if (CACHEABLE.test(action)) {
+      try {
+        localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: data }));
+        NET.lastSync = Date.now();
+        localStorage.setItem('bzc_last', String(NET.lastSync));
+      } catch(e) { /* quota : on ignore */ }
+    }
+    return data;
+  } catch(e) {
+    if (isNetworkError(e)) {
+      setOffline(true);
+      if (CACHEABLE.test(action)) {
+        const raw = localStorage.getItem(key);
+        if (raw) { try { return JSON.parse(raw).d; } catch(e2){} }
+      }
+    }
+    throw e;
+  }
 }
 
 // Upload direct du fichier vers Supabase Storage via une URL signée à usage unique
@@ -198,6 +261,131 @@ async function uploadToSignedUrl(path, token, file) {
   if (!res.ok) { const t = await res.text().catch(()=> ''); throw new Error('Échec de l\'envoi de la vidéo (' + res.status + ') ' + t); }
   return true;
 }
+
+// Upload avec progression (XHR) — permet la barre d'avancement et l'envoi en arrière-plan
+function uploadToSignedUrlProgress(path, token, file, onPct) {
+  const url = `${SUPABASE_URL}/storage/v1/object/upload/sign/athlete-videos/${path}?token=${token}`;
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url, true);
+    xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_ANON_KEY);
+    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+    xhr.setRequestHeader('x-upsert', 'false');
+    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable && onPct) onPct(ev.loaded / ev.total); };
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300)
+      ? resolve(true)
+      : reject(new Error("Échec de l'envoi de la vidéo (" + xhr.status + ')'));
+    xhr.onerror = () => reject(new Error('network'));
+    xhr.ontimeout = () => reject(new Error('network'));
+    xhr.send(file);
+  });
+}
+
+/* ═══ FILE D'ENVOI — l'app reste utilisable pendant l'upload ═══ */
+const UPLOADS = { current: null, queue: [], done: null };
+
+function queueVideo(job){
+  UPLOADS.queue.push(job);
+  renderBanners();
+  pumpUploads();
+}
+
+async function pumpUploads(){
+  if (UPLOADS.current || !UPLOADS.queue.length) return;
+  if (NET.offline) { renderBanners(); return; }
+  const idx = UPLOADS.queue.findIndex(j => !j.hold);
+  if (idx < 0) { renderBanners(); return; }
+  const job = UPLOADS.queue.splice(idx, 1)[0];
+  UPLOADS.current = { name: job.exerciseName, pct: 0, msg: null };
+  renderBanners();
+  try {
+    let file = job.file;
+    if (file.size > 48 * 1024 * 1024) {
+      UPLOADS.current.msg = 'Compression…';
+      renderBanners();
+      file = await compressVideoIfNeeded(file, (m) => { if (UPLOADS.current) { UPLOADS.current.msg = m; renderBanners(); } });
+      UPLOADS.current.msg = null;
+    }
+    const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+    const { path, token } = await callApi('requestVideoUpload', { exerciseName: job.exerciseName, note: job.note, fileExt: ext });
+    await uploadToSignedUrlProgress(path, token, file, (pct) => {
+      if (UPLOADS.current) { UPLOADS.current.pct = pct; updateUploadBar(pct); }
+    });
+    UPLOADS.current = null;
+    UPLOADS.done = { name: job.exerciseName, t: Date.now() };
+    renderBanners();
+    setTimeout(() => { UPLOADS.done = null; renderBanners(); }, 5000);
+    if (document.getElementById('my-exercises-list')) loadMyExercisesList();
+    if (typeof loadPlayerStreak === 'function' && document.getElementById('home-week-stats')) loadPlayerStreak();
+  } catch(e) {
+    UPLOADS.queue.unshift(job);
+    UPLOADS.current = null;
+    if (isNetworkError(e)) setOffline(true);
+    renderBanners();
+    setTimeout(pumpUploads, 8000);
+    return;
+  }
+  pumpUploads();
+}
+
+function updateUploadBar(pct){
+  const f = document.getElementById('upl-fill');
+  const t = document.getElementById('upl-pct');
+  if (!f) { renderBanners(); return; }
+  f.style.width = Math.round(pct * 100) + '%';
+  if (t) t.textContent = Math.round(pct * 100) + ' %';
+}
+
+function releaseHolds(){
+  UPLOADS.queue.forEach(j => { j.hold = false; });
+  renderBanners();
+  pumpUploads();
+}
+
+const ICO_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--w2)" stroke-width="1.6" stroke-linecap="round"><path d="M2 3l20 18"/><path d="M5 12.5a11 11 0 013.5-2.3M2 8.8A16 16 0 018 5.6M16 5.6a16 16 0 016 3.2M15.5 10.2a11 11 0 013.5 2.3M9 16a6 6 0 016 0"/><circle cx="12" cy="20" r="1" fill="var(--w2)" stroke="none"/></svg>';
+const ICO_UP = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.7" stroke-linecap="round"><path d="M12 20V5M6 11l6-6 6 6"/></svg>';
+const ICO_OK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg>';
+
+function renderBanners(){
+  const el = document.getElementById('app-banners');
+  if (!el) return;
+  let h = '';
+  if (NET.offline) {
+    const d = NET.lastSync ? new Date(NET.lastSync).toLocaleDateString(LOCALE(), { day: 'numeric', month: 'long' }) : null;
+    h += `<div class="banner" style="background:var(--s3)">${ICO_OFF}
+      <div style="flex:1;min-width:0"><div class="bt">Hors ligne</div>
+      <div class="bs">${d ? 'Données du ' + d + ' · consultables sans réseau' : 'Reconnexion automatique dès le retour du réseau'}</div></div></div>`;
+  }
+  if (UPLOADS.current) {
+    const pct = Math.round((UPLOADS.current.pct || 0) * 100);
+    const nm = (UPLOADS.current.name || '').replace(/</g, '&lt;');
+    h += `<div class="banner">${ICO_UP}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+          <div class="bt" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Envoi en cours · ${nm}</div>
+          <div id="upl-pct" style="font-family:var(--font-num);font-weight:700;font-size:15px;color:var(--orange)">${UPLOADS.current.msg ? '' : pct + ' %'}</div>
+        </div>
+        <div class="bs">${UPLOADS.current.msg || "Continue à utiliser l'app, l'envoi se poursuit"}</div>
+        <div class="upl-track"><div class="upl-fill" id="upl-fill" style="width:${pct}%"></div></div>
+      </div></div>`;
+  } else if (UPLOADS.queue.length) {
+    const n = UPLOADS.queue.length;
+    const allHeld = UPLOADS.queue.every(j => j.hold);
+    h += `<div class="banner">${ICO_UP}
+      <div style="flex:1;min-width:0"><div class="bt">${n} vidéo${n > 1 ? 's' : ''} en attente d'envoi</div>
+      <div class="bs">${NET.offline ? 'Partira dès le retour du réseau' : (allHeld ? 'Mise de côté pour plus tard' : 'Reprise automatique en cours…')}</div></div>
+      ${(allHeld && !NET.offline) ? `<button class="gbtn" style="padding:8px 12px;font-size:12px;flex-shrink:0" onclick="releaseHolds()">Envoyer</button>` : ''}</div>`;
+  } else if (UPLOADS.done) {
+    h += `<div class="banner">${ICO_OK}
+      <div style="flex:1;min-width:0"><div class="bt">Envoyé au coach</div>
+      <div class="bs">${(UPLOADS.done.name || '').replace(/</g, '&lt;')}</div></div></div>`;
+  }
+  el.innerHTML = h;
+}
+
+window.addEventListener('online', () => setOffline(false));
+window.addEventListener('offline', () => setOffline(true));
 
 // Extraction d'images fixes depuis une vidéo (canvas) pour le premier avis IA — aucun envoi de fichier vidéo entier, juste quelques images compressées.
 function seekToTime(video, t){
@@ -789,15 +977,23 @@ function nav(s){
   render();
 }
 
+function setFab(on){
+  const f = document.getElementById('fab');
+  if(f) f.style.display = (on && APP_STATE.role!=='coach' && APP_STATE.authenticated) ? 'flex' : 'none';
+}
+
 function render(){
   const c=document.getElementById('content');
   c.scrollTop=0;
+  const wide = window.innerWidth >= 1000;
   document.querySelector('#nt-suivi span').textContent = 'Suivi';
-  const evEl = document.querySelector('#nt-evals span'); if(evEl) evEl.textContent = 'Évals';
-  document.querySelector('#nt-biblio span').textContent = 'Biblio';
+  const evEl = document.querySelector('#nt-evals span'); if(evEl) evEl.textContent = wide ? 'Mes évaluations' : 'Évals';
+  document.querySelector('#nt-biblio span').textContent = wide ? 'Bibliothèque' : 'Biblio';
   document.querySelector('#nt-profil span').textContent = 'Profil';
   const evTab = document.getElementById('nt-evals');
   if(evTab) evTab.style.display = APP_STATE.role==='coach' ? 'none' : '';
+  setFab(true);
+  renderBanners();
   if(CURRENT.screen==='suivi'){
     c.innerHTML=suiviHTML();
     if(APP_STATE.role!=='coach') loadPlayerHome();
@@ -870,15 +1066,40 @@ async function loadPlayerStreak(){
         <div style="display:flex;gap:4px">${dots}</div>
       </div>`;
     }
+    const tb = document.getElementById('topbar-streak');
+    if(tb && APP_STATE.role!=='coach'){
+      tb.innerHTML = streak > 0
+        ? `<div class="pill" style="background:var(--orange-bg);border-color:transparent;color:var(--orange)"><span style="width:7px;height:7px;border-radius:50%;background:var(--orange);margin-right:7px;display:inline-block"></span>Série ${streak} j</div>`
+        : '';
+    }
     const el = document.getElementById('home-week-stats');
     if(el){
+      const GOAL = 4;
+      const pct = Math.max(0, Math.min(100, Math.round((doneThisWeek / GOAL) * 100)));
+      const R = 32, C = 2 * Math.PI * R;
       el.innerHTML = `
-        <div style="display:flex;gap:10px">
-          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:var(--w);line-height:1">${doneThisWeek}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">séance${doneThisWeek>1?'s':''} cette semaine</div></div>
-          <div style="width:.5px;background:var(--border)"></div>
-          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:${vidsThisWeek?'var(--orange)':'var(--w)'};line-height:1">${vidsThisWeek}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">vidéo${vidsThisWeek>1?'s':''} envoyée${vidsThisWeek>1?'s':''}</div></div>
-          <div style="width:.5px;background:var(--border)"></div>
-          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:var(--gold2);line-height:1">${weekStreak}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">semaine${weekStreak>1?'s':''} d'affilée</div></div>
+        <div style="display:flex;align-items:center;gap:18px">
+          <div style="position:relative;width:82px;height:82px;flex-shrink:0">
+            <svg width="82" height="82" viewBox="0 0 82 82">
+              <circle cx="41" cy="41" r="${R}" fill="none" stroke="var(--s3)" stroke-width="8"/>
+              <circle cx="41" cy="41" r="${R}" fill="none" stroke="var(--gold2)" stroke-width="8" stroke-linecap="round"
+                      stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct/100)}" transform="rotate(-90 41 41)"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-family:var(--font-num);font-weight:800;font-size:22px;color:var(--w);line-height:1">${pct}</div>
+              <div style="font-size:8.5px;color:var(--w3);letter-spacing:.4px">% objectifs</div>
+            </div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-bottom:9px;border-bottom:.5px solid var(--border)">
+              <div style="font-size:13px;color:var(--w2)">Séances faites</div>
+              <div><span style="font-family:var(--font-num);font-weight:800;font-size:22px;color:var(--w)">${doneThisWeek}</span><span style="font-size:12px;color:var(--w3)"> / ${GOAL}</span></div>
+            </div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-top:9px">
+              <div style="font-size:13px;color:var(--w2)">Vidéos envoyées</div>
+              <div style="font-family:var(--font-num);font-weight:800;font-size:22px;color:${vidsThisWeek?'var(--orange)':'var(--w)'}">${vidsThisWeek}</div>
+            </div>
+          </div>
         </div>`;
     }
   }catch(e){ /* silencieux */ }
@@ -1238,6 +1459,7 @@ function renderLancerFrancEval(etapes, criteres) {
       </div>
     </div>
   </div>
+  <div id="eval-refvideo" style="display:none;margin-top:16px"></div>
   ${comments.length ? `
   <div class="sec" style="padding-left:0;padding-top:22px">Commentaires du coach</div>
   <div class="app-grid-3" style="padding:0">
@@ -1249,6 +1471,31 @@ function renderLancerFrancEval(etapes, criteres) {
     </div>`).join('')}
   </div>` : ''}
   <div style="height:24px"></div>`;
+}
+
+async function loadEvalRefVideo(etapes){
+  const box = document.getElementById('eval-refvideo');
+  if(!box || NET.offline) return;
+  const scored = (etapes||[]).filter(e => (e.moyenneApres||0) > 0);
+  if(!scored.length) return;
+  const weakest = scored.slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0))[0];
+  try{
+    const { videos } = await callApi('listVideos', { category: 'Tous' });
+    if(!videos || !videos.length) return;
+    const words = (weakest.etape||'').toLowerCase().split(/[^a-zà-ÿ]+/).filter(w=>w.length>3);
+    const match = videos.find(v => words.some(w => (v.title||'').toLowerCase().includes(w))) || videos[0];
+    box.style.display = 'block';
+    box.innerHTML = `<div class="card" style="margin:0;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openVideo('${match.id}')">
+      <div style="width:40px;height:40px;border-radius:var(--r8);background:var(--gold4);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="var(--gold2)"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:500;color:var(--w)">Vidéo de référence · ${(weakest.etape||'').toLowerCase().replace(/</g,'&lt;')}</div>
+        <div style="font-size:11.5px;color:var(--w3);margin-top:2px">${(match.title||'').replace(/</g,'&lt;')}${APP_STATE.user?.coachFirstName ? ' · choisie par ' + APP_STATE.user.coachFirstName : ''}</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+    </div>`;
+  }catch(e){}
 }
 
 async function loadLancerFrancEval(playerId) {
@@ -1276,6 +1523,7 @@ async function loadLancerFrancEval(playerId) {
     const text = await res.text();
     const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
     el.innerHTML = renderLancerFrancEval(etapes, criteres);
+    loadEvalRefVideo(etapes);
   } catch (e) {
     console.error('Erreur chargement Lancer Franc:', e);
     const stage = e._stage || 'inconnu';
@@ -1547,6 +1795,14 @@ const ICO = {
   camera:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="14" height="12" rx="3"/><path d="M16 11l6-3v8l-6-3z"/></svg>',
   court:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18"/><circle cx="12" cy="12" r="3"/></svg>',
 };
+function skShape(kind){
+  if(kind==='eval') return `<div><div class="sk l" style="width:35%"></div><div style="display:flex;gap:14px;align-items:flex-end;margin:10px 0 14px"><div class="sk" style="width:78px;height:44px"></div><div style="flex:1"><div class="sk l" style="width:100%"></div><div class="sk l" style="width:88%"></div><div class="sk l" style="width:94%;margin-bottom:0"></div></div></div></div>`;
+  if(kind==='row') return `<div style="display:flex;align-items:center;gap:12px"><div class="sk c" style="width:40px;height:40px"></div><div style="flex:1"><div class="sk l" style="width:52%"></div><div class="sk l" style="width:34%;margin-bottom:0"></div></div></div>`;
+  if(kind==='tiles') return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">${'<div><div class="sk b" style="height:104px;margin-bottom:8px"></div><div class="sk l" style="width:70%"></div></div>'.repeat(3)}</div>`;
+  if(kind==='ring') return `<div style="display:flex;align-items:center;gap:16px"><div class="sk c" style="width:82px;height:82px"></div><div style="flex:1"><div class="sk l" style="width:60%"></div><div class="sk l" style="width:40%;margin-bottom:0"></div></div></div>`;
+  return `<div><div class="sk l" style="width:40%"></div><div class="sk l" style="width:72%;margin-bottom:0"></div></div>`;
+}
+
 function tileHTML(onclick, emoji, bg, title, sub){
   return `<div class="card" onclick="${onclick}" style="margin:0;cursor:pointer;display:flex;align-items:center;gap:12px">
     <div style="width:40px;height:40px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${bg.indexOf('orange')>-1?'var(--orange)':'var(--gold2)'}">${emoji}</div>
@@ -1589,31 +1845,42 @@ function joueurHTML(){
     </div>
   </div>
 
-  <div id="home-week-stats" class="card" style="margin:0 14px 12px"><span class="skel-bar"></span></div>
+  <div id="home-week-stats" class="card" style="margin:0 14px 12px">${skShape('ring')}</div>
+
+  <div id="home-cta" style="padding:0 14px 12px">
+    <div onclick="openMyExercises()" style="cursor:pointer;display:flex;align-items:center;gap:14px;background:var(--orange);border-radius:var(--r20);padding:16px 18px">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>
+      </div>
+      <div style="min-width:0">
+        <div style="font-family:var(--font-btn);font-weight:700;font-size:16px;color:#2b1608">Filme ton exo du jour</div>
+        <div style="font-size:12.5px;color:rgba(43,22,8,.72);margin-top:2px">${APP_STATE.user?.coachFirstName || APP_STATE.user?.coachName || 'Ton coach'} te répond en 24 h</div>
+      </div>
+    </div>
+  </div>
 
   <div class="home-cols">
     <div class="home-col">
-      <div id="home-objective" class="card"><span class="skel-bar"></span></div>
-      <div class="card" id="home-eval-card"><span class="skel-bar"></span></div>
-      <div id="home-todo"></div>
+      <div id="home-objective" class="card">${skShape('line')}</div>
+      <div class="card" id="home-eval-card">${skShape('eval')}</div>
+      <div id="home-todo">${skShape('tiles')}</div>
     </div>
     <div class="home-col">
-      <div class="card" id="home-session-card"><span class="skel-bar"></span></div>
+      <div class="card" id="home-session-card">${skShape('row')}</div>
       <div class="card" id="home-coach-card" style="display:none"></div>
-      <div class="card" id="home-mycard"><span class="skel-bar"></span></div>
+      <div class="card" id="home-mycard">${skShape('line')}</div>
       <img class="bison-mark" src="${LOGO_MARK}" alt=""/>
     </div>
   </div>
 
-  <div class="sec" style="padding-left:14px;padding-top:22px">Mes ateliers</div>
-  <div class="app-grid-3" style="padding:0 14px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:22px 14px 0">
+    <div class="sec" style="padding:0">Mes ateliers</div>
+    <div style="font-size:12.5px;color:var(--gold2);cursor:pointer" onclick="nav('evals')">Tout voir</div>
+  </div>
+  <div class="app-grid-3" style="padding:10px 14px 0">
     ${tileHTML("openShootingHub()", ICO.court, "var(--gold4)", "Séances de tir", "5 spots à 3pts + lancers francs")}
     ${tileHTML("openIronmanHub()", ICO.flame, "var(--orange-bg)", "Iron Man", "Circuit course + renforcement")}
     ${tileHTML("openVisionQuiz()", ICO.brain, "var(--gold4)", "Vision de jeu", "Questionnaire e-learning")}
-  </div>
-
-  <div class="sec" style="padding-left:14px;padding-top:22px">Mon espace</div>
-  <div class="app-grid-3" style="padding:0 14px">
     ${tileHTML("openMyCalendar()", ICO.calendar, "var(--gold4)", "Mon calendrier", "Disponibilités et séances")}
     ${tileHTML("openMyExercises()", ICO.camera, "var(--orange-bg)", "Mes vidéos", "Filme-toi et envoie au coach")}
   </div>
@@ -1745,14 +2012,17 @@ function openMyExercises(){
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
       <div style="font-size:14px;font-weight:500;color:var(--w)">Mes exercices filmés</div>
     </div>
-    <div class="sec" style="padding-left:0;padding-top:18px">Envoyer une nouvelle vidéo</div>
+    <div class="sec" style="padding-left:0;padding-top:18px">Envoyer une vidéo</div>
     <div class="card">
-      <input class="finput" id="ex-name" placeholder="Nom de l'exercice (ex: Tir en course)"/>
-      <textarea class="finput" id="ex-note" rows="2" placeholder="Note pour le coach (optionnel)" style="resize:vertical"></textarea>
-      <input type="file" accept="video/*" id="ex-file" class="finput" style="padding:8px"/>
-      <div style="font-size:11px;color:var(--w3);margin-bottom:8px">Vidéo visible uniquement par toi et ton coach. Compression automatique si besoin (max 500 Mo).</div>
-      <div id="ex-upload-error" style="color:var(--red);font-size:12px;margin-bottom:8px"></div>
-      <button class="obtn full" id="ex-upload-btn" onclick="submitExerciseVideo()">Envoyer la vidéo</button>
+      <div onclick="document.getElementById('ex-file').click()" style="cursor:pointer;border:1.5px dashed var(--border2);border-radius:var(--r16);padding:26px 16px;text-align:center;margin-bottom:12px">
+        <div style="width:46px;height:46px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>
+        </div>
+        <div style="font-size:13.5px;color:var(--w2)">Filmer ou choisir un fichier</div>
+      </div>
+      <input type="file" accept="video/*" id="ex-file" style="display:none" onchange="onVideoPicked(this)"/>
+      <div style="font-size:11px;color:var(--w3)">Vidéo visible uniquement par toi et ton coach. Compression automatique si besoin (max 500 Mo).</div>
+      <div id="ex-upload-error" style="color:var(--red);font-size:12px;margin-top:8px"></div>
     </div>
     <div class="sec" style="padding-left:0;padding-top:20px">Mes envois</div>
     <div id="my-exercises-list">
@@ -1826,34 +2096,81 @@ async function compressVideoIfNeeded(file, onProgress){
   return new File([blob], newName, { type: 'video/mp4' });
 }
 
-async function submitExerciseVideo(){
-  const nameInput = document.getElementById('ex-name');
-  const noteInput = document.getElementById('ex-note');
-  const fileInput = document.getElementById('ex-file');
+let REVIEW = null;
+
+function onVideoPicked(input){
   const errEl = document.getElementById('ex-upload-error');
-  const btn = document.getElementById('ex-upload-btn');
-  const exerciseName = (nameInput.value||'').trim();
-  const note = (noteInput.value||'').trim();
-  let file = fileInput.files[0];
-  if(!exerciseName){ errEl.textContent="Nom de l'exercice requis."; return; }
-  if(!file){ errEl.textContent='Sélectionne ou filme une vidéo.'; return; }
-  if(file.size > 500*1024*1024){ errEl.textContent='Vidéo beaucoup trop volumineuse (max 500 Mo).'; return; }
-  errEl.textContent='';
-  btn.disabled = true; btn.textContent = 'Envoi en cours…';
-  try{
-    if(file.size > 48*1024*1024){
-      file = await compressVideoIfNeeded(file, (msg)=>{ btn.textContent = msg; });
-    }
-    btn.textContent = 'Envoi en cours…';
-    const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
-    const { path, token } = await callApi('requestVideoUpload', { exerciseName, note, fileExt: ext });
-    await uploadToSignedUrl(path, token, file);
-    nameInput.value=''; noteInput.value=''; fileInput.value='';
-    btn.disabled = false; btn.textContent = 'Envoyer la vidéo';
-    showSentConfirmation(exerciseName);
-    return;
-  }catch(e){ errEl.textContent = e.message; }
-  btn.disabled = false; btn.textContent = 'Envoyer la vidéo';
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(file.size > 500*1024*1024){ if(errEl) errEl.textContent='Vidéo beaucoup trop volumineuse (max 500 Mo).'; input.value=''; return; }
+  openVideoReview(file);
+}
+
+function fmtDur(s){
+  if(!isFinite(s) || s <= 0) return '';
+  const m = Math.floor(s/60), r = Math.round(s%60);
+  return m + ':' + String(r).padStart(2,'0');
+}
+
+function openVideoReview(file){
+  if(REVIEW && REVIEW.url) URL.revokeObjectURL(REVIEW.url);
+  REVIEW = { file, url: URL.createObjectURL(file) };
+  setFab(false);
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 0 6px">
+      <button onclick="cancelReview()" style="width:44px;height:44px;border-radius:50%;background:var(--s2);border:.5px solid var(--border);color:var(--gold);font-size:22px;cursor:pointer;line-height:1;flex-shrink:0">‹</button>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--w);letter-spacing:1.2px;line-height:1">TON EXO FILMÉ</div>
+    </div>
+    <div style="position:relative;border-radius:var(--r20);overflow:hidden;background:#000;margin:8px 0 14px">
+      <video id="rev-video" src="${REVIEW.url}" playsinline preload="metadata" style="width:100%;max-height:52vh;display:block;background:#000"
+             onloadedmetadata="document.getElementById('rev-dur').textContent=fmtDur(this.duration)"
+             onplay="document.getElementById('rev-play').style.display='none'"
+             onpause="document.getElementById('rev-play').style.display='flex'"></video>
+      <div id="rev-play" onclick="document.getElementById('rev-video').play()" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--gold2);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="#0a0a0a"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
+      <div id="rev-dur" style="position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.66);border-radius:8px;padding:3px 8px;font-family:var(--font-num);font-weight:600;font-size:12px;color:var(--w)"></div>
+    </div>
+    <input class="finput" id="ex-name" placeholder="Nom de l'exercice (ex: Tir en course main gauche)"/>
+    <textarea class="finput" id="ex-note" rows="2" placeholder="Note pour le coach (optionnel)" style="resize:vertical"></textarea>
+    <div id="rev-error" style="color:var(--red);font-size:12px;margin-bottom:8px"></div>
+    <button class="obtn full" style="padding:15px;font-size:14.5px" onclick="sendReview(false)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="2" stroke-linecap="round"><path d="M12 20V5M6 11l6-6 6 6"/></svg>Envoyer au coach</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <button class="ghost" style="border-radius:var(--r16);padding:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="reshootReview()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--w2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>Refilmer</button>
+      <button class="ghost" style="border-radius:var(--r16);padding:13px" onclick="sendReview(true)">Plus tard</button>
+    </div>
+    <div style="height:28px"></div>`;
+}
+
+function cancelReview(){
+  if(REVIEW && REVIEW.url) URL.revokeObjectURL(REVIEW.url);
+  REVIEW = null;
+  openMyExercises();
+}
+
+function reshootReview(){
+  if(REVIEW && REVIEW.url) URL.revokeObjectURL(REVIEW.url);
+  REVIEW = null;
+  openMyExercises();
+  setTimeout(()=>{ const f = document.getElementById('ex-file'); if(f) f.click(); }, 60);
+}
+
+function sendReview(later){
+  if(!REVIEW) return;
+  const errEl = document.getElementById('rev-error');
+  const exerciseName = (document.getElementById('ex-name').value||'').trim();
+  const note = (document.getElementById('ex-note').value||'').trim();
+  if(!exerciseName){ if(errEl) errEl.textContent = "Donne un nom à l'exercice."; return; }
+  const file = REVIEW.file;
+  if(REVIEW.url) URL.revokeObjectURL(REVIEW.url);
+  REVIEW = null;
+  queueVideo({ file, exerciseName, note, hold: !!later });
+  if(later){ nav('suivi'); return; }
+  showSentConfirmation(exerciseName);
 }
 
 
@@ -1866,7 +2183,7 @@ function showSentConfirmation(exerciseName){
       </div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--w);letter-spacing:2px;line-height:1.05;margin-bottom:12px">ENVOYÉ<br>AU COACH</div>
       <div style="font-size:14px;color:var(--w2);margin-bottom:6px">${(exerciseName||'').replace(/</g,'&lt;')}</div>
-      <div style="font-size:13px;color:var(--w3);margin-bottom:18px">Il te répond en général sous 24 h.</div>
+      <div style="font-size:13px;color:var(--w3);margin-bottom:18px">Il te répond en général sous 24 h. L'envoi se poursuit même si tu continues à utiliser l'app.</div>
       ${wk!=null?`<div class="pill" style="margin-bottom:26px"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;display:inline-block"></span>${wk}${wk===1?'ʳᵉ':'ᵉ'} vidéo cette semaine</div>`:''}
       <button class="ghost full" style="max-width:320px;border-radius:var(--r26);padding:14px;margin-bottom:10px;display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="openMyExercises()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.7"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>Filmer un autre exo</button>
@@ -1953,16 +2270,19 @@ function relativeDaysFR(dateStr){
 function coachHTML(){
   setTimeout(loadCoachPlayers, 0);
   return `
-  <div class="sec" style="padding-left:0;padding-top:24px">Vue d'ensemble</div>
-  <div id="coach-stats" class="app-grid-3" style="padding:0">
-    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--w3);font-size:12px"><span class="skel-bar"></span></div>
+  <div style="padding:22px 0 16px">
+    <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Coach · ${(APP_STATE.user?.name||'').replace(/</g,'&lt;')}</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--w);letter-spacing:1.5px;line-height:1">MES JOUEURS</div>
   </div>
-  <div class="sec" style="padding-left:0;padding-top:16px">Liste joueurs</div>
-  <div id="coach-players-list" class="app-grid-3" style="padding:0">
-    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--w3);font-size:12px">Chargement des joueurs…</div>
+  <div id="coach-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+    ${'<div class="card" style="margin:0">'+skShape('line')+'</div>'.repeat(3)}
   </div>
-  <div style="padding:18px 14px 0;max-width:320px">
-    <button class="gbtn full" onclick="showAddPlayerModal()">+ Ajouter un joueur</button>
+  <div id="coach-players-list" style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+    <div class="card" style="margin:0">${skShape('row')}</div>
+    <div class="card" style="margin:0">${skShape('row')}</div>
+  </div>
+  <div style="margin-top:14px">
+    <div onclick="showAddPlayerModal()" style="cursor:pointer;text-align:center;border:1.5px dashed var(--border2);border-radius:var(--r20);padding:16px;color:var(--gold2);font-family:var(--font-btn);font-weight:600;font-size:14px">+ Ajouter un joueur</div>
   </div>
   <div style="height:28px"></div>`;
 }
@@ -1972,7 +2292,7 @@ async function loadCoachPlayers() {
   const statsEl = document.getElementById('coach-stats');
   if (!el) return;
   if (!APP_STATE.userId) {
-    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec ton code coach pour voir tes joueurs.</div></div>`;
+    el.innerHTML = `<div class="card" style="margin:0"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec ton code coach pour voir tes joueurs.</div></div>`;
     if (statsEl) statsEl.innerHTML = '';
     return;
   }
@@ -1985,7 +2305,7 @@ async function loadCoachPlayers() {
     });
 
     if (!players || !players.length) {
-      el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Aucun joueur rattaché pour l'instant. Ajoute ton premier joueur ci-dessous.</div></div>`;
+      el.innerHTML = `<div class="card" style="margin:0"><div style="font-size:12px;color:var(--w3)">Aucun joueur rattaché pour l'instant. Ajoute ton premier joueur ci-dessous.</div></div>`;
       if (statsEl) statsEl.innerHTML = '';
       return;
     }
@@ -2001,49 +2321,50 @@ async function loadCoachPlayers() {
     try { const s = await callApi('getCoachSubmissionsSummary', {}); pendingVideos = s.pendingCount || 0; } catch(e) {}
 
     if (statsEl) {
-      statsEl.innerHTML = `
-      <div class="card" style="margin:0;text-align:center">
-        <div style="font-size:22px;font-weight:600;color:var(--w)">${players.length}</div>
-        <div style="font-size:11px;color:var(--w3);margin-top:2px">Joueur${players.length>1?'s':''}</div>
-      </div>
-      <div class="card" style="margin:0;text-align:center">
-        <div style="font-size:22px;font-weight:600;color:${missingSheets?'var(--red)':'var(--w)'}">${missingSheets}</div>
-        <div style="font-size:11px;color:var(--w3);margin-top:2px">Sans lien Sheets</div>
-      </div>
-      <div class="card" style="margin:0;text-align:center">
-        <div style="font-size:22px;font-weight:600;color:${staleOrNever?'var(--red)':'var(--w)'}">${staleOrNever}</div>
-        <div style="font-size:11px;color:var(--w3);margin-top:2px">Sans suivi (14j+)</div>
-      </div>
-      <div class="card" style="margin:0;text-align:center">
-        <div style="font-size:22px;font-weight:600;color:${pendingVideos?'var(--red)':'var(--w)'}">${pendingVideos}</div>
-        <div style="font-size:11px;color:var(--w3);margin-top:2px">Vidéos à corriger</div>
-      </div>`;
+      const stat = (val, lbl, col) => `<div class="card" style="margin:0;padding:16px 12px">
+        <div style="font-family:var(--font-num);font-weight:800;font-size:32px;color:${col};line-height:1">${val}</div>
+        <div style="font-size:11.5px;color:var(--w3);margin-top:5px">${lbl}</div></div>`;
+      statsEl.innerHTML =
+        stat(players.length, 'joueur' + (players.length>1?'s':''), 'var(--w)') +
+        stat(pendingVideos, 'vidéo' + (pendingVideos>1?'s':'') + ' à voir', pendingVideos ? 'var(--orange)' : 'var(--w)') +
+        stat(staleOrNever, 'sans suivi', staleOrNever ? 'var(--red)' : 'var(--w)');
     }
+
+    // vidéos en attente par joueur (si l'API le permet) — sert aux pastilles orange
+    let pendingByPlayer = {};
+    try {
+      const r = await callApi('listCoachSubmissions', {});
+      (r.submissions || []).forEach(s => {
+        if (s.status !== 'reviewed' && s.player_id) pendingByPlayer[s.player_id] = (pendingByPlayer[s.player_id] || 0) + 1;
+      });
+    } catch(e) { /* action limitée à un joueur : pas de pastille */ }
 
     el.innerHTML = players.map(p => {
       const initials = ((p.first_name || '?')[0] + (p.last_name || '?')[0]).toUpperCase();
       const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
       const role = [p.position, p.level].filter(Boolean).join(' · ') || 'Joueur';
       const noteDays = p.last_note_at ? (now - new Date(p.last_note_at).getTime()) / 86400000 : Infinity;
-      const noteTagClass = noteDays <= 7 ? 'g' : noteDays <= STALE_DAYS ? 'a' : 'r';
-      const noteLabel = p.last_note_at ? 'Suivi ' + relativeDaysFR(p.last_note_at) : 'Aucun suivi';
+      const pend = pendingByPlayer[p.id] || 0;
+      const stale = noteDays > STALE_DAYS;
+      const badge = pend
+        ? `<span style="flex-shrink:0;background:var(--orange-bg);color:var(--orange);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600">${pend} vidéo${pend>1?'s':''}</span>`
+        : (stale ? `<span style="flex-shrink:0;background:var(--gold2);color:#0a0a0a;border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600">Relancer</span>` : '');
+      const sub = [role, p.last_note_at ? 'suivi ' + relativeDaysFR(p.last_note_at) : 'sans suivi'].join(' · ');
       return `
       <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openPlayerDetail('${p.id}','${name.replace(/'/g, "\\'")}')">
-        <div class="avatar" style="width:40px;height:40px;font-size:12px">${initials}</div>
+        <div class="avatar" style="width:44px;height:44px;font-size:13px">${initials}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:500;color:var(--w)">${name}</div>
-          <div style="font-size:12px;color:var(--w3);margin-top:1px">${role}</div>
-          <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
-            <span class="tag ${noteTagClass}" style="font-size:10px">${noteLabel}</span>
-            ${!p.sheets_configured ? `<span class="tag r" style="font-size:10px">Sheets à configurer</span>` : ''}
-          </div>
+          <div style="font-size:15px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+          <div style="font-size:12px;color:var(--w3);margin-top:2px">${sub}</div>
+          ${!p.sheets_configured ? `<div style="margin-top:6px"><span class="tag r" style="font-size:10px">Sheets à configurer</span></div>` : ''}
         </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
+        ${badge}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
       </div>`;
     }).join('');
   } catch (e) {
     console.error('Erreur chargement joueurs:', e);
-    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--red)">Impossible de charger la liste des joueurs.</div></div>`;
+    el.innerHTML = `<div class="card" style="margin:0"><div style="font-size:12px;color:var(--red)">Impossible de charger la liste des joueurs.</div></div>`;
     if (statsEl) statsEl.innerHTML = '';
   }
 }
@@ -2501,14 +2822,14 @@ function biblioHTML(){
   setTimeout(loadVideos, 0);
   return `
   <div style="padding:24px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--w);letter-spacing:1px">Bibliothèque</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--w);letter-spacing:1.5px;line-height:1">BIBLIOTHÈQUE</div>
     ${APP_STATE.role==='coach' ? `<button class="gbtn" onclick="showAddVideoModal()">+ Ajouter une vidéo</button>` : ''}
   </div>
   <div class="tabs" style="padding-left:0;padding-right:0">
     ${['Tous',...VIDEO_CATEGORIES].map(c=>`<div class="tb ${BIBLIO_STATE.filter===c?'on':''}" onclick="setBiblioFilter('${c}')">${c}</div>`).join('')}
   </div>
-  <div id="biblio-list" class="app-grid-3" style="padding:0;margin-top:4px">
-    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--w3);font-size:12px">Chargement des vidéos…</div>
+  <div id="biblio-list" style="margin-top:8px">
+    <div class="card" style="margin:0">${skShape('tiles')}</div>
   </div>
   <div style="height:16px"></div>`;
 }
@@ -2528,33 +2849,49 @@ function driveFileId(url){
   return null;
 }
 
+function videoTileHTML(v, big){
+  const isCoach = APP_STATE.role === 'coach';
+  const title = (v.title || '').replace(/</g, '&lt;');
+  const h = big ? 200 : 118;
+  const play = big ? 58 : 40;
+  return `<div style="position:relative;cursor:pointer" onclick="openVideo('${v.id}')">
+    <div style="position:relative;border-radius:var(--r20);overflow:hidden;height:${h}px;background:repeating-linear-gradient(45deg,var(--s3),var(--s3) 8px,var(--s2) 8px,var(--s2) 16px);display:flex;align-items:center;justify-content:center">
+      <div style="width:${play}px;height:${play}px;border-radius:50%;background:var(--gold2);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.45)">
+        <svg width="${Math.round(play*0.4)}" height="${Math.round(play*0.4)}" viewBox="0 0 24 24" fill="#0a0a0a"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      ${isCoach ? `<button class="ghost" style="position:absolute;top:8px;right:8px;padding:5px 9px;color:var(--red)" title="Supprimer" onclick="event.stopPropagation();deleteVideo('${v.id}')">✕</button>` : ''}
+    </div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:${big ? 22 : 16}px;color:var(--w);letter-spacing:.8px;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+    ${v.category ? `<div style="font-size:12px;color:var(--w3);margin-top:2px">${v.category}${v.added_by_name ? ' · ajouté par ' + v.added_by_name : ''}</div>` : ''}
+  </div>`;
+}
+
 async function loadVideos(){
   const el=document.getElementById('biblio-list');
   if(!el) return;
+  if(NET.offline){
+    el.innerHTML = `<div class="card dim" style="margin:0;display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:var(--r8);background:var(--s3);display:flex;align-items:center;justify-content:center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.6"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>
+        </div>
+        <div><div style="font-size:14px;color:var(--w2)">Bibliothèque vidéo</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Indisponible hors ligne</div></div>
+      </div>`;
+    return;
+  }
   try{
     const { videos } = await callApi('listVideos', { category: BIBLIO_STATE.filter });
     BIBLIO_STATE.videos=videos||[];
     if(!videos || !videos.length){
-      el.innerHTML=`<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--w3)">Aucune vidéo${BIBLIO_STATE.filter!=='Tous'?` dans la catégorie « ${BIBLIO_STATE.filter} »`:''} pour l'instant.${APP_STATE.role==='coach'?' Ajoute ta première vidéo avec le bouton ci-dessus.':''}</div></div>`;
+      el.innerHTML=`<div class="card" style="margin:0"><div style="font-size:12px;color:var(--w3)">Aucune vidéo${BIBLIO_STATE.filter!=='Tous'?` dans la catégorie « ${BIBLIO_STATE.filter} »`:''} pour l'instant.${APP_STATE.role==='coach'?' Ajoute ta première vidéo avec le bouton ci-dessus.':''}</div></div>`;
       return;
     }
-    const isCoach = APP_STATE.role==='coach';
-    el.innerHTML=videos.map(v=>`
-    <div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;margin:0" onclick="openVideo('${v.id}')">
-      <div style="width:42px;height:42px;border-radius:var(--r8);background:var(--gold4);border:.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--gold)" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"><polygon points="7,4 20,12 7,20"/></svg>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(v.title||'').replace(/</g,'&lt;')}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
-          ${v.category?`<span class="tag a" style="font-size:10px">${v.category}</span>`:''}
-        </div>
-      </div>
-      ${isCoach?`<button class="ghost" style="padding:6px 10px;flex-shrink:0;color:var(--red)" title="Supprimer" onclick="event.stopPropagation();deleteVideo('${v.id}')">✕</button>`:''}
-    </div>`).join('');
+    const featured = videos[0];
+    const rest = videos.slice(1);
+    el.innerHTML = videoTileHTML(featured, true)
+      + (rest.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px">${rest.map(v=>videoTileHTML(v,false)).join('')}</div>` : '');
   }catch(e){
     console.error('Erreur chargement vidéos:', e);
-    el.innerHTML=`<div class="card" style="grid-column:1/-1"><div style="font-size:12px;color:var(--red)">Impossible de charger les vidéos.</div><div style="font-size:11px;color:var(--w3);margin-top:6px;font-family:monospace">${(e.message||String(e)).replace(/</g,'&lt;')}</div></div>`;
+    el.innerHTML=`<div class="card" style="margin:0"><div style="font-size:12px;color:var(--red)">Impossible de charger les vidéos.</div><div style="font-size:11px;color:var(--w3);margin-top:6px;font-family:monospace">${(e.message||String(e)).replace(/</g,'&lt;')}</div></div>`;
   }
 }
 
