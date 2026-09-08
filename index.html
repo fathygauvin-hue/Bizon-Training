@@ -1114,63 +1114,21 @@ function joueurHTML(){
   </div>
   <div class="sec" style="padding-left:0">Évaluation technique</div>
   <div class="app-grid-3" style="padding:0">
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openLancerFrancEval()">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('2pts')">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('3pts')">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">3 points</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openChecklistEval('diagnostic')">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">Diagnostic</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Posture dribble, défense, course</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openVisionQuiz()">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">Vision de jeu</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Questionnaire e-learning</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
+    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openLancerFrancEval()"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎯</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Lancer franc</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
+    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openChecklistEval('2pts')"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏀</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">2 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
+    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openChecklistEval('3pts')"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏀</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">3 points</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Radar, notes et commentaires</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
+    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openChecklistEval('diagnostic')"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📋</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Diagnostic</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Posture dribble, défense, course</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
+    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openVisionQuiz()"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🧠</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Vision de jeu</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Questionnaire e-learning</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-<div class="sec" style="padding-left:0;padding-top:22px">Séance de tir</div><div class="app-grid-3" style="padding:0"><div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openShootingHub()"><div><div style="font-size:14px;font-weight:500;color:var(--w)">Séances de tir</div><div style="font-size:12px;color:var(--w3);margin-top:2px">5 spots à 3pts + lancers francs, aller-retour</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div></div>
-<div class="sec" style="padding-left:0;padding-top:22px">Préparation physique</div><div class="app-grid-3" style="padding:0"><div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openIronmanHub()"><div><div style="font-size:14px;font-weight:500;color:var(--w)">Iron Man</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Circuit pyramidal course + renforcement</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div></div><div class="sec" style="padding-left:0;padding-top:22px">Calendrier</div>
+<div class="sec" style="padding-left:0;padding-top:22px">Séance de tir</div><div class="app-grid-3" style="padding:0"><div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openShootingHub()"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎯</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Séances de tir</div><div style="font-size:12px;color:var(--w3);margin-top:2px">5 spots à 3pts + lancers francs, aller-retour</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div></div>
+<div class="sec" style="padding-left:0;padding-top:22px">Préparation physique</div><div class="app-grid-3" style="padding:0"><div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openIronmanHub()"><div style="width:40px;height:40px;border-radius:50%;background:var(--orange-bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔥</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Iron Man</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Circuit pyramidal course + renforcement</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div></div><div class="sec" style="padding-left:0;padding-top:22px">Calendrier</div>
   <div class="app-grid-3" style="padding:0">
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openMyCalendar()">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">Mon calendrier</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Disponibilités et séances programmées</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
+    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openMyCalendar()"><div style="width:40px;height:40px;border-radius:50%;background:var(--gold4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📅</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Mon calendrier</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Disponibilités et séances programmées</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
   <div class="sec" style="padding-left:0;padding-top:22px">Exercices filmés</div>
 
   <div class="app-grid-3" style="padding:0">
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin:0" onclick="openMyExercises()">
-      <div>
-        <div style="font-size:14px;font-weight:500;color:var(--w)">Mes vidéos</div>
-        <div style="font-size:12px;color:var(--w3);margin-top:2px">Filme-toi et envoie au coach</div>
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
+    <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openMyExercises()"><div style="width:40px;height:40px;border-radius:50%;background:var(--orange-bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎥</div><div style="flex:1"><div style="font-size:14px;font-weight:500;color:var(--w)">Mes vidéos</div><div style="font-size:12px;color:var(--w3);margin-top:2px">Filme-toi et envoie au coach</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
   <div style="height:24px"></div>`;
 }
