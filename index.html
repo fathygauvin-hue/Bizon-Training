@@ -91,6 +91,10 @@ select.finput{cursor:pointer}
   .stats-grid{grid-template-columns:repeat(4,1fr)!important}
 }
 .home-cols{display:grid;gap:12px;padding:0 14px;align-items:start}
+#home-objective{position:relative;overflow:hidden}
+#home-objective .court{position:absolute;right:-30px;top:-40px;width:280px;height:200px;opacity:.16;pointer-events:none}
+.bison-mark{position:absolute;right:6px;bottom:-6px;width:130px;opacity:.10;pointer-events:none}
+.home-col{position:relative}
 @media (min-width:1000px){ .home-cols{grid-template-columns:1.55fr 1fr} }
 .home-col{display:flex;flex-direction:column;gap:12px}
 .home-col .card{margin:0}
@@ -133,6 +137,10 @@ select.finput{cursor:pointer}
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M17 12l2 2 4-4"/></svg>
           <span>Suivi</span>
         </div>
+        <div class="nt" id="nt-evals" onclick="nav('evals')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6A6760" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          <span>Évals</span>
+        </div>
         <div class="nt" id="nt-biblio" onclick="nav('biblio')">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6A6760" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 00-4 10 14.5 14.5 0 004 10 14.5 14.5 0 004-10A14.5 14.5 0 0012 2z"/><path d="M2 12h20"/></svg>
           <span>Biblio</span>
@@ -143,7 +151,7 @@ select.finput{cursor:pointer}
         </div>
       </div>
     </div>
-    <div id="rail-foot"><div id="rail-streak"></div></div>
+    <div id="rail-foot"><div id="rail-streak"></div><div id="rail-user"></div></div>
   </div>
 </div>
 
@@ -625,7 +633,9 @@ async function enterApp(profile){
     level:profile.level,
         firstName:profile.first_name || '',
         lastName:profile.last_name || '',
-        team:profile.team || ''
+        team:profile.team || '',
+        coachName:profile.coach_name || '',
+        coachFirstName:profile.coach_first_name || ''
   };
     APP_STATE.language = profile.language || null;
 CURRENT.suivi = APP_STATE.role==='coach' ? 'coach' : 'joueur';
@@ -673,7 +683,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 /* ============ NAVIGATION APP (bottom nav) ============ */
 function nav(s){
-  ['suivi','biblio','profil'].forEach(k=>{
+  ['suivi','evals','biblio','profil'].forEach(k=>{
     const el=document.getElementById('nt-'+k);
     if(!el)return;
     el.classList.toggle('on',k===s);
@@ -687,12 +697,16 @@ function render(){
   const c=document.getElementById('content');
   c.scrollTop=0;
   document.querySelector('#nt-suivi span').textContent = 'Suivi';
+  const evEl = document.querySelector('#nt-evals span'); if(evEl) evEl.textContent = 'Évals';
   document.querySelector('#nt-biblio span').textContent = 'Biblio';
   document.querySelector('#nt-profil span').textContent = 'Profil';
+  const evTab = document.getElementById('nt-evals');
+  if(evTab) evTab.style.display = APP_STATE.role==='coach' ? 'none' : '';
   if(CURRENT.screen==='suivi'){
     c.innerHTML=suiviHTML();
     if(APP_STATE.role!=='coach') loadPlayerHome();
   }
+  else if(CURRENT.screen==='evals') c.innerHTML=evalsHTML();
   else if(CURRENT.screen==='biblio') c.innerHTML=biblioHTML();
   else if(CURRENT.screen==='profil') c.innerHTML=profilHTML();
 }
@@ -721,23 +735,41 @@ async function loadPlayerStreak(){
       .concat((sh.sessions||[]).map(s=>s.created_at||s.started_at))
       .concat((im.sessions||[]).map(s=>s.created_at||s.started_at))
       .filter(Boolean);
+    const dayKey = d => { const t=new Date(d); t.setHours(0,0,0,0); return t.getTime(); };
+    const activeDays = new Set(dates.map(dayKey));
     const weeks = new Set(dates.map(d=>weekKey(d)));
     // série : nombre de semaines consécutives actives en remontant depuis cette semaine (ou la précédente)
+    let weekStreak = 0;
+    let curW = weekKey(new Date());
+    if(!weeks.has(curW)) curW -= 7*86400000;
+    while(weeks.has(curW)){ weekStreak++; curW -= 7*86400000; }
+    // série = séances sur jours consécutifs (en remontant depuis aujourd'hui ou hier)
     let streak = 0;
-    let cur = weekKey(new Date());
-    if(!weeks.has(cur)) cur -= 7*86400000;
-    while(weeks.has(cur)){ streak++; cur -= 7*86400000; }
+    let curD = new Date(); curD.setHours(0,0,0,0);
+    let cd = curD.getTime();
+    if(!activeDays.has(cd)) cd -= 86400000;
+    while(activeDays.has(cd)){ streak++; cd -= 86400000; }
     const thisWeek = weekKey(new Date());
     const doneThisWeek = dates.filter(d=>weekKey(d)===thisWeek).length;
     const vidsThisWeek = (subs.submissions||[]).filter(s=>weekKey(s.created_at)===thisWeek).length;
-    window.__STREAK = { streak, doneThisWeek, vidsThisWeek };
+    window.__STREAK = { streak, weekStreak, doneThisWeek, vidsThisWeek };
+    const ru = document.getElementById('rail-user');
+    if(ru && APP_STATE.role!=='coach'){
+      const nm = APP_STATE.user?.name || '';
+      const ini = (nm.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')||'?').toUpperCase();
+      const sub = [APP_STATE.user?.position, APP_STATE.user?.level].filter(Boolean).join(' · ');
+      ru.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:12px 4px 0">
+        <div class="avatar" style="width:34px;height:34px;font-size:12px">${ini}</div>
+        <div style="min-width:0"><div style="font-size:13px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</div><div style="font-size:11px;color:var(--w3)">${sub}</div></div>
+      </div>`;
+    }
     if(railEl){
       const dots = Array.from({length:5}, (_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<Math.min(streak,5)?'var(--orange)':'var(--s3)'}"></div>`).join('');
       railEl.innerHTML = `<div class="card" style="margin:0;padding:14px">
         <div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Série</div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px">
           <div style="font-family:var(--font-num);font-weight:800;font-size:28px;color:var(--w);line-height:1">${streak}</div>
-          <div style="font-size:12px;color:var(--w3)">semaine${streak>1?'s':''} d'affilée</div>
+          <div style="font-size:12px;color:var(--w3)">séance${streak>1?'s':''} d'affilée</div>
         </div>
         <div style="display:flex;gap:4px">${dots}</div>
       </div>`;
@@ -750,11 +782,12 @@ async function loadPlayerStreak(){
           <div style="width:.5px;background:var(--border)"></div>
           <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:${vidsThisWeek?'var(--orange)':'var(--w)'};line-height:1">${vidsThisWeek}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">vidéo${vidsThisWeek>1?'s':''} envoyée${vidsThisWeek>1?'s':''}</div></div>
           <div style="width:.5px;background:var(--border)"></div>
-          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:var(--gold2);line-height:1">${streak}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">semaine${streak>1?'s':''} d'affilée</div></div>
+          <div style="flex:1;text-align:center"><div style="font-family:var(--font-num);font-weight:800;font-size:26px;color:var(--gold2);line-height:1">${weekStreak}</div><div style="font-size:11px;color:var(--w3);margin-top:4px">semaine${weekStreak>1?'s':''} d'affilée</div></div>
         </div>`;
     }
   }catch(e){ /* silencieux */ }
 }
+
 
 async function loadHomeTodo(){
   const el = document.getElementById('home-todo');
@@ -825,7 +858,8 @@ async function loadHomeObjective(){
     const target = Number(active.target_value);
     const pct = start != null && target > 0 ? Math.max(6, Math.min(100, (start / target) * 100)) : 8;
     el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px">
+      <svg class="court" viewBox="0 0 280 200" fill="none" stroke="var(--gold)" stroke-width="1.4"><rect x="10" y="10" width="260" height="180" rx="4"/><circle cx="140" cy="100" r="34"/><path d="M10 46h60v108H10"/><path d="M70 100a50 50 0 0060 0"/></svg>
+      <div style="position:relative;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>Objectif de la semaine
       </div>
       <div style="font-size:20px;font-weight:600;color:var(--w);line-height:1.25;margin-bottom:12px">Passer <span style="text-transform:lowercase">${(active.criterion||'').replace(/</g,'&lt;')}</span> à ${target.toFixed(1)} / 5</div>
@@ -833,7 +867,7 @@ async function loadHomeObjective(){
         <div style="flex:1;height:8px;background:var(--s3);border-radius:5px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--gold2);border-radius:5px"></div></div>
         <div style="font-size:13px;font-weight:600;color:var(--w2);white-space:nowrap">${start!=null?start.toFixed(1)+' → ':''}${target.toFixed(1)}</div>
       </div>
-      <div style="font-size:12px;color:var(--w3);margin-top:10px">${active.sessions_planned?active.sessions_planned+' séance'+(active.sessions_planned>1?'s':'')+' de tir prévue'+(active.sessions_planned>1?'s':'')+' cette semaine':''}${active.note?(active.sessions_planned?' · ':'')+active.note.replace(/</g,'&lt;'):''}</div>`;
+      <div style="font-size:12px;color:var(--w3);margin-top:10px">${APP_STATE.user?.coachFirstName?'Posé par '+APP_STATE.user.coachFirstName+' · ':''}${active.sessions_planned?active.sessions_planned+' séance'+(active.sessions_planned>1?'s':'')+' de tir prévue'+(active.sessions_planned>1?'s':'')+' cette semaine':''}${active.note?(active.sessions_planned?' · ':'')+active.note.replace(/</g,'&lt;'):''}</div>`;
   }catch(e){ el.style.display='none'; }
 }
 
@@ -856,17 +890,22 @@ async function loadHomeEvalCard(){
     const worst = scored.slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0)).slice(0,3);
     el.style.cursor = 'pointer';
     el.onclick = () => openLancerFrancEval();
+    const sorted = scored.slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0));
     el.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:19px;color:var(--w);letter-spacing:1px">LANCER FRANC</div>
-        <div style="font-size:11px;color:var(--w3)">Voir le détail ›</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--w);letter-spacing:1.2px">LANCER FRANC</div>
+        <div style="font-size:11px;color:var(--w3);white-space:nowrap">Voir le détail ›</div>
       </div>
-      <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:14px">
-        <div style="font-family:var(--font-num);font-weight:800;font-size:46px;color:var(--w);line-height:.9">${avgApres.toFixed(1)}</div>
-        <div style="padding-bottom:4px"><div style="font-size:12px;color:var(--w3)">/ 5</div>${deltaTxt?`<div style="font-size:12px;font-weight:600;color:${delta>0?'var(--green)':'var(--red)'}">${deltaTxt}</div>`:''}</div>
-      </div>
-      <div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">À travailler en priorité</div>
-      ${worst.map(w => barRow(w.etape.replace(/</g,'&lt;'), w.moyenneApres||0, 5)).join('')}`;
+      <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex-shrink:0">
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <div style="font-family:var(--font-num);font-weight:800;font-size:80px;color:var(--w);line-height:.82">${avgApres.toFixed(1)}</div>
+            <div style="padding-top:8px"><div style="font-size:14px;color:var(--w3)">/5</div>${deltaTxt?`<div style="font-size:14px;font-weight:600;color:${delta>0?'var(--green)':'var(--red)'};margin-top:2px">${deltaTxt}</div>`:''}</div>
+          </div>
+          <div style="font-size:11.5px;color:var(--w3);margin-top:4px;max-width:150px">moyenne après correction</div>
+        </div>
+        <div style="flex:1;min-width:200px">${sorted.map(w => barRow(w.etape.replace(/</g,'&lt;'), w.moyenneApres||0, 5)).join('')}</div>
+      </div>`;
   }catch(e){ el.innerHTML = empty; }
 }
 
@@ -904,7 +943,7 @@ async function loadHomeSessionCard(){
         <div style="min-width:0">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--w);letter-spacing:.5px">${found.start_time?found.start_time.slice(0,5):label}</div>
           <div style="font-size:12px;color:var(--w2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(found.title||'').replace(/</g,'&lt;')}</div>
-          <div style="font-size:11px;color:var(--w3)">${label}${found.end_time?' · jusqu\'à '+found.end_time.slice(0,5):''}</div>
+          <div style="font-size:11px;color:var(--w3)">${[found.location, APP_STATE.user?.coachFirstName?('avec '+APP_STATE.user.coachFirstName):'', found.duration_minutes?(Math.floor(found.duration_minutes/60)?Math.floor(found.duration_minutes/60)+' h '+String(found.duration_minutes%60).padStart(2,'0'):found.duration_minutes+' min'):(found.end_time?'jusqu\'à '+found.end_time.slice(0,5):'')].filter(Boolean).join(' · ') || label}</div>
         </div>
       </div>`;
   }catch(e){ el.innerHTML = head + `<div style="font-size:12px;color:var(--w3)">Indisponible.</div>`; }
@@ -934,6 +973,10 @@ async function loadHomeCoachCard(){
         <span class="tag g" style="font-size:10px;flex-shrink:0">Corrigé</span>
       </div>
       <div style="background:var(--gold4);border-radius:var(--r16);padding:12px">
+        ${APP_STATE.user?.coachFirstName?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div class="avatar" style="width:26px;height:26px;font-size:10px">${(APP_STATE.user.coachName||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase()}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--w)">Retour de ${APP_STATE.user.coachFirstName}</div>
+        </div>`:''}
         <div style="font-size:13px;color:var(--w2);white-space:pre-wrap">« ${s.coach_feedback.replace(/</g,'&lt;')} »</div>
       </div>`;
   }catch(e){ /* silencieux */ }
@@ -1416,6 +1459,21 @@ function tileHTML(onclick, emoji, bg, title, sub){
   </div>`;
 }
 
+function evalsHTML(){
+  return `
+  <div style="padding:22px 14px 6px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--w);letter-spacing:1.5px;line-height:1">MES ÉVALUATIONS</div>
+    <div style="font-size:12.5px;color:var(--w3);margin-top:4px">Radar, notes et commentaires de ton coach</div>
+  </div>
+  <div class="app-grid-2" style="padding:0 14px">
+    ${tileHTML("openLancerFrancEval()", ICO.target, "var(--gold4)", "Lancer franc", "Radar, notes et commentaires")}
+    ${tileHTML("openChecklistEval('2pts')", ICO.ball, "var(--gold4)", "2 points", "Radar, notes et commentaires")}
+    ${tileHTML("openChecklistEval('3pts')", ICO.ball, "var(--gold4)", "3 points", "Radar, notes et commentaires")}
+    ${tileHTML("openChecklistEval('diagnostic')", ICO.clipboard, "var(--gold4)", "Diagnostic", "Posture dribble, défense, course")}
+  </div>
+  <div style="height:28px"></div>`;
+}
+
 function joueurHTML(){
   const name = APP_STATE.user?.name || '';
   const firstName = (name.split(' ')[0] || name || '').toUpperCase();
@@ -1424,7 +1482,7 @@ function joueurHTML(){
   return `
   <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:22px 14px 16px">
     <div>
-      <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Semaine ${wk} · ${role}</div>
+      <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Semaine ${wk} · ${APP_STATE.user?.coachName ? 'Coaché par '+APP_STATE.user.coachName : role}</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--w);letter-spacing:1.5px;line-height:1">SALUT ${firstName}</div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;justify-content:flex-end;min-width:220px">
@@ -1447,15 +1505,13 @@ function joueurHTML(){
       <div class="card" id="home-session-card"><span class="skel-bar"></span></div>
       <div class="card" id="home-coach-card" style="display:none"></div>
       <div class="card" id="home-mycard"><span class="skel-bar"></span></div>
+      <svg class="bison-mark" viewBox="0 0 120 110" fill="none" stroke="var(--gold)" stroke-width="3" stroke-linecap="round">
+        <path d="M34 40c-6-14-18-20-28-16 2 10 10 18 20 21"/>
+        <path d="M86 40c6-14 18-20 28-16-2 10-10 18-20 21"/>
+        <path d="M34 38c0-14 12-24 26-24s26 10 26 24c0 10-2 18-6 25-5 9-12 15-20 15s-15-6-20-15c-4-7-6-15-6-25z"/>
+        <path d="M50 74c3 4 7 6 10 6s7-2 10-6"/>
+      </svg>
     </div>
-  </div>
-
-  <div class="sec" style="padding-left:14px;padding-top:22px">Mes évaluations</div>
-  <div class="app-grid-3" style="padding:0 14px">
-    ${tileHTML("openLancerFrancEval()", ICO.target, "var(--gold4)", "Lancer franc", "Radar, notes et commentaires")}
-    ${tileHTML("openChecklistEval('2pts')", ICO.ball, "var(--gold4)", "2 points", "Radar, notes et commentaires")}
-    ${tileHTML("openChecklistEval('3pts')", ICO.ball, "var(--gold4)", "3 points", "Radar, notes et commentaires")}
-    ${tileHTML("openChecklistEval('diagnostic')", ICO.clipboard, "var(--gold4)", "Diagnostic", "Posture dribble, défense, course")}
   </div>
 
   <div class="sec" style="padding-left:14px;padding-top:22px">Mes ateliers</div>
@@ -1701,6 +1757,7 @@ async function submitExerciseVideo(){
   }catch(e){ errEl.textContent = e.message; }
   btn.disabled = false; btn.textContent = 'Envoyer la vidéo';
 }
+
 
 function showSentConfirmation(exerciseName){
   const wk = (window.__STREAK && window.__STREAK.vidsThisWeek != null) ? window.__STREAK.vidsThisWeek + 1 : null;
@@ -2175,6 +2232,10 @@ async function openPlayerDetail(playerId, playerName) {
         <input class="finput" type="time" id="ts-end" style="flex:1"/>
       </div>
       <input class="finput" id="ts-title" placeholder="Titre de l'entraînement"/>
+      <div style="display:flex;gap:8px">
+        <input class="finput" id="ts-location" placeholder="Lieu (ex: Gymnase Sud)" style="flex:2"/>
+        <input class="finput" type="number" min="0" step="15" id="ts-duration" placeholder="Durée (min)" style="flex:1"/>
+      </div>
       <textarea class="finput" id="ts-desc" rows="2" placeholder="Description (optionnel)" style="resize:vertical"></textarea>
       <select class="finput" id="ts-video"><option value="">Aucune vidéo de la Biblio</option></select>
       <div id="ts-msg" style="font-size:12px;color:var(--green);margin-bottom:6px"></div>
@@ -2794,11 +2855,15 @@ async function addTrainingProgramForPlayer(playerId){
   const title = document.getElementById('ts-title').value.trim();
   const description = document.getElementById('ts-desc').value.trim();
   const video_id = document.getElementById('ts-video').value || null;
+  const location = (document.getElementById('ts-location')?.value || '').trim();
+  const duration_minutes = document.getElementById('ts-duration')?.value || null;
   if(!days.length || !title){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent='Choisis au moins un jour et un titre.'; } return; }
   try{
-    await callApi('addTrainingProgram', { playerId, days, start_time: start_time||null, end_time: end_time||null, title, description: description||null, video_id });
+    await callApi('addTrainingProgram', { playerId, days, start_time: start_time||null, end_time: end_time||null, title, description: description||null, video_id, location: location||null, duration_minutes: duration_minutes||null });
     document.getElementById('ts-title').value='';
     document.getElementById('ts-desc').value='';
+    if(document.getElementById('ts-location')) document.getElementById('ts-location').value='';
+    if(document.getElementById('ts-duration')) document.getElementById('ts-duration').value='';
     for(let di=0; di<7; di++){ const cb=document.getElementById('ts-day-'+di); if(cb) cb.checked=false; }
     if(msgEl){ msgEl.style.color='var(--green)'; msgEl.textContent='Entraînement ajouté !'; setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },2500); }
     await loadPlayerProgramList(playerId);
