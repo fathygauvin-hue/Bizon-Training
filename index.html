@@ -102,6 +102,7 @@ select.finput{cursor:pointer}
 #rail-foot{display:none}
 /* bouton camera flottant */
 #fab{position:fixed;right:18px;bottom:88px;z-index:60;display:none;align-items:center;gap:10px;cursor:pointer}
+#home-actions{display:none}
 #fab .fab-lbl{background:var(--s2);border:.5px solid var(--border);border-radius:20px;padding:7px 13px;font-size:12.5px;color:var(--w2);font-family:var(--font-btn);font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.45)}
 #fab .fab-btn{width:58px;height:58px;border-radius:50%;background:var(--orange);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 10px rgba(240,138,90,.13),0 10px 26px rgba(0,0,0,.5)}
 /* bandeaux etat (hors ligne / envoi) */
@@ -129,7 +130,8 @@ select.finput{cursor:pointer}
   .nt.on{background:var(--s2)}
   #content{grid-column:2;grid-row:1 / span 3;min-height:0;max-width:1180px;padding:0 30px 20px;border-left:.5px solid var(--border)}
   #rail-foot{display:block;grid-column:1;grid-row:3;align-self:end;padding:12px 12px 18px}
-  #fab{right:26px;bottom:26px}
+  #fab{display:none !important}
+  #home-actions{display:flex}
   #app-banners{top:16px;left:auto;right:24px;margin:0;max-width:390px;padding:0}
   #home-week-stats{display:none}
   #home-cta{display:none}
@@ -1837,7 +1839,7 @@ function joueurHTML(){
       <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Semaine ${wk} · ${APP_STATE.user?.coachName ? 'Coaché par '+APP_STATE.user.coachName : role}</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--w);letter-spacing:1.5px;line-height:1">SALUT ${firstName}</div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;justify-content:flex-end;min-width:220px">
+    <div id="home-actions" style="gap:10px;flex-wrap:wrap;flex:1;justify-content:flex-end;min-width:220px">
       <button class="ghost" style="border-radius:var(--r26);padding:12px 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px" onclick="openMyCard()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.7"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>Ma carte</button>
       <button class="gbtn" style="border-radius:var(--r26);padding:12px 20px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px" onclick="openMyExercises()">
