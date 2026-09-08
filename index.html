@@ -68,7 +68,7 @@ a{color:inherit;text-decoration:none}
 .ghost{background:var(--s3);color:var(--w2);font-family:'Inter',sans-serif;font-size:13px;padding:10px 16px;border-radius:var(--r8);border:.5px solid var(--border);cursor:pointer;transition:background .15s}
 .ghost:hover{background:var(--s4)}
 .ghost.full{width:100%;text-align:center}
-.avatar{border-radius:50%;background:var(--gold3);display:flex;align-items:center;justify-content:center;font-weight:500;color:var(--gold2);flex-shrink:0}
+.avatar{border-radius:50%;background:var(--s3);border:.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--gold2);flex-shrink:0}
 .sb-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .sb-lbl{font-size:12px;color:var(--w2);width:76px;flex-shrink:0}
 .sb-bg{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
@@ -1136,26 +1136,12 @@ async function loadHomeTodo(){
 async function loadHomeMyCard(){
   const el = document.getElementById('home-mycard');
   if(!el) return;
-  let score = null, delta = null;
-  try{
-    const { sheets } = await callApi('getSheetLinks', { playerId: APP_STATE.userId });
-    if(sheets?.sheet_lf){
-      const res = await fetch(sheets.sheet_lf);
-      const { etapes } = parseLancerFrancGrid(parseCSV(await res.text()));
-      const sc = etapes.filter(e => (e.moyenneApres||0) > 0);
-      if(sc.length){
-        score = sc.reduce((a,e)=>a+(e.moyenneApres||0),0)/sc.length;
-        const av = sc.reduce((a,e)=>a+(e.moyenneAvant||0),0)/sc.length;
-        delta = score - av;
-      }
-    }
-  }catch(e){}
-  const dTxt = (delta != null && Math.abs(delta) >= 0.05) ? (delta>0?'+':'') + delta.toFixed(1) : '';
+  const st = await loadSheetEval(APP_STATE.userId);
   el.innerHTML = `
     <div style="font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px">Ta carte</div>
     <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:6px">
-      <div style="font-family:var(--font-num);font-weight:800;font-size:44px;color:var(--w);line-height:.9">${score!=null?score.toFixed(1):'—'}</div>
-      ${dTxt?`<div style="padding-bottom:5px;font-size:13px;font-weight:600;color:${delta>0?'var(--green)':'var(--red)'}">${dTxt}</div>`:''}
+      <div style="font-family:var(--font-num);font-weight:800;font-size:44px;color:${st.hasData?'var(--w)':'var(--w3)'};line-height:.9">${st.score.toFixed(1)}</div>
+      ${st.delta!=null?`<div style="padding-bottom:5px">${deltaHTML(st.delta,13)}</div>`:''}
     </div>
     <div style="font-size:12.5px;color:var(--w2);margin-bottom:14px">Partage ta progression en une image</div>
     <button class="gbtn full" style="border-radius:var(--r26);padding:13px" onclick="openMyCard()">Générer ma carte</button>`;
@@ -1193,39 +1179,29 @@ async function loadHomeObjective(){
 async function loadHomeEvalCard(){
   const el = document.getElementById('home-eval-card');
   if(!el) return;
-  const empty = `<div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dernière évaluation</div><div style="font-size:12px;color:var(--w3)">Pas encore d'évaluation.</div>`;
-  try{
-    const { sheets } = await callApi('getSheetLinks', { playerId: APP_STATE.userId });
-    if(!sheets?.sheet_lf){ el.innerHTML = empty; return; }
-    const res = await fetch(sheets.sheet_lf);
-    const text = await res.text();
-    const { etapes } = parseLancerFrancGrid(parseCSV(text));
-    const scored = etapes.filter(e => (e.moyenneApres||0) > 0);
-    if(!scored.length){ el.innerHTML = empty; return; }
-    const avgApres = scored.reduce((a,e)=>a+(e.moyenneApres||0),0) / scored.length;
-    const avgAvant = scored.reduce((a,e)=>a+(e.moyenneAvant||0),0) / scored.length;
-    const delta = avgApres - avgAvant;
-    const deltaTxt = Math.abs(delta) < 0.05 ? '' : (delta > 0 ? '+' : '') + delta.toFixed(1);
-    const worst = scored.slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0)).slice(0,3);
-    el.style.cursor = 'pointer';
-    el.onclick = () => openLancerFrancEval();
-    const sorted = scored.slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0));
-    el.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--w);letter-spacing:1.2px">LANCER FRANC</div>
-        <div style="font-size:11px;color:var(--w3);white-space:nowrap">Voir le détail ›</div>
-      </div>
-      <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
-        <div style="flex-shrink:0">
-          <div style="display:flex;align-items:flex-start;gap:8px">
-            <div style="font-family:var(--font-num);font-weight:800;font-size:80px;color:var(--w);line-height:.82">${avgApres.toFixed(1)}</div>
-            <div style="padding-top:8px"><div style="font-size:14px;color:var(--w3)">/5</div>${deltaTxt?`<div style="font-size:14px;font-weight:600;color:${delta>0?'var(--green)':'var(--red)'};margin-top:2px">${deltaTxt}</div>`:''}</div>
-          </div>
-          <div style="font-size:11.5px;color:var(--w3);margin-top:4px;max-width:150px">moyenne après correction</div>
+  const st = await loadSheetEval(APP_STATE.userId);
+  el.style.cursor = 'pointer';
+  el.onclick = () => openLancerFrancEval();
+  const rows = st.hasData
+    ? st.scored.slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0))
+        .map(w => barRow(w.etape.replace(/</g,'&lt;'), w.moyenneApres||0, 5)).join('')
+    : `<div style="font-size:12.5px;color:var(--w3);padding-top:6px">Ton coach n'a pas encore rempli ta grille d'évaluation.</div>
+       ${[0,1,2].map(()=>barRow('—', 0, 5)).join('')}`;
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--w);letter-spacing:1.2px">LANCER FRANC</div>
+      <div style="font-size:11px;color:var(--w3);white-space:nowrap">Voir le détail ›</div>
+    </div>
+    <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex-shrink:0">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="font-family:var(--font-num);font-weight:800;font-size:80px;color:${st.hasData?'var(--w)':'var(--w3)'};line-height:.82">${st.score.toFixed(1)}</div>
+          <div style="padding-top:8px"><div style="font-size:14px;color:var(--w3)">/5</div>${st.delta!=null?`<div style="margin-top:2px">${deltaHTML(st.delta,14)}</div>`:''}</div>
         </div>
-        <div style="flex:1;min-width:200px">${sorted.map(w => barRow(w.etape.replace(/</g,'&lt;'), w.moyenneApres||0, 5)).join('')}</div>
-      </div>`;
-  }catch(e){ el.innerHTML = empty; }
+        <div style="font-size:11.5px;color:var(--w3);margin-top:4px;max-width:150px">moyenne après correction</div>
+      </div>
+      <div style="flex:1;min-width:200px">${rows}</div>
+    </div>`;
 }
 
 async function loadHomeSessionCard(){
@@ -1411,6 +1387,59 @@ function radarSVGDual(etapes) {
     '<polygon points="' + apresPts + '" fill="' + tierColor(avgApres) + '" fill-opacity="0.12" stroke="' + tierColor(avgApres) + '" stroke-width="2"/>' +
     dots + labels + '</svg></div>';
 }
+/* ═══════════════════════════════════════════════════════════════
+   SOURCE UNIQUE DES CHIFFRES : le Google Sheet du joueur.
+   Aucune note n'est calculée ailleurs. Si le Sheet n'est pas
+   complété : score 0, progression vide, pas de delta.
+   ═══════════════════════════════════════════════════════════════ */
+const SHEET_CACHE = {};
+
+// Statistiques dérivées de la grille Lancer franc.
+// scored = critères réellement notés dans le Sheet (moyenneApres > 0).
+function sheetStats(etapes){
+  const all = etapes || [];
+  const scored = all.filter(e => (e.moyenneApres || 0) > 0);
+  if(!scored.length){
+    return { etapes: all, scored: [], hasData: false, score: 0, before: 0, delta: null, filled: 0, total: all.length };
+  }
+  const score = scored.reduce((a,e)=>a+(e.moyenneApres||0),0) / scored.length;
+  const before = scored.reduce((a,e)=>a+(e.moyenneAvant||0),0) / scored.length;
+  const delta = score - before;
+  return {
+    etapes: all, scored, hasData: true,
+    score, before,
+    delta: Math.abs(delta) < 0.05 ? null : delta,
+    filled: scored.length, total: all.length,
+  };
+}
+
+function deltaHTML(delta, size){
+  if(delta == null) return '';
+  const s = size || 14;
+  return `<span style="font-size:${s}px;font-weight:600;color:${delta>0?'var(--green)':'var(--red)'}">${delta>0?'+':''}${delta.toFixed(1)}</span>`;
+}
+
+// Lit le Sheet Lancer franc d'un joueur (une seule fois par session).
+async function loadSheetEval(playerId){
+  const id = playerId || APP_STATE.userId;
+  if(!id) return sheetStats([]);
+  if(SHEET_CACHE[id]) return SHEET_CACHE[id];
+  let stats = sheetStats([]);
+  let criteres = [];
+  try{
+    const { sheets } = await callApi('getSheetLinks', { playerId: id });
+    if(sheets?.sheet_lf){
+      const res = await fetch(sheets.sheet_lf);
+      const parsed = parseLancerFrancGrid(parseCSV(await res.text()));
+      stats = sheetStats(parsed.etapes);
+      criteres = parsed.criteres || [];
+    }
+  }catch(e){ /* Sheet absent ou illisible : on reste à 0 */ }
+  stats.criteres = criteres;
+  SHEET_CACHE[id] = stats;
+  return stats;
+}
+
 function priorityBlockHTML(etapes){
   const scored = (etapes||[]).filter(e => (e.moyenneApres||0) > 0);
   if(!scored.length) return '';
@@ -1430,37 +1459,72 @@ function priorityBlockHTML(etapes){
 }
 
 function renderLancerFrancEval(etapes, criteres) {
-  if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
+  const st = sheetStats(etapes);
+  const isCoach = APP_STATE.role === 'coach';
   const comments = (criteres || []).filter(c => c.commentAvant || c.commentApres);
-  return priorityBlockHTML(etapes) + `
-  <div class="app-grid-2" style="padding:0">
+
+  // 1. Le score, tel qu'il sort du Sheet (0 si la grille n'est pas remplie)
+  const scoreCard = `
+  <div class="card" style="margin:0 0 14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <div style="font-family:var(--font-num);font-weight:800;font-size:76px;color:${st.hasData?'var(--w)':'var(--w3)'};line-height:.82">${st.score.toFixed(1)}</div>
+      <div style="padding-top:8px;font-size:14px;color:var(--w3)">/5</div>
+    </div>
+    <div style="min-width:0">
+      <div style="font-size:12.5px;color:var(--w3)">moyenne après correction</div>
+      ${st.delta != null
+        ? `<div style="margin-top:4px">${deltaHTML(st.delta,20)}<span style="font-size:12.5px;color:var(--w3);margin-left:6px">vs avant (${st.before.toFixed(1)})</span></div>`
+        : `<div style="font-size:12.5px;color:var(--w3);margin-top:4px">Pas encore de progression mesurée</div>`}
+      <div style="font-size:11.5px;color:var(--w3);margin-top:6px">${st.filled} critère${st.filled>1?'s':''} noté${st.filled>1?'s':''} sur ${st.total} dans le Google Sheet</div>
+    </div>
+  </div>`;
+
+  if(!st.hasData){
+    return scoreCard + `
+    <div class="card" style="margin:0">
+      <div style="font-size:13px;color:var(--w2);margin-bottom:4px">Grille pas encore remplie</div>
+      <div style="font-size:12px;color:var(--w3)">Les notes apparaîtront ici dès que ton coach aura complété le Google Sheet.</div>
+    </div>
+    <div class="sec" style="padding-left:0;padding-top:22px">Détail par étape</div>
+    <div class="card" style="margin:0">${etapes.map(e => barRow(e.etape.replace(/</g,'&lt;'), 0, 5)).join('') || '<div style="font-size:12px;color:var(--w3)">Aucune étape dans le Sheet.</div>'}</div>
+    <div id="eval-refvideo" style="display:none;margin-top:16px"></div>
+    <div style="height:24px"></div>`;
+  }
+
+  const detailRow = e => {
+    const noted = (e.moyenneApres||0) > 0;
+    const prog = (e.moyenneApres||0) - (e.moyenneAvant||0);
+    const progLabel = !noted ? '' : (Math.abs(prog) < 0.05 ? '—' : (prog > 0 ? '+' : '') + prog.toFixed(1));
+    const progColor = prog > 0 ? 'var(--green)' : prog < 0 ? 'var(--red)' : 'var(--w3)';
+    return `
+    <div class="sb-row"${noted?'':' style="opacity:.5"'}>
+      <div class="sb-lbl" style="width:150px">${e.etape.replace(/</g,'&lt;')}</div>
+      <div class="sb-bg"><div class="sb-fill" style="width:${noted ? (e.moyenneApres/5)*100 : 0}%;background:${noted ? tierColor(e.moyenneApres) : 'transparent'}"></div></div>
+      <div class="sb-val">${noted ? e.moyenneApres.toFixed(1) : '0.0'}</div>
+      <div style="font-size:11px;color:${noted?progColor:'var(--w3)'};min-width:64px;text-align:right">${noted ? progLabel : 'Non évalué'}</div>
+    </div>`;
+  };
+
+  return scoreCard + priorityBlockHTML(etapes) + `
+  ${isCoach ? `
+  <div class="app-grid-2" style="padding:0;margin-top:14px">
     <div>
+      <div class="sec" style="padding-left:0;padding-top:0">Radar · version coach</div>
       <div class="card" style="display:flex;justify-content:center;margin:0">${radarSVGDual(etapes)}</div>
       <div style="display:flex;gap:10px;padding:10px 0 0;font-size:10px;color:var(--w3);flex-wrap:wrap">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#8c8c84;margin-right:5px"></span>Avant</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7BC47A;margin-right:5px"></span>Après ≥4</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E7C34B;margin-right:5px"></span>Après 2.5-4</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E07070;margin-right:5px"></span>Après <2.5</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E07070;margin-right:5px"></span>Après &lt;2.5</span>
       </div>
     </div>
     <div>
       <div class="sec" style="padding-left:0;padding-top:0">Détail par étape</div>
-      <div class="card" style="margin:0">
-        ${etapes.map(e => {
-          const prog = e.moyenneApres - e.moyenneAvant;
-          const progColor = prog > 0 ? 'var(--green)' : prog < 0 ? 'var(--red)' : 'var(--w3)';
-          const progLabel = prog === 0 ? '—' : (prog > 0 ? '+' : '') + prog.toFixed(1);
-          return `
-          <div class="sb-row">
-            <div class="sb-lbl" style="width:150px">${e.etape}</div>
-            <div class="sb-bg"><div class="sb-fill" style="width:${(e.moyenneApres / 5) * 100}%;background:${e.moyenneApres>=4?'#7BC47A':e.moyenneApres>=2.5?'#E7C34B':'#E07070'}"></div></div>
-            <div class="sb-val">${e.moyenneApres.toFixed(1)}</div>
-            <div style="font-size:11px;color:${progColor};min-width:34px;text-align:right">${progLabel}</div>
-          </div>`;
-        }).join('')}
-      </div>
+      <div class="card" style="margin:0">${etapes.map(detailRow).join('')}</div>
     </div>
-  </div>
+  </div>` : `
+  <div class="sec" style="padding-left:0;padding-top:18px">Détail par étape</div>
+  <div class="card" style="margin:0">${etapes.map(detailRow).join('')}</div>`}
   <div id="eval-refvideo" style="display:none;margin-top:16px"></div>
   ${comments.length ? `
   <div class="sec" style="padding-left:0;padding-top:22px">Commentaires du coach</div>
@@ -1504,43 +1568,23 @@ async function loadLancerFrancEval(playerId) {
   const el = document.getElementById('lf-eval-section');
   if (!el) return;
   if (!playerId) {
-    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec ton code d'accès pour voir tes données.</div></div>`;
+    el.innerHTML = `<div class="card" style="margin:0"><div style="font-size:12px;color:var(--w3)">Connecte-toi avec ton code d'accès pour voir tes données.</div></div>`;
     return;
   }
-  try {
-    let sheets;
-    try {
-      const data = await callApi('getSheetLinks', { playerId });
-      sheets = data.sheets;
-    } catch (aErr) { aErr._stage = 'supabase'; throw aErr; }
-    if (!sheets?.sheet_lf) {
-      el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucun lien Google Sheet configuré pour ce joueur (Lancer franc).</div></div>`;
-      return;
-    }
-    let res;
-    try {
-      res = await fetch(sheets.sheet_lf);
-    } catch (fe) { fe._stage = 'fetch-network'; throw fe; }
-    if (!res.ok) { const e2 = new Error('HTTP ' + res.status); e2._stage = 'fetch-http'; throw e2; }
-    const text = await res.text();
-    const { etapes, criteres } = parseLancerFrancGrid(parseCSV(text));
-    el.innerHTML = renderLancerFrancEval(etapes, criteres);
-    loadEvalRefVideo(etapes);
-  } catch (e) {
-    console.error('Erreur chargement Lancer Franc:', e);
-    const stage = e._stage || 'inconnu';
-    el.innerHTML = `<div class="card"><div style="font-size:12px;color:var(--red)">Impossible de charger les données du Sheet Lancer Franc.</div><div style="font-size:11px;color:var(--w3);margin-top:8px;font-family:monospace">Étape: ${stage}<br>Détail: ${(e.message || String(e)).replace(/</g,'&lt;')}</div></div>`;
-  }
+  const st = await loadSheetEval(playerId);
+  el.innerHTML = renderLancerFrancEval(st.etapes, st.criteres);
+  loadEvalRefVideo(st.etapes);
 }
 
 async function openLancerFrancEval(playerId) {
   const targetId = playerId || APP_STATE.userId;
+  setFab(false);
   document.getElementById('content').innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
-      <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
-      <div style="font-size:14px;font-weight:500;color:var(--w)">Évaluation technique · Lancer franc</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 0 10px">
+      <button onclick="nav('${APP_STATE.role==='coach'?'suivi':'evals'}')" style="width:44px;height:44px;border-radius:50%;background:var(--s2);border:.5px solid var(--border);color:var(--gold);font-size:22px;cursor:pointer;line-height:1;flex-shrink:0">‹</button>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--w);letter-spacing:1.5px;line-height:1">LANCER FRANC</div>
     </div>
-    <div id="lf-eval-section" style="padding:20px 0;text-align:center;color:var(--w3);font-size:12px">Chargement des données…</div>
+    <div id="lf-eval-section">${skShape('eval')}</div>
   `;
   await loadLancerFrancEval(targetId);
 }
@@ -1693,6 +1737,7 @@ async function loadChecklistEval(key, playerId) {
 
 async function openChecklistEval(key, playerId) {
   const targetId = playerId || APP_STATE.userId;
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -1893,6 +1938,7 @@ function joueurHTML(){
 async function openMyCard(){
   const name = APP_STATE.user?.name || '';
   const role = [APP_STATE.user?.position, APP_STATE.user?.level].filter(Boolean).join(' · ') || 'Joueur';
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;padding:14px 0 6px">
       <button onclick="nav('suivi')" style="width:44px;height:44px;border-radius:50%;background:var(--s2);border:.5px solid var(--border);color:var(--gold);font-size:22px;cursor:pointer;line-height:1;flex-shrink:0">‹</button>
@@ -1933,20 +1979,8 @@ async function drawMyCard(name, role){
   x.fillText('BIZON TRAINING', 142, 96);
   x.letterSpacing = '0px';
   // score
-  let score = null, delta = null, critLabel = 'Lancer franc';
-  try{
-    const { sheets } = await callApi('getSheetLinks', { playerId: APP_STATE.userId });
-    if(sheets?.sheet_lf){
-      const res = await fetch(sheets.sheet_lf);
-      const { etapes } = parseLancerFrancGrid(parseCSV(await res.text()));
-      const sc = etapes.filter(e => (e.moyenneApres||0) > 0);
-      if(sc.length){
-        score = sc.reduce((a,e)=>a+(e.moyenneApres||0),0)/sc.length;
-        const av = sc.reduce((a,e)=>a+(e.moyenneAvant||0),0)/sc.length;
-        delta = score - av;
-      }
-    }
-  }catch(e){}
+  const st = await loadSheetEval(APP_STATE.userId);
+  const score = st.score, delta = st.delta, critLabel = 'Lancer franc';
   x.letterSpacing = '2px';
   x.fillStyle = '#E7C34B';
   x.font = '500 34px "JetBrains Mono", monospace';
@@ -1954,13 +1988,13 @@ async function drawMyCard(name, role){
   x.letterSpacing = '0px';
   x.fillStyle = '#FAF9F6';
   x.font = '800 230px "Big Shoulders Display", Impact, sans-serif';
-  x.fillText(score != null ? score.toFixed(1) : '—', 76, H/2 + 40);
-  if(score != null){
+  x.fillText(score.toFixed(1), 76, H/2 + 40);
+  {
     const w = x.measureText(score.toFixed(1)).width;
     x.font = '500 46px Inter, sans-serif';
     x.fillStyle = '#8c8c84';
     x.fillText('/ 5', 96 + w, H/2 + 40);
-    if(delta != null && Math.abs(delta) >= 0.05){
+    if(delta != null){
       x.font = '700 48px Inter, sans-serif';
       x.fillStyle = delta > 0 ? '#7BC47A' : '#E07070';
       x.fillText((delta>0?'+':'') + delta.toFixed(1), 96 + w, H/2 - 60);
@@ -2009,6 +2043,7 @@ async function downloadMyCard(){
 let VIDEO_RETURN_FN = () => nav('suivi');
 
 function openMyExercises(){
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -2178,6 +2213,7 @@ function sendReview(later){
 
 function showSentConfirmation(exerciseName){
   const wk = (window.__STREAK && window.__STREAK.vidsThisWeek != null) ? window.__STREAK.vidsThisWeek + 1 : null;
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 20px">
       <div style="width:110px;height:110px;border-radius:50%;background:var(--gold2);display:flex;align-items:center;justify-content:center;margin-bottom:26px;box-shadow:0 0 0 14px var(--gold4)">
@@ -2351,19 +2387,21 @@ async function loadCoachPlayers() {
       const badge = pend
         ? `<span style="flex-shrink:0;background:var(--orange-bg);color:var(--orange);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600">${pend} vidéo${pend>1?'s':''}</span>`
         : (stale ? `<span style="flex-shrink:0;background:var(--gold2);color:#0a0a0a;border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600">Relancer</span>` : '');
-      const sub = [role, p.last_note_at ? 'suivi ' + relativeDaysFR(p.last_note_at) : 'sans suivi'].join(' · ');
       return `
       <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0" onclick="openPlayerDetail('${p.id}','${name.replace(/'/g, "\\'")}')">
         <div class="avatar" style="width:44px;height:44px;font-size:13px">${initials}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:15px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-          <div style="font-size:12px;color:var(--w3);margin-top:2px">${sub}</div>
+          <div style="font-size:12px;color:var(--w3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${role} · <span id="pscore-${p.id}" style="color:var(--w3)">— / 5</span></div>
           ${!p.sheets_configured ? `<div style="margin-top:6px"><span class="tag r" style="font-size:10px">Sheets à configurer</span></div>` : ''}
         </div>
         ${badge}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--w3)" stroke-width="1.5" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
       </div>`;
     }).join('');
+
+    // Les notes viennent du Google Sheet de chaque joueur, chargées en arrière-plan (3 à la fois)
+    fillCoachScores(players.map(p => p.id));
   } catch (e) {
     console.error('Erreur chargement joueurs:', e);
     el.innerHTML = `<div class="card" style="margin:0"><div style="font-size:12px;color:var(--red)">Impossible de charger la liste des joueurs.</div></div>`;
@@ -2371,7 +2409,26 @@ async function loadCoachPlayers() {
   }
 }
 
+// Remplit la note /5 de chaque ligne joueur depuis son Google Sheet.
+async function fillCoachScores(ids){
+  const queue = ids.slice();
+  const worker = async () => {
+    while(queue.length){
+      const id = queue.shift();
+      const el = document.getElementById('pscore-' + id);
+      if(!el) continue;
+      try{
+        const st = await loadSheetEval(id);
+        el.textContent = st.score.toFixed(1) + ' / 5';
+        el.style.color = st.hasData ? tierColor(st.score) : 'var(--w3)';
+      }catch(e){ el.textContent = '0.0 / 5'; }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+}
+
 function showAddPlayerModal(){
+  setFab(false);
   document.getElementById('content').innerHTML = `
   <div class="overlay">
     <div class="modal">
@@ -2405,6 +2462,7 @@ async function createPlayer(){
 
 function showPlayerCreatedModal(p){
   const link = `${window.location.origin}${window.location.pathname}?code=${p.access_code}`;
+  setFab(false);
   document.getElementById('content').innerHTML = `
   <div class="overlay">
     <div class="modal">
@@ -2495,6 +2553,7 @@ let OBJ_CTX = null;
 async function openSetObjective(playerId, playerName){
   const first = (playerName||'').split(' ')[0];
   const weekOf = new Date().toLocaleDateString(LOCALE(), { day:'2-digit', month:'long' });
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;padding:14px 0 6px">
       <button onclick="openPlayerDetail('${playerId}','${(playerName||'').replace(/'/g,"\\'")}')" style="width:44px;height:44px;border-radius:50%;background:var(--s2);border:.5px solid var(--border);color:var(--gold);font-size:22px;cursor:pointer;line-height:1;flex-shrink:0">‹</button>
@@ -2590,6 +2649,7 @@ async function submitObjective(){
 }
 
 async function openPlayerDetail(playerId, playerName) {
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -2901,6 +2961,7 @@ function openVideo(id){
   const v=(BIBLIO_STATE.videos||[]).find(x=>String(x.id)===String(id));
   if(!v) return;
   const fid=driveFileId(v.drive_url);
+  setFab(false);
   document.getElementById('content').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('biblio')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -2922,6 +2983,7 @@ function openVideo(id){
 }
 
 function showAddVideoModal(){
+  setFab(false);
   document.getElementById('content').innerHTML=`
   <div class="overlay">
     <div class="modal">
@@ -2980,6 +3042,7 @@ function quizVideoEmbed(url){
 }
 
 async function openVisionQuiz(){
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -3064,6 +3127,7 @@ async function loadPlayerQuizResults(playerId){
 }
 
 function openQuizEditor(){
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('profil')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -3161,6 +3225,7 @@ async function saveQuizEditor(){
 const JOURS_SEMAINE = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 
 async function openMyCalendar(){
+  setFab(false);
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)">
       <button onclick="nav('suivi')" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;line-height:1">‹</button>
@@ -3349,7 +3414,7 @@ async function saveAiCriteria(){
   }catch(e){ alert(tr(e.message)); }
 }
 
-  function openSettingsModal(){ const u=APP_STATE.user||{}; window._settingsLangSelected=APP_STATE.language||'fr'; document.getElementById('content').innerHTML=`<div class="overlay"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:1.5px">Paramètres</div><button onclick="render()" style="background:none;border:none;color:var(--w3);font-size:22px;cursor:pointer">✕</button></div><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Prénom</div><input class="finput" id="profile-first-name" value="${(u.firstName||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Nom</div><input class="finput" id="profile-last-name" value="${(u.lastName||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Équipe</div><input class="finput" id="profile-team" value="${(u.team||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Niveau</div><input class="finput" id="profile-level" value="${(u.level||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Langue</div><div style="display:flex;gap:8px"><button type="button" class="gbtn" id="settings-lang-fr" style="flex:1" onclick="setSettingsLangUI('fr')">Français</button><button type="button" class="gbtn" id="settings-lang-en" style="flex:1" onclick="setSettingsLangUI('en')">English</button></div><div id="profile-info-msg" style="font-size:12px;margin-top:10px;min-height:16px"></div><button class="gbtn full" style="margin-top:14px" onclick="saveProfileInfo()">Enregistrer les modifications</button></div></div>`; setSettingsLangUI(APP_STATE.language||'fr'); } function setSettingsLangUI(lang){ window._settingsLangSelected=lang; const fr=document.getElementById('settings-lang-fr'); const en=document.getElementById('settings-lang-en'); if(fr) fr.style.cssText='flex:1;'+(lang==='fr'?'background:var(--gold2);color:#111':''); if(en) en.style.cssText='flex:1;'+(lang==='en'?'background:var(--gold2);color:#111':''); } async function saveProfileInfo(){ const fnEl=document.getElementById('profile-first-name'); const lnEl=document.getElementById('profile-last-name'); const teamEl=document.getElementById('profile-team'); const levelEl=document.getElementById('profile-level'); const msgEl=document.getElementById('profile-info-msg'); const first_name=(fnEl.value||'').trim(); const last_name=(lnEl.value||'').trim(); const team=(teamEl.value||'').trim(); const level=(levelEl.value||'').trim(); const newLang=window._settingsLangSelected||APP_STATE.language||'fr'; if(!first_name||!last_name){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent='Prénom et nom requis.'; } return; } try{ const { profile } = await callApi('updateProfile', { first_name, last_name, team, level }); APP_STATE.user.name = `${profile.first_name||''} ${profile.last_name||''}`.trim(); APP_STATE.user.firstName = profile.first_name||''; APP_STATE.user.lastName = profile.last_name||''; APP_STATE.user.team = profile.team||''; APP_STATE.user.level = profile.level; if(newLang!==APP_STATE.language){ await switchLanguage(newLang); } else { render(); } }catch(e){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent=tr(e.message); } } }
+  function openSettingsModal(){ const u=APP_STATE.user||{}; window._settingsLangSelected=APP_STATE.language||'fr'; setFab(false); document.getElementById('content').innerHTML=`<div class="overlay"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:1.5px">Paramètres</div><button onclick="render()" style="background:none;border:none;color:var(--w3);font-size:22px;cursor:pointer">✕</button></div><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Prénom</div><input class="finput" id="profile-first-name" value="${(u.firstName||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Nom</div><input class="finput" id="profile-last-name" value="${(u.lastName||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Équipe</div><input class="finput" id="profile-team" value="${(u.team||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Niveau</div><input class="finput" id="profile-level" value="${(u.level||'').replace(/"/g,'&quot;')}"/><div style="font-size:11px;color:var(--w3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">Langue</div><div style="display:flex;gap:8px"><button type="button" class="gbtn" id="settings-lang-fr" style="flex:1" onclick="setSettingsLangUI('fr')">Français</button><button type="button" class="gbtn" id="settings-lang-en" style="flex:1" onclick="setSettingsLangUI('en')">English</button></div><div id="profile-info-msg" style="font-size:12px;margin-top:10px;min-height:16px"></div><button class="gbtn full" style="margin-top:14px" onclick="saveProfileInfo()">Enregistrer les modifications</button></div></div>`; setSettingsLangUI(APP_STATE.language||'fr'); } function setSettingsLangUI(lang){ window._settingsLangSelected=lang; const fr=document.getElementById('settings-lang-fr'); const en=document.getElementById('settings-lang-en'); if(fr) fr.style.cssText='flex:1;'+(lang==='fr'?'background:var(--gold2);color:#111':''); if(en) en.style.cssText='flex:1;'+(lang==='en'?'background:var(--gold2);color:#111':''); } async function saveProfileInfo(){ const fnEl=document.getElementById('profile-first-name'); const lnEl=document.getElementById('profile-last-name'); const teamEl=document.getElementById('profile-team'); const levelEl=document.getElementById('profile-level'); const msgEl=document.getElementById('profile-info-msg'); const first_name=(fnEl.value||'').trim(); const last_name=(lnEl.value||'').trim(); const team=(teamEl.value||'').trim(); const level=(levelEl.value||'').trim(); const newLang=window._settingsLangSelected||APP_STATE.language||'fr'; if(!first_name||!last_name){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent='Prénom et nom requis.'; } return; } try{ const { profile } = await callApi('updateProfile', { first_name, last_name, team, level }); APP_STATE.user.name = `${profile.first_name||''} ${profile.last_name||''}`.trim(); APP_STATE.user.firstName = profile.first_name||''; APP_STATE.user.lastName = profile.last_name||''; APP_STATE.user.team = profile.team||''; APP_STATE.user.level = profile.level; if(newLang!==APP_STATE.language){ await switchLanguage(newLang); } else { render(); } }catch(e){ if(msgEl){ msgEl.style.color='var(--red)'; msgEl.textContent=tr(e.message); } } }
 
 /* ═══ PROFIL ═══ */
 function profilHTML(){
