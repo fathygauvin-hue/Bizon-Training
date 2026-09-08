@@ -93,7 +93,7 @@ select.finput{cursor:pointer}
 .home-cols{display:grid;gap:12px;padding:0 14px;align-items:start}
 #home-objective{position:relative;overflow:hidden}
 #home-objective .court{position:absolute;right:-30px;top:-40px;width:280px;height:200px;opacity:.16;pointer-events:none}
-.bison-mark{position:absolute;right:6px;bottom:-6px;width:130px;opacity:.10;pointer-events:none}
+.bison-mark{position:absolute;right:10px;bottom:6px;width:56px;opacity:.12;pointer-events:none}
 .home-col{position:relative}
 @media (min-width:1000px){ .home-cols{grid-template-columns:1.55fr 1fr} }
 .home-col{display:flex;flex-direction:column;gap:12px}
@@ -127,7 +127,7 @@ select.finput{cursor:pointer}
   <div class="app-frame">
     <div id="topbar">
       <div class="bar-inner">
-        <div class="logo" style="display:flex;align-items:center;gap:8px;font-family:'Bebas Neue',sans-serif;font-size:23px;color:var(--gold);letter-spacing:2.5px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Bizon Training</div>
+        <div class="logo" style="display:flex;align-items:center;gap:9px"><img id="topbar-logo" alt="" style="height:26px;width:auto"/><span style="font-family:'Bebas Neue',sans-serif;font-size:23px;color:var(--gold);letter-spacing:2.5px">Bizon Training</span></div>
       </div>
     </div>
     <div id="content"></div>
@@ -241,6 +241,7 @@ async function extractVideoFrames(url, count = 4){
   return frames;
 }
 
+const LOGO_MARK = 'data:image/png;base64,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';
 const APP_STATE = { authenticated:false, role:null, userId:null, user:null, code:null, language:null };
 const CURRENT = { screen:'suivi', suivi:'joueur' };
 
@@ -572,34 +573,122 @@ function showAccessScreen(prefill){
   document.getElementById('app-shell').style.display='none';
   const root=document.getElementById('auth-root');
   root.style.display='block';
-  root.innerHTML=accessScreenHTML(prefill);
+  const urlCode = new URLSearchParams(location.search).get('code');
+  root.innerHTML=accessScreenHTML(prefill || urlCode || '');
+  pickLoginLang(APP_STATE.language || 'fr');
+  setTimeout(()=>{ const bs=codeBoxes(); const first=bs.find(b=>b && !b.value) || bs[0]; if(first) first.focus(); }, 60);
+}
+
+function courtBgHTML(){
+  return `<svg viewBox="0 0 400 720" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;opacity:.20;pointer-events:none" fill="none" stroke="var(--gold)" stroke-width="1.6">
+    <rect x="18" y="18" width="364" height="684" rx="6"/>
+    <path d="M18 360h364"/>
+    <circle cx="200" cy="360" r="66"/>
+    <path d="M126 18h148v150H126z"/>
+    <path d="M126 552h148v150H126z"/>
+    <circle cx="200" cy="168" r="52"/>
+    <circle cx="200" cy="552" r="52"/>
+    <path d="M18 96a250 250 0 00364 0" />
+    <path d="M18 624a250 250 0 01364 0" />
+  </svg>`;
+}
+function bisonLogoHTML(size){
+  const s = size || 54;
+  return `<svg width="${s}" height="${Math.round(s*0.86)}" viewBox="0 0 140 120" fill="none" stroke="var(--w)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M38 46C30 24 16 14 4 18c0 16 10 30 26 36"/>
+    <path d="M102 46c8-22 22-32 34-28 0 16-10 30-26 36"/>
+    <path d="M38 40c0-16 14-28 32-28s32 12 32 28c0 14-3 25-9 34-6 10-14 16-23 16s-17-6-23-16c-6-9-9-20-9-34z"/>
+    <path d="M56 78c4 5 9 8 14 8s10-3 14-8"/>
+    <path d="M62 60h16"/>
+  </svg>`;
 }
 
 function accessScreenHTML(prefill){
+  const pre = (prefill||'').toUpperCase().slice(0,6);
+  const boxes = Array.from({length:6}, (_,i) => `
+    <input id="code-box-${i}" maxlength="1" inputmode="text" autocomplete="off"
+      value="${pre[i]||''}"
+      oninput="codeBoxInput(${i})" onkeydown="codeBoxKey(event,${i})" onpaste="codeBoxPaste(event)"
+      style="width:46px;height:58px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;color:var(--w);background:var(--s3);border:1.5px solid ${pre[i]?'var(--gold)':'var(--border)'};border-radius:var(--r16);outline:none;caret-color:var(--gold2)"/>`).join('');
   return `
-  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);max-width:420px;margin:0 auto;padding:24px">
-    <div style="width:52px;height:52px;border-radius:14px;background:var(--gold3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;margin-bottom:14px">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.3" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+  <div style="position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px;overflow:hidden">
+    ${courtBgHTML()}
+    <div style="position:relative;width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px">
+        <img src="${LOGO_MARK}" alt="" style="height:56px;width:auto"/>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:46px;color:var(--w);letter-spacing:5px;line-height:1">BIZON</div>
+      </div>
+      <div style="font-family:var(--font-num);font-weight:600;font-size:12px;color:var(--w2);letter-spacing:10px;margin-bottom:22px;padding-left:60px">TRAINING</div>
+      <div style="font-size:14px;color:var(--w2);text-align:center;line-height:1.5;margin-bottom:22px">Le suivi de ta progression,<br>avec ton coach.</div>
+
+      <div class="card" style="width:100%;margin:0;padding:16px">
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--w3);margin-bottom:12px">
+          <span style="width:7px;height:7px;border-radius:50%;background:${pre?'var(--green)':'var(--w3)'};display:inline-block"></span>
+          ${pre ? "Lien de ton coach · code pré-rempli" : "Entre ton code d'accès"}
+        </div>
+        <div style="display:flex;gap:7px;justify-content:space-between;margin-bottom:14px">${boxes}</div>
+        <button class="gbtn full" style="border-radius:var(--r26);padding:15px;font-size:15px" onclick="handleAccessCode()">Entrer</button>
+        <div id="access-error" style="color:var(--red);font-size:12px;margin-top:10px;text-align:center"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:20px">
+        <button id="lang-fr" class="ghost" style="border-radius:20px;padding:8px 18px;font-size:13px" onclick="pickLoginLang('fr')">Français</button>
+        <button id="lang-en" class="ghost" style="border-radius:20px;padding:8px 18px;font-size:13px" onclick="pickLoginLang('en')">English</button>
+      </div>
     </div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold);letter-spacing:3px;margin-bottom:4px">BIZON TRAINING</div>
-    <div style="font-size:12px;color:var(--w3);margin-bottom:24px">Entre ton code d'accès</div>
-    <input class="finput" id="access-code-input" placeholder="Ex: J52WZY" maxlength="6" style="text-align:center;text-transform:uppercase;font-size:18px;letter-spacing:4px;max-width:220px" value="${prefill||''}" onkeydown="if(event.key==='Enter')handleAccessCode()"/>
-    <button class="gbtn full" style="max-width:220px;margin-top:12px" onclick="handleAccessCode()">Entrer</button>
-    <div id="access-error" style="color:var(--red);font-size:12px;margin-top:10px;text-align:center;max-width:260px"></div>
   </div>`;
 }
 
+let LOGIN_LANG = null;
+function pickLoginLang(l){
+  LOGIN_LANG = l;
+  const fr = document.getElementById('lang-fr'), en = document.getElementById('lang-en');
+  [['fr',fr],['en',en]].forEach(([k,btn])=>{
+    if(!btn) return;
+    const on = k===l;
+    btn.style.background = on ? 'var(--gold)' : 'var(--s3)';
+    btn.style.color = on ? '#0a0a0a' : 'var(--w2)';
+    btn.style.fontWeight = on ? '600' : '400';
+  });
+}
+function codeBoxes(){ return Array.from({length:6}, (_,i)=>document.getElementById('code-box-'+i)); }
+function readCode(){ return codeBoxes().map(b=>(b&&b.value||'').toUpperCase()).join(''); }
+function codeBoxInput(i){
+  const b = document.getElementById('code-box-'+i);
+  if(!b) return;
+  b.value = (b.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,1);
+  b.style.borderColor = b.value ? 'var(--gold)' : 'var(--border)';
+  if(b.value && i<5){ const n=document.getElementById('code-box-'+(i+1)); if(n){ n.focus(); n.select(); } }
+  if(readCode().length===6) setTimeout(()=>handleAccessCode(), 120);
+}
+function codeBoxKey(e,i){
+  if(e.key==='Enter'){ handleAccessCode(); return; }
+  if(e.key==='Backspace' && !e.target.value && i>0){
+    const p=document.getElementById('code-box-'+(i-1));
+    if(p){ p.focus(); p.value=''; p.style.borderColor='var(--border)'; }
+  }
+  if(e.key==='ArrowLeft' && i>0) document.getElementById('code-box-'+(i-1))?.focus();
+  if(e.key==='ArrowRight' && i<5) document.getElementById('code-box-'+(i+1))?.focus();
+}
+function codeBoxPaste(e){
+  e.preventDefault();
+  const t=(e.clipboardData||window.clipboardData).getData('text').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
+  codeBoxes().forEach((b,i)=>{ if(b){ b.value=t[i]||''; b.style.borderColor=b.value?'var(--gold)':'var(--border)'; } });
+  if(t.length===6) setTimeout(()=>handleAccessCode(), 120);
+}
+
+let LOGIN_BUSY = false;
 async function handleAccessCode(){
-  const input=document.getElementById('access-code-input');
-  const code=(input.value||'').trim().toUpperCase();
+  if(LOGIN_BUSY) return;
+  const code = readCode();
   const errEl=document.getElementById('access-error');
+  const shake = () => { codeBoxes().forEach(b=>{ if(b){ b.style.animation='shake .3s'; setTimeout(()=>b.style.animation='',300); } }); };
   if(code.length!==6){
     errEl.textContent='Le code doit contenir 6 caractères.';
-    input.classList.add('shake-anim');
-    input.style.animation='shake .3s';
-    setTimeout(()=>input.style.animation='',300);
+    shake();
     return;
   }
+  LOGIN_BUSY = true;
   errEl.textContent='Vérification…';
   let profile;
   try {
@@ -611,13 +700,18 @@ async function handleAccessCode(){
   }
   if(!profile){
     APP_STATE.code = null;
+    LOGIN_BUSY = false;
     errEl.textContent='Code invalide. Vérifie et réessaie.';
-    input.style.animation='shake .3s';
-    setTimeout(()=>input.style.animation='',300);
+    shake();
     return;
   }
   errEl.textContent='';
   localStorage.setItem('bizon_access_code', code);
+  if(!profile.language && LOGIN_LANG){
+    profile.language = LOGIN_LANG;
+    try{ APP_STATE.code = code; await callApi('setLanguage', { language: LOGIN_LANG }); }catch(e){}
+  }
+  LOGIN_BUSY = false;
   await enterApp(profile);
 }
 
@@ -682,6 +776,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ============ NAVIGATION APP (bottom nav) ============ */
+(function(){ const l=document.getElementById('topbar-logo'); if(l) l.src=LOGO_MARK; })();
+
 function nav(s){
   ['suivi','evals','biblio','profil'].forEach(k=>{
     const el=document.getElementById('nt-'+k);
@@ -1505,12 +1601,7 @@ function joueurHTML(){
       <div class="card" id="home-session-card"><span class="skel-bar"></span></div>
       <div class="card" id="home-coach-card" style="display:none"></div>
       <div class="card" id="home-mycard"><span class="skel-bar"></span></div>
-      <svg class="bison-mark" viewBox="0 0 120 110" fill="none" stroke="var(--gold)" stroke-width="3" stroke-linecap="round">
-        <path d="M34 40c-6-14-18-20-28-16 2 10 10 18 20 21"/>
-        <path d="M86 40c6-14 18-20 28-16-2 10-10 18-20 21"/>
-        <path d="M34 38c0-14 12-24 26-24s26 10 26 24c0 10-2 18-6 25-5 9-12 15-20 15s-15-6-20-15c-4-7-6-15-6-25z"/>
-        <path d="M50 74c3 4 7 6 10 6s7-2 10-6"/>
-      </svg>
+      <img class="bison-mark" src="${LOGO_MARK}" alt=""/>
     </div>
   </div>
 
@@ -1561,10 +1652,17 @@ async function drawMyCard(name, role){
   x.beginPath(); x.arc(W/2, H-170, 150, Math.PI, 2*Math.PI); x.stroke();
   x.beginPath(); x.arc(W/2, H/2, 110, 0, 2*Math.PI); x.stroke();
   // logo texte
-  x.fillStyle = '#E7C34B';
-  x.font = '600 40px "Bebas Neue", Impact, sans-serif';
-  x.letterSpacing = '6px';
-  x.fillText('BIZON TRAINING', 80, 100);
+  try{
+    const logo = new Image();
+    logo.src = LOGO_MARK;
+    await new Promise((res)=>{ logo.onload=res; logo.onerror=res; setTimeout(res,1200); });
+    if(logo.width) x.drawImage(logo, 76, 34, 46, Math.round(46*logo.height/logo.width));
+  }catch(e){}
+  x.fillStyle = '#FAF9F6';
+  x.font = '600 46px "Bebas Neue", Impact, sans-serif';
+  x.letterSpacing = '7px';
+  x.fillText('BIZON TRAINING', 142, 96);
+  x.letterSpacing = '0px';
   // score
   let score = null, delta = null, critLabel = 'Lancer franc';
   try{
