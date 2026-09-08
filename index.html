@@ -90,6 +90,10 @@ select.finput{cursor:pointer}
   .app-grid-3{grid-template-columns:repeat(3,1fr)}
   .stats-grid{grid-template-columns:repeat(4,1fr)!important}
 }
+.home-cols{display:grid;gap:12px;padding:0 14px;align-items:start}
+@media (min-width:1000px){ .home-cols{grid-template-columns:1.55fr 1fr} }
+.home-col{display:flex;flex-direction:column;gap:12px}
+.home-col .card{margin:0}
 /* ===== FORMAT WEB : rail de navigation a gauche ===== */
 #rail-foot{display:none}
 @media (min-width:1000px){
@@ -696,6 +700,8 @@ function render(){
 /* ═══ ACCUEIL JOUEUR — objectif, évaluation, séance, retour coach ═══ */
 async function loadPlayerHome(){
   loadPlayerStreak();
+  loadHomeTodo();
+  loadHomeMyCard();
   loadHomeObjective();
   loadHomeEvalCard();
   loadHomeSessionCard();
@@ -748,6 +754,59 @@ async function loadPlayerStreak(){
         </div>`;
     }
   }catch(e){ /* silencieux */ }
+}
+
+async function loadHomeTodo(){
+  const el = document.getElementById('home-todo');
+  if(!el) return;
+  try{
+    const { programs } = await callApi('getPlayerProgram', {});
+    const withVideo = (programs||[]).filter(p => p.videos && p.videos.drive_url);
+    if(!withVideo.length){ el.innerHTML = ''; return; }
+    const items = withVideo.slice(0,3).map(p => {
+      const day = JOURS_SEMAINE[p.day_of_week] || '';
+      const t = p.start_time ? p.start_time.slice(0,5) : '';
+      return `<div onclick="window.open('${p.videos.drive_url}','_blank')" style="cursor:pointer">
+        <div style="position:relative;border-radius:var(--r16);height:104px;background:repeating-linear-gradient(45deg,var(--s3),var(--s3) 8px,var(--s2) 8px,var(--s2) 16px);display:flex;align-items:center;justify-content:center;margin-bottom:8px">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--gold2);display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#0a0a0a"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+        <div style="font-size:13.5px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(p.videos.title||p.title||'Vidéo').replace(/</g,'&lt;')}</div>
+        <div style="font-size:11px;color:var(--w3);margin-top:2px">${day}${t?' · '+t:''}</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="font-size:10px;color:var(--w3);text-transform:uppercase;letter-spacing:1.2px;margin:4px 0 10px">À faire cette semaine</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">${items}</div>`;
+  }catch(e){ el.innerHTML = ''; }
+}
+
+async function loadHomeMyCard(){
+  const el = document.getElementById('home-mycard');
+  if(!el) return;
+  let score = null, delta = null;
+  try{
+    const { sheets } = await callApi('getSheetLinks', { playerId: APP_STATE.userId });
+    if(sheets?.sheet_lf){
+      const res = await fetch(sheets.sheet_lf);
+      const { etapes } = parseLancerFrancGrid(parseCSV(await res.text()));
+      const sc = etapes.filter(e => (e.moyenneApres||0) > 0);
+      if(sc.length){
+        score = sc.reduce((a,e)=>a+(e.moyenneApres||0),0)/sc.length;
+        const av = sc.reduce((a,e)=>a+(e.moyenneAvant||0),0)/sc.length;
+        delta = score - av;
+      }
+    }
+  }catch(e){}
+  const dTxt = (delta != null && Math.abs(delta) >= 0.05) ? (delta>0?'+':'') + delta.toFixed(1) : '';
+  el.innerHTML = `
+    <div style="font-size:10px;color:var(--gold2);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px">Ta carte</div>
+    <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:6px">
+      <div style="font-family:var(--font-num);font-weight:800;font-size:44px;color:var(--w);line-height:.9">${score!=null?score.toFixed(1):'—'}</div>
+      ${dTxt?`<div style="padding-bottom:5px;font-size:13px;font-weight:600;color:${delta>0?'var(--green)':'var(--red)'}">${dTxt}</div>`:''}
+    </div>
+    <div style="font-size:12.5px;color:var(--w2);margin-bottom:14px">Partage ta progression en une image</div>
+    <button class="gbtn full" style="border-radius:var(--r26);padding:13px" onclick="openMyCard()">Générer ma carte</button>`;
 }
 
 async function loadHomeObjective(){
@@ -1363,26 +1422,33 @@ function joueurHTML(){
   const role = [APP_STATE.user?.position, APP_STATE.user?.level].filter(Boolean).join(' · ') || 'Joueur';
   const wk = isoWeek(new Date());
   return `
-  <div style="padding:22px 14px 16px">
-    <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Semaine ${wk} · ${role}</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--w);letter-spacing:1.5px;line-height:1.05;margin-bottom:14px">SALUT ${firstName}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="obtn" style="flex:1;min-width:150px" onclick="openMyExercises()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="1.8"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>Envoyer une vidéo</button>
-      <button class="ghost" style="flex:1;min-width:120px;border-radius:var(--r26);display:inline-flex;align-items:center;justify-content:center;gap:8px" onclick="openMyCard()">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:22px 14px 16px">
+    <div>
+      <div style="font-family:var(--font-num);font-weight:700;font-size:11px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Semaine ${wk} · ${role}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--w);letter-spacing:1.5px;line-height:1">SALUT ${firstName}</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1;justify-content:flex-end;min-width:220px">
+      <button class="ghost" style="border-radius:var(--r26);padding:12px 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px" onclick="openMyCard()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold2)" stroke-width="1.7"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>Ma carte</button>
+      <button class="gbtn" style="border-radius:var(--r26);padding:12px 20px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px" onclick="openMyExercises()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.8"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3v8l-6-3z"/></svg>Envoyer une vidéo</button>
     </div>
   </div>
 
-  <div id="home-objective" class="card" style="margin:0 14px 12px"><span class="skel-bar"></span></div>
   <div id="home-week-stats" class="card" style="margin:0 14px 12px"><span class="skel-bar"></span></div>
 
-  <div class="app-grid-2" style="padding:0 14px">
-    <div class="card" id="home-eval-card" style="margin:0"><span class="skel-bar"></span></div>
-    <div class="card" id="home-session-card" style="margin:0"><span class="skel-bar"></span></div>
+  <div class="home-cols">
+    <div class="home-col">
+      <div id="home-objective" class="card"><span class="skel-bar"></span></div>
+      <div class="card" id="home-eval-card"><span class="skel-bar"></span></div>
+      <div id="home-todo"></div>
+    </div>
+    <div class="home-col">
+      <div class="card" id="home-session-card"><span class="skel-bar"></span></div>
+      <div class="card" id="home-coach-card" style="display:none"></div>
+      <div class="card" id="home-mycard"><span class="skel-bar"></span></div>
+    </div>
   </div>
-
-  <div class="card" id="home-coach-card" style="margin:12px 14px 0;display:none"></div>
 
   <div class="sec" style="padding-left:14px;padding-top:22px">Mes évaluations</div>
   <div class="app-grid-3" style="padding:0 14px">
