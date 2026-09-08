@@ -2392,7 +2392,11 @@ async function loadCoachPlayers() {
         <div class="avatar" style="width:44px;height:44px;font-size:13px">${initials}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:15px;font-weight:500;color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-          <div style="font-size:12px;color:var(--w3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${role} · <span id="pscore-${p.id}" style="color:var(--w3)">— / 5</span></div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-top:2px;font-size:12px;color:var(--w3)">
+            <span style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${role}</span>
+            <span style="flex-shrink:0">·</span>
+            <span id="pscore-${p.id}" style="flex-shrink:0;font-family:var(--font-num);font-weight:700;font-size:13px">— / 5</span>
+          </div>
           ${!p.sheets_configured ? `<div style="margin-top:6px"><span class="tag r" style="font-size:10px">Sheets à configurer</span></div>` : ''}
         </div>
         ${badge}
