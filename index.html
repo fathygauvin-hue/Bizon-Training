@@ -11,6 +11,7 @@
 /* ============ RESET & TOKENS ============ */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
+body{overflow:hidden}
 body{background:var(--bg);color:var(--w);font-family:var(--font-body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 
@@ -29,9 +30,9 @@ a{color:inherit;text-decoration:none}
 }
 
 #auth-root,#app-shell{background:var(--bg);min-height:100vh;width:100%;font-family:'Space Grotesk',sans-serif}
-#app-shell{display:none;flex-direction:column}
+#app-shell{display:none;flex-direction:column;position:fixed;inset:0}
 #auth-root{display:none}
-.app-frame{width:100%;height:100vh;height:100dvh;min-height:100vh;min-height:100dvh;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.app-frame{width:100%;height:100%;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
 .bar-inner{max-width:1200px;margin:0 auto;width:100%;display:flex;align-items:center;justify-content:center;padding:0 32px;height:100%}
 .botnav-inner{max-width:640px;margin:0 auto;width:100%;display:flex;align-items:center}
 
@@ -953,6 +954,14 @@ function handleLogout(){
 const DEMO_ROLE = new URLSearchParams(window.location.search).get('demo');
 function installDemoMode(){
   const dAgo = n => new Date(Date.now() - n*86400000).toISOString();
+  const DEMO_LF_CSV = 'data:text/csv;charset=utf-8,' + encodeURIComponent(
+    ['', '', '', '', ''].concat([
+      'Relâché du poignet,Relâché,2.5,,,2.4,"Le poignet reste bloqué à la fin du geste."',
+      'Regard sur la cible,Regard,2.8,,,3.1,"En progression, garde la cible jusqu\'au bout."',
+      'Alignement épaules,Alignement,3.9,,,4.2,',
+      'Position des pieds,Appuis,4.2,,,4.4,',
+      'Rythme de la poussée,Rythme,3.7,,,4.0,'
+    ]).join('\n'));
   const P = (id, first, last, position, level, days, sheets) => ({ id, first_name:first, last_name:last, position, level, last_note_at: days==null?null:dAgo(days), sheets_configured: sheets!==false });
   const players = [
     P('p1','Célestine','Segretain','Meneuse','NCAA D1', 3, true),
@@ -984,10 +993,10 @@ function installDemoMode(){
     listMySubmissions: { submissions: mySubs },
     getPlayerProgram: { programs },
     getObjectives: { active:{ id:'o1', criterion:'Lancer franc — équilibre', start_value:2.4, target_value:3.5, sessions_planned:6, sessions_done:4 }, history:[] },
-    getSheetLinks: { sheets:{} },
+    getSheetLinks: { sheets:{ sheet_lf: DEMO_LF_CSV } },
+    listVideos: { videos:[{ id:'v1', title:'Relâché du poignet — drill', category:'Tir', drive_url:'https://example.com' }] },
     listShootingSessions: { sessions:[{ id:'sh1', created_at:dAgo(1) },{ id:'sh2', created_at:dAgo(3) },{ id:'sh3', created_at:dAgo(4) }] },
     listIronmanSessions: { sessions:[{ id:'im1', created_at:dAgo(2) }] },
-    listVideos: { videos:[] },
     getCoachNotes: { notes:[] },
     getPlayerAvailability: { slots:[] },
     getAiCriteria: { criteria:'' },
@@ -1007,6 +1016,8 @@ function installDemoMode(){
     coach_first_name:'William',
     language:'fr',
   });
+  const screen = new URLSearchParams(window.location.search).get('screen');
+  if(screen === 'eval') setTimeout(()=>openLancerFrancEval(), 60);
 }
 
 /* Au chargement : lien ?code=XXXXXX (partagé par le coach) ou code déjà mémorisé sur l'appareil */
@@ -1477,28 +1488,74 @@ function radarSVGDual(etapes) {
     '<polygon points="' + apresPts + '" fill="' + tierColor(avgApres) + '" fill-opacity="0.12" stroke="' + tierColor(avgApres) + '" stroke-width="2"/>' +
     dots + labels + '</svg></div>';
 }
-function priorityBlockHTML(etapes){
+function priorityBlockHTML(etapes, criteres){
   const scored = (etapes||[]).filter(e => (e.moyenneApres||0) > 0);
   if(!scored.length) return '';
   const sorted = scored.slice().sort((a,b)=>(a.moyenneApres||0)-(b.moyenneApres||0));
   const todo = sorted.filter(e => (e.moyenneApres||0) < 3.5);
   const done = sorted.filter(e => (e.moyenneApres||0) >= 3.5);
-  const row = e => {
+  const noteOf = e => {
+    const c = (criteres||[]).find(c => c.etape === e.etape && (c.commentApres || c.commentAvant));
+    const t = c ? (c.commentApres || c.commentAvant) : '';
+    return t ? '« ' + t.replace(/</g,'&lt;') + ' »' : '';
+  };
+  const row = (e, withNote) => {
     const d = (e.moyenneApres||0) - (e.moyenneAvant||0);
     const dTxt = Math.abs(d) < 0.05 ? '' : (d>0?'+':'') + d.toFixed(1);
-    return barRow(e.etape.replace(/</g,'&lt;') + (dTxt?` <span style="color:${d>0?'var(--green)':'var(--red)'};font-size:11px">${dTxt}</span>`:''), e.moyenneApres||0, 5);
+    const note = withNote ? noteOf(e) : '';
+    const sub = [dTxt, note].filter(Boolean).join(' · ');
+    const v = e.moyenneApres||0;
+    const col = tierColor(v);
+    return `<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+        <div style="font-size:14px;font-weight:700;color:var(--w)">${e.etape.replace(/</g,'&lt;')}</div>
+        <div style="font-size:14px;font-weight:700;color:${col}">${v.toFixed(1)}</div>
+      </div>
+      <div style="height:9px;border-radius:5px;background:var(--s3);overflow:hidden"><div style="width:${Math.max(0,Math.min(100,v/5*100))}%;height:100%;background:${col}"></div></div>
+      ${sub?`<div style="font-size:12px;color:var(--w3)">${sub}</div>`:''}
+    </div>`;
   };
   return `
   <div class="card" style="margin:0 0 12px">
-    ${todo.length?`<div style="font-size:10px;color:var(--red);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px">À travailler en priorité</div>${todo.map(row).join('')}`:''}
-    ${done.length?`<div style="font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:1.2px;margin:${todo.length?'16px':'0'} 0 10px">Acquis</div>${done.map(row).join('')}`:''}
+    ${todo.length?`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px">À travailler en priorité</div>${todo.map(e=>row(e,true)).join('')}`:''}
+    ${done.length?`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:1.4px;margin:${todo.length?'18px':'0'} 0 12px">Acquis</div>${done.map(e=>row(e,false)).join('')}`:''}
+  </div>`;
+}
+
+function evalHeroHTML(etapes){
+  const scored = (etapes||[]).filter(e => (e.moyenneApres||0) > 0);
+  if(!scored.length) return '';
+  const apres = scored.reduce((a,e)=>a+(e.moyenneApres||0),0)/scored.length;
+  const avant = scored.reduce((a,e)=>a+(e.moyenneAvant||0),0)/scored.length;
+  const d = apres - avant;
+  const dTxt = Math.abs(d) < 0.05 ? '' : (d>0?'+':'') + d.toFixed(1);
+  return `<div class="card" style="margin:0 0 12px;display:flex;align-items:center;gap:16px">
+    <div>
+      <div style="font-family:var(--font-display);font-weight:800;font-size:52px;line-height:.85;color:var(--w)">${apres.toFixed(1)}</div>
+      <div style="font-size:12px;color:var(--w3);margin-top:4px">moyenne après</div>
+    </div>
+    ${dTxt?`<div style="width:1px;height:44px;background:var(--s3)"></div>
+    <div>
+      <div style="font-size:20px;font-weight:700;color:${d>0?'var(--green)':'var(--red)'}">${dTxt}</div>
+      <div style="font-size:12px;color:var(--w3);margin-top:4px">vs avant (${avant.toFixed(1)})</div>
+    </div>`:''}
   </div>`;
 }
 
 function renderLancerFrancEval(etapes, criteres) {
   if (!etapes.length) return `<div class="card"><div style="font-size:12px;color:var(--w3)">Aucune donnée trouvée dans le Sheet.</div></div>`;
   const comments = (criteres || []).filter(c => c.commentAvant || c.commentApres);
-  return priorityBlockHTML(etapes) + `
+  // Côté joueur : barres classées, pas de radar (le radar reste côté coach).
+  if (APP_STATE.role !== 'coach') {
+    return evalHeroHTML(etapes) + priorityBlockHTML(etapes, criteres) + `
+    <div id="eval-refvideo" style="display:none;margin-top:4px"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--w3);padding:14px 2px 0">
+      <div>Barres classées du plus faible au plus fort</div>
+      <div>Radar : version coach</div>
+    </div>
+    <div style="height:24px"></div>`;
+  }
+  return priorityBlockHTML(etapes, criteres) + `
   <div class="app-grid-2" style="padding:0">
     <div>
       <div class="card" style="display:flex;justify-content:center;margin:0">${radarSVGDual(etapes)}</div>
@@ -1883,12 +1940,12 @@ function evalsHTML(){
   return `
   <div style="padding:22px 14px 6px">
     <div style="font-family:var(--font-display);font-weight:800;font-size:32px;color:var(--w);letter-spacing:1.5px;line-height:1">MES ÉVALUATIONS</div>
-    <div style="font-size:12.5px;color:var(--w3);margin-top:4px">Radar, notes et commentaires de ton coach</div>
+    <div style="font-size:12.5px;color:var(--w3);margin-top:4px">Tes barres classées : à travailler en priorité, puis acquis</div>
   </div>
   <div class="app-grid-2" style="padding:0 14px">
-    ${tileHTML("openLancerFrancEval()", ICO.target, "var(--gold4)", "Lancer franc", "Radar, notes et commentaires")}
-    ${tileHTML("openChecklistEval('2pts')", ICO.ball, "var(--gold4)", "2 points", "Radar, notes et commentaires")}
-    ${tileHTML("openChecklistEval('3pts')", ICO.ball, "var(--gold4)", "3 points", "Radar, notes et commentaires")}
+    ${tileHTML("openLancerFrancEval()", ICO.target, "var(--gold4)", "Lancer franc", "À travailler en priorité et acquis")}
+    ${tileHTML("openChecklistEval('2pts')", ICO.ball, "var(--gold4)", "2 points", "À travailler en priorité et acquis")}
+    ${tileHTML("openChecklistEval('3pts')", ICO.ball, "var(--gold4)", "3 points", "À travailler en priorité et acquis")}
     ${tileHTML("openChecklistEval('diagnostic')", ICO.clipboard, "var(--gold4)", "Diagnostic", "Posture dribble, défense, course")}
   </div>
   <div style="height:28px"></div>`;
