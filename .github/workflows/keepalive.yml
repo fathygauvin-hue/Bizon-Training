@@ -1,0 +1,33 @@
+# Maintient le projet Supabase actif.
+# Le plan gratuit met un projet en pause apres environ 7 jours sans activite
+# sur la base de donnees. Ce job appelle une action "ping" qui fait une
+# requete minimale sur Postgres. Aucun identifiant sensible : la cle utilisee
+# est la cle publique, deja presente dans index.html.
+
+name: Reveil Supabase
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # tous les jours vers 6h17 UTC
+  workflow_dispatch:        # permet de le lancer a la main
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Appeler l API Bizon Training
+        run: |
+          CLE="sb_publishable_tZk7-W_5TusA_hMtrtvhhA_9Fedr8cP"
+          CODE=$(curl -sS -o reponse.json -w "%{http_code}" \
+            -X POST "https://shwtjplbjirgkgjtxrap.supabase.co/functions/v1/api" \
+            -H "Content-Type: application/json" \
+            -H "apikey: $CLE" \
+            -H "Authorization: Bearer $CLE" \
+            -d '{"action":"ping"}')
+          echo "Code HTTP : $CODE"
+          cat reponse.json
+          echo
+          if [ "$CODE" != "200" ]; then
+            echo "Le reveil a echoue."
+            exit 1
+          fi
