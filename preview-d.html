@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bizon Training — Direction D · Photo d'abord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@400;500;600&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{
+--encre:#101010;--papier:#FBFAF7;--papier2:#F1EEE8;--trait:#101010;
+--gris:#6E6A64;--gris2:#A9A49C;
+--or:#C9A227;--vert:#1F7A4D;--rouge:#B3261E;
+--d:'Anton',Impact,sans-serif;--s:'Newsreader',Georgia,serif;--u:'Archivo',system-ui,sans-serif;--b:'Bebas Neue',Impact,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#2A2824;color:var(--encre);font-family:var(--u);-webkit-font-smoothing:antialiased;padding:30px}
+.wrap{max-width:1180px;margin:0 auto}
+.tag{font-family:var(--u);font-size:11px;font-weight:600;letter-spacing:.08em;color:#A9A49C;text-transform:uppercase;margin:34px 0 10px}
+.tag b{color:var(--or);font-weight:600}
+.page{background:var(--papier);margin-bottom:8px}
+
+/* ── zone photo ── */
+.photo{position:relative;overflow:hidden;background:#15140F}
+.photo svg{position:absolute;inset:0;width:100%;height:100%}
+.photo .lbl{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'IBM Plex Mono',monospace;
+ font-size:10px;color:rgba(255,255,255,.3);border:1px dashed rgba(255,255,255,.22);padding:7px 13px;white-space:nowrap}
+
+/* ── ÉCRAN 1 ── */
+.e1-photo{height:330px}
+.e1-over{position:absolute;left:0;bottom:0;padding:0 26px 22px;width:100%}
+.e1-kicker{font-family:var(--s);font-style:italic;font-size:15px;color:rgba(255,255,255,.8);margin-bottom:2px}
+.e1-nom{font-family:var(--d);font-size:78px;line-height:.86;color:#fff;letter-spacing:-.01em;margin-left:-4px}
+.barre{background:var(--encre);color:var(--papier);display:flex;align-items:baseline;gap:18px;padding:16px 26px}
+.barre .n{font-family:var(--d);font-size:46px;line-height:1}
+.barre .sur{font-family:var(--u);font-size:15px;color:#8d8880;margin-left:-12px}
+.barre .q{font-family:var(--u);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8d8880}
+.barre .d{margin-left:auto;font-family:var(--d);font-size:30px;color:var(--or)}
+.bloc{padding:26px}
+.h{font-family:var(--d);font-size:26px;letter-spacing:.005em;margin-bottom:2px}
+.sous{font-family:var(--s);font-style:italic;font-size:15px;color:var(--gris);margin-bottom:16px}
+.liste{border-top:2px solid var(--trait)}
+.liste div{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid #DAD5CC;padding:13px 0}
+.liste span.t{font-family:var(--u);font-size:16px}
+.liste span.m{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gris)}
+.liste span.i{font-family:var(--d);font-size:15px;color:var(--gris2);width:22px}
+.mot{border-left:5px solid var(--or);padding:4px 0 4px 18px;margin:26px 0 0}
+.mot p{font-family:var(--s);font-size:20px;line-height:1.45}
+.mot cite{display:block;margin-top:9px;font-family:var(--u);font-style:normal;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gris)}
+.cta{display:block;background:var(--encre);color:var(--papier);text-align:left;padding:19px 26px;font-family:var(--d);font-size:24px;letter-spacing:.01em}
+.cta em{float:right;font-style:normal;color:var(--or)}
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.deux>*{border-right:1px solid #DAD5CC}
+.deux>*:last-child{border-right:0}
+
+/* ── ÉCRAN 2 ── */
+.e2-top{display:flex;align-items:flex-end;justify-content:space-between;padding:26px 26px 0}
+.e2-note{font-family:var(--d);font-size:150px;line-height:.78;letter-spacing:-.02em;margin-right:-6px}
+.e2-note i{font-style:normal;font-family:var(--u);font-size:26px;color:var(--gris2)}
+.crit{border-top:2px solid var(--trait);margin:22px 26px 0}
+.crit .r{display:grid;grid-template-columns:1fr 150px 54px 46px;align-items:center;gap:14px;border-bottom:1px solid #DAD5CC;padding:12px 0}
+.crit .r span.nom{font-family:var(--u);font-size:16px}
+.crit .r .ech{position:relative;height:9px}
+.crit .r .ech:before{content:'';position:absolute;left:0;right:0;top:4px;height:1px;background:#CFC9BE}
+.crit .r .ech i{position:absolute;top:0;width:3px;height:9px;background:var(--encre)}
+.crit .r .dl{font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right}
+.crit .r .vl{font-family:var(--d);font-size:22px;text-align:right}
+.crit .vide span.nom,.crit .vide .vl{color:var(--gris2)}
+.ref{display:flex;align-items:center;gap:14px;margin:18px 26px 26px;background:var(--papier2);padding:14px 16px}
+.ref .t{font-family:var(--u);font-size:14px}
+.ref .t em{display:block;font-style:normal;font-family:var(--s);font-size:14px;color:var(--gris)}
+.ref .b{margin-left:auto;font-family:var(--d);font-size:15px;border:2px solid var(--encre);padding:6px 14px}
+
+/* ── ÉCRAN 3 ── */
+.e3-top{display:flex;align-items:flex-end;justify-content:space-between;padding:26px 26px 18px}
+.e3-top .g{font-family:var(--d);font-size:54px;line-height:.86}
+.e3-top .c{display:flex;gap:26px;text-align:right}
+.e3-top .c div b{display:block;font-family:var(--d);font-size:34px;line-height:1}
+.e3-top .c div span{font-family:var(--u);font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--gris)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{font-family:var(--u);font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--gris);
+ text-align:left;padding:0 0 8px;border-bottom:2px solid var(--trait)}
+tbody td{padding:11px 0;border-bottom:1px solid #DAD5CC;vertical-align:middle}
+.vign{width:38px;height:38px;background:#15140F;display:block;position:relative;overflow:hidden}
+.vign svg{position:absolute;inset:0;width:100%;height:100%}
+td.j{font-family:var(--u);font-size:15px;font-weight:500}
+td.j em{display:block;font-style:italic;font-family:var(--s);font-size:13px;color:var(--gris)}
+td.note{font-family:var(--d);font-size:24px;text-align:right}
+.puce{font-family:var(--u);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid var(--encre);padding:4px 9px;white-space:nowrap}
+.puce.or{border-color:var(--or);color:#8a6f12}
+.puce.off{border-color:#CFC9BE;color:var(--gris2)}
+
+/* ── ÉCRAN 4 : la carte ── */
+.cartes{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;padding:26px}
+.story{position:relative;width:378px;height:672px;background:#15140F;overflow:hidden}
+.story .photo{position:absolute;inset:0}
+.story-mark{position:absolute;top:22px;left:22px;font-family:var(--b);font-size:17px;letter-spacing:.13em;color:var(--or)}
+.story-date{position:absolute;top:24px;right:22px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(255,255,255,.45)}
+.story-bas{position:absolute;left:0;right:0;bottom:0}
+.story-blanc{background:var(--papier);padding:20px 22px 16px;position:relative;overflow:hidden}
+.story-disc{font-family:var(--s);font-style:italic;font-size:16px;color:var(--gris);margin-bottom:-6px}
+.story-n{font-family:var(--d);font-size:138px;line-height:.8;letter-spacing:-.03em;margin-left:-7px}
+.story-n i{font-style:normal;font-family:var(--u);font-size:24px;color:var(--gris2);letter-spacing:0}
+.story-or{position:absolute;right:0;bottom:0;background:var(--or);color:var(--encre);padding:10px 18px 8px}
+.story-or b{display:block;font-family:var(--d);font-size:36px;line-height:.9}
+.story-or span{font-family:var(--u);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.story-noir{background:var(--encre);color:var(--papier);display:flex;justify-content:space-between;align-items:center;padding:11px 22px;
+ font-family:var(--u);font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.story-noir em{font-style:normal;color:var(--or)}
+.carre{position:relative;width:300px;height:300px;background:#15140F;overflow:hidden}
+.carre .photo{position:absolute;inset:0}
+.carre-bas{position:absolute;left:0;bottom:0;right:0;background:var(--papier);padding:14px 16px 12px}
+.carre-bas .story-n{font-size:84px}
+.notes{flex:1;min-width:280px}
+.notes h4{font-family:var(--d);font-size:22px;margin-bottom:8px}
+.notes ul{list-style:none}
+.notes li{font-family:var(--u);font-size:14px;line-height:1.7;color:#3b3833;padding-left:16px;position:relative}
+.notes li:before{content:'';position:absolute;left:0;top:11px;width:7px;height:2px;background:var(--or)}
+.notes li b{font-weight:600;color:var(--encre)}
+.pied{background:var(--encre);color:#8d8880;font-family:var(--u);font-size:12px;padding:16px 26px}
+</style></head>
+<body><div class="wrap">
+
+<!-- ════════ ÉCRAN 1 ════════ -->
+<div class="tag">Écran 1 — Accueil joueur <b>· photo d'abord</b></div>
+<div class="page">
+  <div class="photo e1-photo">
+    <svg viewBox="0 0 900 330" preserveAspectRatio="xMidYMid slice">
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#2E2A20"/><stop offset=".55" stop-color="#16150F"/><stop offset="1" stop-color="#0A0A08"/>
+      </linearGradient></defs>
+      <rect width="900" height="330" fill="url(#g1)"/>
+      <circle cx="690" cy="96" r="72" fill="none" stroke="#C9A227" stroke-opacity=".30" stroke-width="2"/>
+      <path d="M618 96h144M690 24v144M636 48c36 32 36 64 0 96M744 48c-36 32-36 64 0 96" stroke="#C9A227" stroke-opacity=".20" stroke-width="2" fill="none"/>
+      <path d="M0 268h900" stroke="#fff" stroke-opacity=".08" stroke-width="1"/>
+      <rect width="900" height="330" fill="#000" opacity=".30"/>
+    </svg>
+    <div class="lbl">PHOTO DU JOUEUR / FRAME VIDÉO</div>
+    <div class="e1-over">
+      <div class="e1-kicker">Semaine 45 — coaché par William Zonzon</div>
+      <div class="e1-nom">LÉO TEST</div>
+    </div>
+  </div>
+  <div class="barre">
+    <span class="n">4,4</span><span class="sur">/5</span>
+    <span class="q">Lancer franc</span>
+    <span class="d">+3,0</span>
+  </div>
+  <div class="deux">
+    <div class="bloc">
+      <div class="h">À FAIRE CETTE SEMAINE</div>
+      <div class="sous">Trois exercices, posés par William.</div>
+      <div class="liste">
+        <div><span class="i">01</span><span class="t">Lancer franc</span><span class="m">1:58</span></div>
+        <div><span class="i">02</span><span class="t">Tir en course</span><span class="m">2:40</span></div>
+        <div><span class="i">03</span><span class="t">Gainage</span><span class="m">5:20</span></div>
+      </div>
+      <div class="mot">
+        <p>« Garde le coude plus près du corps sur la poussée, et reste sur tes appuis après le tir. »</p>
+        <cite>William Zonzon — 10 mars</cite>
+      </div>
+    </div>
+    <div class="bloc">
+      <div class="h">OBJECTIF</div>
+      <div class="sous">Relâché du poignet — en cours</div>
+      <div class="liste">
+        <div><span class="t">Séances cette semaine</span><span class="m">3 / 4</span></div>
+        <div><span class="t">Vidéos envoyées</span><span class="m">1</span></div>
+        <div><span class="t">Série en cours</span><span class="m">3 séances</span></div>
+      </div>
+      <div class="h" style="margin-top:26px">PROCHAINE SÉANCE</div>
+      <div class="sous">Jeudi 12 — 18:30 · Tir extérieur</div>
+      <div class="liste"><div><span class="t">Gymnase Sud</span><span class="m">1 h 30</span></div></div>
+    </div>
+  </div>
+  <div class="cta">FILME TON EXO DU JOUR <em>→</em></div>
+</div>
+
+<!-- ════════ ÉCRAN 2 ════════ -->
+<div class="tag">Écran 2 — Fiche d'évaluation <b>· feuille de notes</b></div>
+<div class="page">
+  <div class="e2-top">
+    <div>
+      <div class="h" style="font-size:30px">LANCER FRANC</div>
+      <div class="sous" style="margin:0">Évaluation du 10 mars — 6 critères notés sur 7</div>
+    </div>
+    <div style="text-align:right">
+      <div class="e2-note">4,4<i>/5</i></div>
+      <div style="font-family:var(--u);font-size:14px;font-weight:600;color:var(--vert)">+3,0 depuis 1,4</div>
+    </div>
+  </div>
+  <div class="crit">
+    <div class="r"><span class="nom">Alignement du bras de tir</span><span class="ech"><i style="left:100%;margin-left:-3px"></i></span><span class="dl" style="color:var(--vert)">+4,0</span><span class="vl">5,0</span></div>
+    <div class="r"><span class="nom">Dribble de préparation</span><span class="ech"><i style="left:100%;margin-left:-3px"></i></span><span class="dl" style="color:var(--vert)">+3,0</span><span class="vl">5,0</span></div>
+    <div class="r"><span class="nom">Attraper / Placement</span><span class="ech"><i style="left:94%"></i></span><span class="dl" style="color:var(--vert)">+3,0</span><span class="vl">4,7</span></div>
+    <div class="r"><span class="nom">Posture de départ</span><span class="ech"><i style="left:86%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">4,3</span></div>
+    <div class="r"><span class="nom">Footwork de mise en place</span><span class="ech"><i style="left:74%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">3,7</span></div>
+    <div class="r"><span class="nom">Footwork de chargement</span><span class="ech"><i style="left:74%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">3,7</span></div>
+    <div class="r vide"><span class="nom">Stabilisation</span><span class="ech"></span><span class="dl" style="color:var(--gris2)">non évalué</span><span class="vl">0,0</span></div>
+  </div>
+  <div class="ref">
+    <span class="t">Vidéo de référence<em>Pivot engagé — choisie par William</em></span>
+    <span class="b">REGARDER</span>
+  </div>
+</div>
+
+<!-- ════════ ÉCRAN 3 ════════ -->
+<div class="tag">Écran 3 — Bureau coach <b>· densité assumée</b></div>
+<div class="page">
+  <div class="e3-top">
+    <div>
+      <div class="g">MES JOUEURS</div>
+      <div class="sous" style="margin:0">William Zonzon — mis à jour depuis le Sheet</div>
+    </div>
+    <div class="c">
+      <div><b>17</b><span>Joueurs</span></div>
+      <div><b>2</b><span>Vidéos à voir</span></div>
+      <div><b>17</b><span>Sans suivi</span></div>
+    </div>
+  </div>
+  <div style="padding:0 26px 26px">
+  <table>
+    <thead><tr><th colspan="2">Joueur</th><th>Poste · niveau</th><th>Tendance</th><th style="text-align:right">Note</th><th style="text-align:right">État</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="width:50px"><span class="vign"><svg viewBox="0 0 38 38"><rect width="38" height="38" fill="#232017"/><circle cx="26" cy="12" r="7" fill="none" stroke="#C9A227" stroke-opacity=".5"/></svg></span></td>
+        <td class="j">Célestine Segretain<em>3/2 · WNCAA D1 Weber</em></td>
+        <td style="color:var(--gris)">Meneuse</td>
+        <td><svg width="84" height="18" fill="none" stroke="#101010" stroke-width="1.5"><path d="M2 13l14-3 14 2 14-7 14-1 14-3"/></svg></td>
+        <td class="note">4,0</td>
+        <td style="text-align:right"><span class="puce or">1 vidéo</span></td>
+      </tr>
+      <tr>
+        <td><span class="vign"><svg viewBox="0 0 38 38"><rect width="38" height="38" fill="#1C1A13"/><circle cx="12" cy="26" r="7" fill="none" stroke="#C9A227" stroke-opacity=".5"/></svg></span></td>
+        <td class="j">Jahyan Siméon<em>4 · U18 Espoir Limoges</em></td>
+        <td style="color:var(--gris)">Ailier fort</td>
+        <td><svg width="84" height="18" fill="none" stroke="#101010" stroke-width="1.5"><path d="M2 9l14 2 14-4 14 5 14-2 14 1"/></svg></td>
+        <td class="note">4,0</td>
+        <td style="text-align:right"><span class="puce">Relancer</span></td>
+      </tr>
+      <tr>
+        <td><span class="vign"><svg viewBox="0 0 38 38"><rect width="38" height="38" fill="#26221A"/><circle cx="19" cy="19" r="8" fill="none" stroke="#C9A227" stroke-opacity=".5"/></svg></span></td>
+        <td class="j">Abdrahaman Traoré<em>4 · Pro N1 ASA CIV</em></td>
+        <td style="color:var(--gris)">Ailier fort</td>
+        <td><svg width="84" height="18" fill="none" stroke="#B3261E" stroke-width="1.5"><path d="M2 5l14 4 14-2 14 7 14 1 14 3"/></svg></td>
+        <td class="note" style="color:var(--rouge)">4,0</td>
+        <td style="text-align:right"><span class="puce">Relancer</span></td>
+      </tr>
+      <tr>
+        <td><span class="vign"><svg viewBox="0 0 38 38"><rect width="38" height="38" fill="#1A1812"/></svg></span></td>
+        <td class="j">Anton Bogat<em>1/2 · U11</em></td>
+        <td style="color:var(--gris)">Meneur</td>
+        <td><span style="font-family:var(--s);font-style:italic;font-size:13px;color:var(--gris2)">pas de données</span></td>
+        <td class="note" style="color:var(--gris2)">0,0</td>
+        <td style="text-align:right"><span class="puce off">Sheet à remplir</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="sous" style="margin:14px 0 0">4 lignes sur 17 — aperçu</div>
+  </div>
+</div>
+
+<!-- ════════ ÉCRAN 4 ════════ -->
+<div class="tag">Écran 4 — Ma carte <b>· story 9:16 à partager</b></div>
+<div class="page">
+<div class="cartes">
+
+  <div class="story">
+    <div class="photo">
+      <svg viewBox="0 0 378 672" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="g2" x1="0" y1="0" x2=".7" y2="1">
+          <stop offset="0" stop-color="#36301F"/><stop offset=".5" stop-color="#17150E"/><stop offset="1" stop-color="#090907"/>
+        </linearGradient></defs>
+        <rect width="378" height="672" fill="url(#g2)"/>
+        <circle cx="270" cy="150" r="86" fill="none" stroke="#C9A227" stroke-opacity=".26" stroke-width="2"/>
+        <path d="M184 150h172M270 64v172M216 96c42 38 42 70 0 108M324 96c-42 38-42 70 0 108" stroke="#C9A227" stroke-opacity=".17" stroke-width="2" fill="none"/>
+        <rect width="378" height="672" fill="#000" opacity=".26"/>
+      </svg>
+      <div class="lbl">FRAME VIDÉO DU JOUEUR</div>
+    </div>
+    <span class="story-mark">BIZON TRAINING</span>
+    <span class="story-date">10 MARS</span>
+    <div class="story-bas">
+      <div class="story-blanc">
+        <div class="story-disc">Lancer franc</div>
+        <div class="story-n">4,4<i>/5</i></div>
+        <div class="story-or"><b>+3,0</b><span>Progression</span></div>
+      </div>
+      <div class="story-noir"><span>Léo Test — coaché par William Zonzon</span><em>BIZON</em></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="carre">
+      <div class="photo">
+        <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">
+          <rect width="300" height="300" fill="url(#g2)"/>
+          <circle cx="220" cy="80" r="56" fill="none" stroke="#C9A227" stroke-opacity=".26" stroke-width="2"/>
+          <rect width="300" height="300" fill="#000" opacity=".26"/>
+        </svg>
+      </div>
+      <span class="story-mark" style="font-size:14px;top:16px;left:16px">BIZON TRAINING</span>
+      <div class="carre-bas">
+        <div class="story-disc" style="font-size:14px">Léo Test — lancer franc</div>
+        <div class="story-n">4,4<i style="font-size:18px">/5</i></div>
+        <div class="story-or" style="padding:7px 13px 6px"><b style="font-size:26px">+3,0</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h4>CE QUI CHANGE</h4>
+    <ul>
+      <li><b>L'image porte la carte.</b> Sans frame vidéo, pas de carte — c'est ce qui la rend impossible à générer ailleurs.</li>
+      <li><b>Le blanc coupe le noir à bord franc.</b> Aucun flou, aucune transparence, aucun arrondi.</li>
+      <li><b>Deux tailles de typo.</b> Le chiffre déborde, le reste se lit. Rien entre les deux.</li>
+      <li><b>L'or est un aplat</b> posé dans l'angle, pas une lueur de fond.</li>
+      <li><b>Virgule décimale.</b> 4,4 et pas 4.4 — c'est un produit français.</li>
+    </ul>
+    <h4 style="margin-top:22px">CE QU'IL ME FAUT</h4>
+    <ul>
+      <li>Une ou deux <b>vraies frames</b> de vidéos de joueurs. Tant qu'il y a un aplat à la place, la direction se juge mal.</li>
+      <li>Ta décision sur <b>Anton</b> à la place de Bebas pour les chiffres et les titres.</li>
+    </ul>
+  </div>
+
+</div>
+</div>
+
+<div class="pied">Maquette statique — aucune donnée n'est modifiable depuis cette page. L'application en production n'est pas touchée.</div>
+</div></body></html>
