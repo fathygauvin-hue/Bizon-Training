@@ -70,6 +70,52 @@ td.n{font-family:var(--nb);font-weight:800;font-size:19px;text-align:right;font-
 .init{width:30px;height:30px;border:1px solid var(--filet2);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mo);font-size:11px;color:var(--or)}
 @media(max-width:900px){.app{grid-template-columns:1fr}.rail{border-right:0;border-bottom:1px solid var(--filet)}
 .hero-in,.mur,.mods{grid-template-columns:1fr}.photo{display:none}.nom-fond{font-size:74px}}
+/* ── Écran 4 : carte à partager ── */
+.story{position:relative;width:405px;height:720px;background:#0B0C0F;border:1px solid var(--filet);overflow:hidden}
+.carre{position:relative;width:360px;height:360px;background:#0B0C0F;border:1px solid var(--filet);overflow:hidden;margin-bottom:26px}
+.story-court{position:absolute;inset:0;width:100%;height:100%;opacity:.16}
+.story-grain{position:absolute;inset:0;background:
+  radial-gradient(120% 70% at 50% 0%,rgba(201,162,39,.13),transparent 60%),
+  radial-gradient(100% 50% at 50% 100%,rgba(0,0,0,.65),transparent)}
+.story-in{position:relative;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:26px 24px 22px}
+.carre-in{position:relative;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:20px}
+.story-top{display:flex;justify-content:space-between;align-items:center}
+.story-mark{display:flex;align-items:center;gap:7px;font-family:var(--ti);font-size:14px;letter-spacing:.14em;color:var(--or)}
+.story-date{font-family:var(--mo);font-size:9px;letter-spacing:.16em;color:var(--gris2)}
+.story-ghost{position:absolute;left:-10px;top:120px;font-family:var(--ti);font-size:188px;line-height:.78;
+  color:transparent;-webkit-text-stroke:1px rgba(245,247,250,.07);pointer-events:none}
+.story-hero{margin-top:auto}
+.story-disc{font-family:var(--mo);font-size:9px;letter-spacing:.2em;color:var(--gris);margin-bottom:6px}
+.story-big{font-family:var(--nb);font-weight:800;font-size:132px;line-height:.78;color:var(--blanc);letter-spacing:-.02em}
+.story-big span{font-family:var(--mo);font-weight:400;font-size:30px;color:var(--gris2);letter-spacing:0}
+.story-delta{display:flex;align-items:center;gap:6px;margin-top:10px;font-family:var(--mo);font-size:12px;color:var(--prog)}
+.story-prog{margin-top:16px}
+.story-prog-bar{height:3px;background:var(--filet);position:relative}
+.story-prog-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--gris2)}
+.story-prog-bar:after{content:'';position:absolute;left:0;top:0;bottom:0;width:88%;background:var(--or);mix-blend-mode:normal;height:3px}
+.story-prog-l{display:flex;justify-content:space-between;margin-top:6px;font-family:var(--mo);font-size:9px;letter-spacing:.14em;color:var(--gris2)}
+.story-arcwrap{margin:22px 0 0}
+.story-arc{width:100%;display:block}
+.story-arcl{font-family:var(--mo);font-size:8.5px;letter-spacing:.11em;color:var(--gris2);text-align:center;margin-top:2px}
+.story-stats{display:flex;border-top:1px solid var(--filet);margin-top:18px;padding-top:12px}
+.story-stats div{flex:1;border-right:1px solid var(--filet)}
+.story-stats div:last-child{border-right:0}
+.story-stats b{display:block;font-family:var(--nb);font-weight:700;font-size:28px;line-height:1;color:var(--blanc)}
+.story-stats span{font-family:var(--mo);font-size:8px;letter-spacing:.16em;color:var(--gris2)}
+.story-foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;
+  font-family:var(--mo);font-size:9px;letter-spacing:.13em;color:var(--gris2)}
+.story-foot b{color:var(--gris);font-weight:400}
+.story-url{color:var(--or)}
+.carte-notes{border-top:1px solid var(--filet);padding-top:18px}
+.carte-notes-t{font-family:var(--ti);font-size:17px;letter-spacing:.09em;color:var(--blanc);margin-bottom:8px}
+.carte-notes ul{list-style:none;margin:0;padding:0}
+.carte-notes li{font-size:12.5px;line-height:1.75;color:var(--gris);padding-left:14px;position:relative}
+.carte-notes li:before{content:'';position:absolute;left:0;top:11px;width:5px;height:1px;background:var(--or)}
+.carte-notes li b{color:var(--blanc);font-weight:500}
+.carte-cta{display:flex;gap:10px;margin-top:20px}
+.carte-btn{font-family:var(--ti);font-size:15px;letter-spacing:.07em;padding:11px 20px;background:var(--or);color:#0B0C0F}
+.carte-btn.ghost{background:transparent;color:var(--blanc);border:1px solid var(--filet2)}
+
 </style></head><body>
 
 <div class="wrap">
@@ -244,6 +290,135 @@ td.n{font-family:var(--nb);font-weight:800;font-size:19px;text-align:right;font-
       <td style="text-align:right"><span class="pastille" style="color:var(--gris);border-color:var(--filet2)">Sheet à remplir</span></td></tr>
   </table>
   <div class="lbl" style="margin-top:16px">4 lignes sur 17 · aperçu</div>
+</div>
+
+<div class="ecran">
+<div class="ecran-tag">Écran 4 — Ma carte <b>format story 9:16 · à partager</b></div>
+
+<div style="padding:26px 28px 40px">
+<div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap">
+
+<!-- ═══ STORY 9:16 ═══ -->
+<div>
+<div class="lbl" style="margin-bottom:10px">Story · 1080 × 1920</div>
+<div class="story">
+  <svg class="story-court" viewBox="0 0 405 720" preserveAspectRatio="none">
+    <path d="M -60 560 A 240 240 0 0 1 465 560" fill="none" stroke="#C9A227" stroke-width="1"/>
+    <path d="M 40 720 L 40 620 L 365 620 L 365 720" fill="none" stroke="#C9A227" stroke-width="1"/>
+    <circle cx="202" cy="620" r="52" fill="none" stroke="#C9A227" stroke-width="1"/>
+  </svg>
+  <div class="story-grain"></div>
+
+  <div class="story-in">
+    <!-- en-tête -->
+    <div class="story-top">
+      <span class="story-mark">
+        <svg width="15" height="17" viewBox="0 0 24 27" fill="none" stroke="#C9A227" stroke-width="2"><path d="M12 1 1 6v9c0 6 5 9 11 11 6-2 11-5 11-11V6z"/></svg>
+        BIZON TRAINING
+      </span>
+      <span class="story-date">SEM. 45 · 10 MARS</span>
+    </div>
+
+    <!-- nom géant en fond -->
+    <div class="story-ghost">LÉO</div>
+
+    <!-- bloc héros -->
+    <div class="story-hero">
+      <div class="story-disc">LANCER FRANC · ÉVALUATION</div>
+      <div class="story-big">4.4<span>/5</span></div>
+      <div class="story-delta">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#35D07F" stroke-width="2.4"><path d="M8 13V4M3.5 8.2 8 3.4l4.5 4.8"/></svg>
+        +3.0 depuis la dernière évaluation
+      </div>
+      <div class="story-prog">
+        <div class="story-prog-bar"><i style="width:28%"></i></div>
+        <div class="story-prog-l"><span>AVANT 1.4</span><span style="color:#C9A227">APRÈS 4.4</span></div>
+      </div>
+    </div>
+
+    <!-- arc : où en est chaque critère -->
+    <div class="story-arcwrap">
+      <svg viewBox="0 0 340 128" class="story-arc">
+        <path d="M18 120 A 152 152 0 0 1 322 120" fill="none" stroke="#262A31" stroke-width="1" stroke-dasharray="3 5"/>
+        <path d="M60 120 A 110 110 0 0 1 280 120" fill="none" stroke="#262A31" stroke-width="1" stroke-dasharray="3 5"/>
+        <circle cx="170" cy="120" r="4" fill="#C9A227"/>
+        <circle cx="46"  cy="78"  r="5.5" fill="#35D07F"/>
+        <circle cx="96"  cy="48"  r="5.5" fill="#35D07F"/>
+        <circle cx="150" cy="34"  r="5.5" fill="#35D07F"/>
+        <circle cx="206" cy="52"  r="5.5" fill="#FFB020"/>
+        <circle cx="258" cy="74"  r="5.5" fill="#FFB020"/>
+        <circle cx="300" cy="100" r="5.5" fill="#FFB020"/>
+      </svg>
+      <div class="story-arcl">6 critères acquis sur 7 · plus le point est haut, plus c'est maîtrisé</div>
+    </div>
+
+    <!-- bandeau chiffres -->
+    <div class="story-stats">
+      <div><b>3</b><span>SÉANCES</span></div>
+      <div><b>1</b><span>VIDÉO</span></div>
+      <div><b>3</b><span>SÉRIE</span></div>
+    </div>
+
+    <!-- pied -->
+    <div class="story-foot">
+      <span>COACHÉ PAR <b>WILLIAM ZONZON</b></span>
+      <span class="story-url">bizon-training</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ COLONNE DROITE ═══ -->
+<div style="flex:1;min-width:300px">
+
+  <div class="lbl" style="margin-bottom:10px">Variante carré · fil d'actualité 1080 × 1080</div>
+  <div class="carre">
+    <svg class="story-court" viewBox="0 0 360 360" preserveAspectRatio="none">
+      <path d="M -40 300 A 200 200 0 0 1 400 300" fill="none" stroke="#C9A227" stroke-width="1"/>
+    </svg>
+    <div class="carre-in">
+      <div class="story-top" style="margin-bottom:0">
+        <span class="story-mark"><svg width="13" height="15" viewBox="0 0 24 27" fill="none" stroke="#C9A227" stroke-width="2"><path d="M12 1 1 6v9c0 6 5 9 11 11 6-2 11-5 11-11V6z"/></svg> BIZON TRAINING</span>
+        <span class="story-date">10 MARS</span>
+      </div>
+      <div>
+        <div class="story-disc" style="margin-bottom:2px">LÉO TEST · LANCER FRANC</div>
+        <div class="story-big" style="font-size:92px;line-height:.82">4.4<span style="font-size:24px">/5</span></div>
+        <div class="story-delta" style="font-size:12px;margin-top:6px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#35D07F" stroke-width="2.4"><path d="M8 13V4M3.5 8.2 8 3.4l4.5 4.8"/></svg>+3.0
+        </div>
+      </div>
+      <div class="story-stats" style="padding:10px 0 0">
+        <div><b>3</b><span>SÉANCES</span></div>
+        <div><b>6/7</b><span>CRITÈRES</span></div>
+        <div><b>1</b><span>VIDÉO</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="carte-notes">
+    <div class="carte-notes-t">Ce qui déclenche une carte</div>
+    <ul>
+      <li><b>Nouvelle évaluation</b> — la note et le delta viennent du Sheet, rien d'autre.</li>
+      <li><b>Série de séances</b> — 3, 5, 10 d'affilée.</li>
+      <li><b>Critère acquis</b> — un critère passe au vert.</li>
+    </ul>
+    <div class="carte-notes-t" style="margin-top:18px">Règles de la carte</div>
+    <ul>
+      <li>Un seul chiffre domine. Le reste est en appui, jamais à égalité.</li>
+      <li>Si le Sheet est vide, <b>pas de carte</b> — on ne partage pas un 0.0.</li>
+      <li>Le nom du coach est sur chaque carte : c'est l'expertise qui circule.</li>
+      <li>Photo du joueur en fond quand elle existe, sinon le nom géant suffit.</li>
+    </ul>
+    <div class="carte-cta">
+      <span class="carte-btn">Partager ma carte</span>
+      <span class="carte-btn ghost">Enregistrer l'image</span>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
 </div>
 
 <div style="border-top:1px solid var(--filet);padding:22px 28px 40px" class="lbl">
