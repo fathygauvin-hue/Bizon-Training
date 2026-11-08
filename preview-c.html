@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bizon Training — Direction C · Régie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Big+Shoulders+Display:wght@500;700;800&family=DM+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+--noir:#08090B;--graphite:#14161A;--filet:#262A31;--filet2:#3A404A;
+--blanc:#F5F7FA;--gris:#8E96A3;--gris2:#5C636E;
+--or:#C9A227;--prog:#35D07F;--vigi:#FFB020;--regr:#FF4D4D;--ref:#35C5F0;
+--ti:'Bebas Neue',Impact,sans-serif;--nb:'Big Shoulders Display',Impact,sans-serif;
+--tx:'DM Sans',system-ui,sans-serif;--mo:'IBM Plex Mono',monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--noir);color:var(--blanc);font-family:var(--tx);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.lbl{font-family:var(--mo);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gris)}
+.num{font-family:var(--nb);font-weight:800;line-height:.82;font-variant-numeric:tabular-nums}
+.ti{font-family:var(--ti);letter-spacing:.04em;line-height:1}
+.wrap{max-width:1280px;margin:0 auto}
+.ecran{border-top:1px solid var(--filet)}
+.ecran-tag{display:flex;align-items:baseline;gap:14px;padding:26px 28px 14px}
+.ecran-tag b{font-family:var(--ti);font-size:22px;letter-spacing:.06em;font-weight:400}
+
+/* ── RAIL ── */
+.app{display:grid;grid-template-columns:230px 1fr;min-height:620px}
+.rail{border-right:1px solid var(--filet);padding:22px 0;display:flex;flex-direction:column}
+.marque{display:flex;align-items:center;gap:10px;padding:0 20px 26px}
+.marque span{font-family:var(--ti);font-size:21px;color:var(--or);letter-spacing:.14em}
+.nav a{display:flex;align-items:center;gap:11px;padding:11px 20px;color:var(--gris);text-decoration:none;font-size:14px;border-left:2px solid transparent}
+.nav a.on{color:var(--blanc);border-left-color:var(--or);background:var(--graphite)}
+.rail-bas{margin-top:auto;padding:18px 20px 0;border-top:1px solid var(--filet)}
+.serie{display:flex;align-items:baseline;gap:7px;margin:6px 0 9px}
+.pips{display:flex;gap:3px}.pips i{flex:1;height:5px;background:var(--filet2)}.pips i.a{background:var(--vigi)}
+
+/* ── HERO ── */
+.hero{position:relative;border-bottom:1px solid var(--filet);overflow:hidden;min-height:250px}
+.court{position:absolute;inset:0;width:100%;height:100%;opacity:.17}
+.nom-fond{position:absolute;left:14px;bottom:-16px;font-family:var(--ti);font-size:150px;color:#fff;opacity:.045;letter-spacing:.02em;white-space:nowrap;pointer-events:none}
+.hero-in{position:relative;display:grid;grid-template-columns:300px 1fr;gap:0;min-height:250px}
+.photo{border-right:1px solid var(--filet);display:flex;align-items:flex-end;justify-content:center;position:relative}
+.photo .ph{width:170px;height:206px;border:1px dashed var(--filet2);display:flex;align-items:center;justify-content:center;text-align:center;padding:14px}
+.ident{padding:26px 28px;display:flex;flex-direction:column;justify-content:space-between}
+.mods{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--filet)}
+.mod{padding:15px 18px;border-right:1px solid var(--filet)}
+.mod:last-child{border-right:0}
+.mod .v{font-family:var(--nb);font-weight:800;font-size:33px;line-height:1;margin-top:5px;font-variant-numeric:tabular-nums}
+.delta{font-family:var(--nb);font-weight:700;font-size:14px}
+
+/* ── MUR ── */
+.mur{display:grid;grid-template-columns:1.5fr 1fr}
+.col{border-right:1px solid var(--filet)}
+.col:last-child{border-right:0}
+.bloc{padding:20px 24px;border-bottom:1px solid var(--filet)}
+.bloc h3{font-family:var(--ti);font-size:19px;font-weight:400;letter-spacing:.05em;margin-bottom:14px}
+.ligne{display:grid;grid-template-columns:1fr 46px 54px;align-items:center;gap:12px;padding:7px 0}
+.barre{grid-column:1/-1;height:3px;background:var(--filet);margin-top:-3px}
+.barre i{display:block;height:100%}
+.vv{font-family:var(--nb);font-weight:800;font-size:19px;text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--filet2);padding:4px 10px;font-family:var(--mo);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.cta{display:flex;align-items:center;justify-content:space-between;padding:17px 24px;background:var(--or);color:#120F05;border:0;width:100%;cursor:pointer;font-family:var(--tx);font-size:15px;font-weight:500}
+.vign{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--filet)}
+.vign div{background:var(--graphite);aspect-ratio:16/10;display:flex;align-items:flex-end;padding:9px;font-size:12px;color:var(--gris)}
+
+/* ── TABLE COACH ── */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-family:var(--mo);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);text-align:left;padding:11px 14px;border-bottom:1px solid var(--filet2);font-weight:400}
+td{padding:11px 14px;border-bottom:1px solid var(--filet)}
+td.n{font-family:var(--nb);font-weight:800;font-size:19px;text-align:right;font-variant-numeric:tabular-nums}
+.pastille{font-family:var(--mo);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border:1px solid}
+.init{width:30px;height:30px;border:1px solid var(--filet2);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mo);font-size:11px;color:var(--or)}
+@media(max-width:900px){.app{grid-template-columns:1fr}.rail{border-right:0;border-bottom:1px solid var(--filet)}
+.hero-in,.mur,.mods{grid-template-columns:1fr}.photo{display:none}.nom-fond{font-size:74px}}
+</style></head><body>
+
+<div class="wrap">
+
+<div class="ecran-tag"><b>Écran 1 — Accueil joueur</b><span class="lbl">Direction C · Régie</span></div>
+<div class="app ecran">
+  <aside class="rail">
+    <div class="marque">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.5"><path d="M4 7l5-3 4 3 4-1 3 4-2 5-5 4H9l-5-4z"/><path d="M9 11h.01M15 10h.01"/></svg>
+      <span>Bizon Training</span>
+    </div>
+    <nav class="nav">
+      <a class="on" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>Suivi</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Mes évaluations</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 3a14 14 0 000 18"/></svg>Bibliothèque</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profil</a>
+    </nav>
+    <div class="rail-bas">
+      <div class="lbl">Série</div>
+      <div class="serie"><span class="num" style="font-size:30px">3</span><span style="font-size:12px;color:var(--gris)">séances d'affilée</span></div>
+      <div class="pips"><i class="a"></i><i class="a"></i><i class="a"></i><i></i><i></i></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:18px">
+        <span class="init">LT</span>
+        <div><div style="font-size:13px">Léo Test</div><div class="lbl" style="font-size:9px">Ailier · U18</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <section class="hero">
+      <svg class="court" viewBox="0 0 400 250" preserveAspectRatio="xMidYMid slice" fill="none" stroke="#C9A227" stroke-width="1">
+        <rect x="1" y="1" width="398" height="248"/><circle cx="200" cy="125" r="46"/>
+        <path d="M60 1v70h80V1M60 249v-70h80v70"/><path d="M400 125a150 150 0 01-150 150M400 125a150 150 0 00-150-150"/>
+      </svg>
+      <div class="nom-fond">LÉO TEST</div>
+      <div class="hero-in">
+        <div class="photo"><div class="ph"><span class="lbl" style="font-size:9px;line-height:1.7">Photo du joueur<br>détourée</span></div></div>
+        <div class="ident">
+          <div>
+            <div class="lbl">Semaine 45 · Coaché par William Zonzon</div>
+            <div class="ti" style="font-size:58px;margin:8px 0 10px">SALUT LÉO</div>
+            <span class="chip" style="color:var(--vigi);border-color:var(--vigi)">● Objectif en cours</span>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:18px">
+            <button class="cta" style="width:auto;padding:12px 20px">Envoyer une vidéo</button>
+            <button class="cta" style="width:auto;padding:12px 20px;background:transparent;color:var(--blanc);border:1px solid var(--filet2)">Ma carte</button>
+          </div>
+        </div>
+      </div>
+      <div class="mods">
+        <div class="mod"><div class="lbl">Lancer franc</div><div class="v">4.4<span style="font-size:15px;color:var(--gris)"> / 5</span></div></div>
+        <div class="mod"><div class="lbl">Progression</div><div class="v" style="color:var(--prog)">+3.0</div></div>
+        <div class="mod"><div class="lbl">Séances · semaine</div><div class="v">3<span style="font-size:15px;color:var(--gris)"> / 4</span></div></div>
+        <div class="mod"><div class="lbl">Vidéos envoyées</div><div class="v">1</div></div>
+      </div>
+    </section>
+
+    <section class="mur">
+      <div class="col">
+        <div class="bloc">
+          <h3>Objectif de la semaine</h3>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">
+            <span class="num" style="font-size:40px">3.5</span>
+            <span style="color:var(--gris);font-size:14px">relâché du poignet · posé par William</span>
+          </div>
+          <div style="height:4px;background:var(--filet)"><i style="display:block;width:62%;height:100%;background:var(--or)"></i></div>
+          <div style="display:flex;justify-content:space-between;margin-top:7px" class="lbl"><span>2.9 actuel</span><span>cible 3.5</span></div>
+        </div>
+        <div class="bloc" style="border-bottom:0">
+          <h3>À faire cette semaine</h3>
+          <div class="vign"><div>Lancer franc · 1:58</div><div>Tir en course · 2:40</div><div>Gainage · 5:20</div></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="bloc">
+          <h3>Prochaine séance</h3>
+          <div style="display:flex;gap:14px;align-items:center">
+            <div style="border:1px solid var(--filet2);padding:7px 11px;text-align:center"><div class="lbl" style="font-size:9px">Mar</div><div class="num" style="font-size:23px">12</div></div>
+            <div><div style="font-size:15px">18:30 · Tir extérieur</div><div class="lbl" style="font-size:9px;margin-top:3px">Gymnase Sud · 1 h 30</div></div>
+          </div>
+        </div>
+        <div class="bloc">
+          <h3>Retour du coach</h3>
+          <div style="border-left:2px solid var(--or);padding-left:13px;font-size:14px;color:#D8DCE3">« Garde le coude plus près du corps sur la poussée, et reste sur tes appuis après le tir. »</div>
+          <div class="lbl" style="margin-top:9px">10 mars · sur « Tir en course »</div>
+        </div>
+        <div class="bloc" style="border-bottom:0;padding:0">
+          <button class="cta">Filme ton exo du jour
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#120F05" stroke-width="1.9"><rect x="2" y="6" width="13" height="12"/><path d="M15 11l6-3v8l-6-3z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="ecran-tag"><b>Écran 2 — Fiche d'évaluation</b><span class="lbl">L'arc à trois points porte les critères</span></div>
+<div class="ecran" style="display:grid;grid-template-columns:1fr 1.25fr">
+  <div style="border-right:1px solid var(--filet);padding:26px 28px;position:relative">
+    <div class="lbl">Moyenne après correction</div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin:8px 0 4px">
+      <span class="num" style="font-size:84px">4.4</span>
+      <div><div style="color:var(--gris);font-size:14px">/ 5</div><div class="delta" style="color:var(--prog);font-size:21px">+3.0</div></div>
+    </div>
+    <div class="lbl">vs avant (1.4) · 6 critères notés sur 15</div>
+    <svg viewBox="0 0 320 210" style="width:100%;margin-top:22px" fill="none">
+      <path d="M160 200a130 130 0 010-180" stroke="#262A31" stroke-width="1"/>
+      <path d="M160 200a92 92 0 010-128" stroke="#262A31" stroke-width="1"/>
+      <path d="M160 200a54 54 0 010-76" stroke="#262A31" stroke-width="1"/>
+      <circle cx="160" cy="200" r="4" fill="#C9A227"/>
+      <circle cx="78" cy="78" r="5" fill="#35D07F"/><circle cx="104" cy="44" r="5" fill="#35D07F"/>
+      <circle cx="120" cy="106" r="5" fill="#35D07F"/><circle cx="92" cy="140" r="5" fill="#FFB020"/>
+      <circle cx="64" cy="118" r="5" fill="#FFB020"/><circle cx="46" cy="60" r="5" fill="#35D07F"/>
+      <text x="160" y="196" fill="#8E96A3" font-family="IBM Plex Mono" font-size="9" text-anchor="middle">PANIER</text>
+    </svg>
+    <div class="lbl" style="text-align:center">Plus le point est loin du panier, plus le critère est acquis</div>
+  </div>
+  <div>
+    <div style="padding:22px 26px 10px;display:flex;justify-content:space-between;align-items:baseline">
+      <span class="ti" style="font-size:21px">LANCER FRANC</span><span class="lbl">Dernière évaluation · 10 mars</span>
+    </div>
+    <div style="padding:0 26px 22px">
+      <div class="ligne"><span>Alignement du bras de tir</span><span class="delta" style="color:var(--prog)">+4.0</span><span class="vv">5.0</span></div>
+      <div class="barre"><i style="width:100%;background:var(--prog)"></i></div>
+      <div class="ligne"><span>Dribble de préparation</span><span class="delta" style="color:var(--prog)">+3.8</span><span class="vv">5.0</span></div>
+      <div class="barre"><i style="width:100%;background:var(--prog)"></i></div>
+      <div class="ligne"><span>Attraper / Placement</span><span class="delta" style="color:var(--prog)">+3.0</span><span class="vv">4.7</span></div>
+      <div class="barre"><i style="width:94%;background:var(--prog)"></i></div>
+      <div class="ligne"><span>Posture de départ</span><span class="delta" style="color:var(--prog)">+2.3</span><span class="vv">4.3</span></div>
+      <div class="barre"><i style="width:86%;background:var(--prog)"></i></div>
+      <div class="ligne"><span>Footwork de mise en place</span><span class="delta" style="color:var(--vigi)">+2.3</span><span class="vv" style="color:var(--vigi)">3.7</span></div>
+      <div class="barre"><i style="width:74%;background:var(--vigi)"></i></div>
+      <div class="ligne"><span>Footwork de chargement</span><span class="delta" style="color:var(--vigi)">+2.3</span><span class="vv" style="color:var(--vigi)">3.7</span></div>
+      <div class="barre"><i style="width:74%;background:var(--vigi)"></i></div>
+      <div class="ligne" style="opacity:.42"><span>Stabilisation</span><span class="lbl" style="font-size:9px">non évalué</span><span class="vv">0.0</span></div>
+      <div class="barre"></div>
+    </div>
+    <div style="border-top:1px solid var(--filet);padding:15px 26px;display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-size:14px">Vidéo de référence · footwork</div><div class="lbl" style="margin-top:2px">Pivot engagé · choisie par William</div></div>
+      <span class="chip" style="color:var(--ref);border-color:var(--ref)">Regarder</span>
+    </div>
+  </div>
+</div>
+
+<div class="ecran-tag"><b>Écran 3 — Bureau coach</b><span class="lbl">Densité façon salle d'analyse</span></div>
+<div class="ecran" style="padding:24px 28px 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px">
+    <div><div class="lbl">Coach · William Zonzon</div><div class="ti" style="font-size:38px;margin-top:5px">MES JOUEURS</div></div>
+    <div style="display:flex;gap:1px;background:var(--filet);border:1px solid var(--filet)">
+      <div style="background:var(--noir);padding:11px 20px"><div class="lbl">Joueurs</div><div class="num" style="font-size:27px;margin-top:4px">17</div></div>
+      <div style="background:var(--noir);padding:11px 20px"><div class="lbl">Vidéos à voir</div><div class="num" style="font-size:27px;margin-top:4px;color:var(--vigi)">2</div></div>
+      <div style="background:var(--noir);padding:11px 20px"><div class="lbl">Sans suivi</div><div class="num" style="font-size:27px;margin-top:4px;color:var(--regr)">17</div></div>
+    </div>
+  </div>
+  <table>
+    <tr><th style="width:34px"></th><th>Joueur</th><th>Poste · Niveau</th><th>Tendance</th><th style="text-align:right">Note</th><th>Suivi</th><th style="text-align:right">État</th></tr>
+    <tr><td><span class="init">CS</span></td><td>Célestine Segretain</td><td style="color:var(--gris)">3/2 · WNCAA D1 Weber</td>
+      <td><svg width="76" height="20" fill="none" stroke="#35D07F" stroke-width="1.5"><path d="M2 15l13-3 13 4 13-9 13 2 13-7"/></svg></td>
+      <td class="n" style="color:var(--prog)">4.0</td><td style="color:var(--gris)">il y a 3 j</td>
+      <td style="text-align:right"><span class="pastille" style="color:var(--vigi);border-color:var(--vigi)">1 vidéo</span></td></tr>
+    <tr><td><span class="init">JS</span></td><td>Jahyan Siméon</td><td style="color:var(--gris)">4 · U18 Espoir Limoges</td>
+      <td><svg width="76" height="20" fill="none" stroke="#8E96A3" stroke-width="1.5"><path d="M2 11l13 2 13-3 13 1 13-2 13 3"/></svg></td>
+      <td class="n">4.0</td><td style="color:var(--gris)">—</td>
+      <td style="text-align:right"><span class="pastille" style="color:var(--or);border-color:var(--or)">Relancer</span></td></tr>
+    <tr><td><span class="init">AT</span></td><td>Abdrahaman Traoré</td><td style="color:var(--gris)">4 · Pro N1 ASA CIV</td>
+      <td><svg width="76" height="20" fill="none" stroke="#FF4D4D" stroke-width="1.5"><path d="M2 5l13 4 13-2 13 7 13 1 13 3"/></svg></td>
+      <td class="n" style="color:var(--regr)">4.0</td><td style="color:var(--gris)">—</td>
+      <td style="text-align:right"><span class="pastille" style="color:var(--or);border-color:var(--or)">Relancer</span></td></tr>
+    <tr><td><span class="init">AB</span></td><td>Anton Bogat</td><td style="color:var(--gris)">1/2 · U11</td>
+      <td><span class="lbl" style="font-size:9px">pas de données</span></td>
+      <td class="n" style="color:var(--gris2)">0.0</td><td style="color:var(--gris)">—</td>
+      <td style="text-align:right"><span class="pastille" style="color:var(--gris);border-color:var(--filet2)">Sheet à remplir</span></td></tr>
+  </table>
+  <div class="lbl" style="margin-top:16px">4 lignes sur 17 · aperçu</div>
+</div>
+
+<div style="border-top:1px solid var(--filet);padding:22px 28px 40px" class="lbl">
+  Maquette statique — aucune donnée n'est modifiable depuis cette page.
+</div>
+</div>
+</body></html>
