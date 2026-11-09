@@ -168,6 +168,31 @@ tbody tr:hover td.note{color:var(--or)!important}
 
 html[data-t="sombre"] tbody svg[stroke="#101010"]{stroke:#E6E1D6}
 .e2-top > div:last-child > div:last-child{margin-top:10px}
+
+/* ── le sélecteur vit maintenant dans Profil ── */
+.switch{position:static;top:auto;right:auto;display:inline-flex;border:1.5px solid var(--encre);background:transparent}
+.switch button{color:var(--gris)}
+.switch button.on{background:var(--encre);color:var(--papier)}
+.switch button:hover:not(.on){color:var(--encre);background:rgba(201,162,39,.14)}
+html[data-t="sombre"] .switch button.on{background:var(--or);color:#101010}
+/* ── Écran 5 : profil ── */
+.pf-top{display:flex;align-items:center;gap:16px;padding:26px 26px 20px}
+.pf-av{width:62px;height:62px;background:#15140F;position:relative;overflow:hidden;flex:none}
+.pf-av svg{position:absolute;inset:0;width:100%;height:100%}
+.pf-nom{font-family:var(--d);font-size:36px;line-height:.9}
+.rg{padding:0 26px}
+.rg h5{font-family:var(--u);font-size:10px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--gris);
+ border-bottom:2px solid var(--trait);padding-bottom:7px;margin:22px 0 0}
+.rg .l{display:flex;align-items:center;gap:16px;border-bottom:1px solid #DAD5CC;padding:15px 0;transition:background .15s,padding-left .15s}
+.rg .l:hover{background:rgba(201,162,39,.09);padding-left:7px}
+.rg .l .k{font-family:var(--u);font-size:16px}
+.rg .l .k em{display:block;font-style:italic;font-family:var(--s);font-size:13.5px;color:var(--gris)}
+.rg .l .v{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gris);text-align:right}
+.rg .l .act{margin-left:auto;font-family:var(--d);font-size:15px;border:2px solid var(--encre);padding:6px 14px;cursor:pointer;transition:.18s}
+.rg .l .act:hover{background:var(--encre);color:var(--papier)}
+.rg .l .act.dgr{border-color:var(--rouge);color:var(--rouge)}
+.rg .l .act.dgr:hover{background:var(--rouge);color:var(--papier)}
+html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 </style></head>
 <body><div class="wrap">
 
@@ -377,12 +402,46 @@ html[data-t="sombre"] tbody svg[stroke="#101010"]{stroke:#E6E1D6}
 </div>
 </div>
 
-<div class="pied">Maquette statique — aucune donnée n'est modifiable depuis cette page. L'application en production n'est pas touchée.</div>
-</div><div class="switch">
-  <button data-th="clair" class="on">Clair</button>
-  <button data-th="sombre">Sombre</button>
+<div class="tag">Écran 5 — Profil <b>· réglages du joueur</b></div>
+<div class="page">
+  <div class="pf-top">
+    <span class="pf-av"><svg viewBox="0 0 62 62"><rect width="62" height="62" fill="#232017"/><circle cx="42" cy="18" r="11" fill="none" stroke="#C9A227" stroke-opacity=".45" stroke-width="1.5"/></svg></span>
+    <div>
+      <div class="pf-nom">LÉO TEST</div>
+      <div class="sous" style="margin:0">Ailier · U18 — coaché par William Zonzon</div>
+    </div>
+  </div>
+
+  <div class="rg">
+    <h5>Apparence</h5>
+    <div class="l">
+      <span class="k">Thème<em>Suit ton téléphone par défaut. Ton choix est retenu.</em></span>
+      <span style="margin-left:auto">
+        <span class="switch">
+          <button data-th="clair" class="on">Clair</button>
+          <button data-th="sombre">Sombre</button>
+        </span>
+      </span>
+    </div>
+
+    <h5>Mon compte</h5>
+    <div class="l"><span class="k">Code d'accès<em>Géré par ton coach, depuis le Sheet.</em></span><span class="v">2Z••••</span></div>
+    <div class="l"><span class="k">Poste</span><span class="v">Ailier</span></div>
+    <div class="l"><span class="k">Niveau</span><span class="v">U18</span></div>
+    <div class="l"><span class="k">Coach<em>Williams Zonzon — expert principal</em></span><span class="v">William Zonzon</span></div>
+
+    <h5>Abonnement</h5>
+    <div class="l"><span class="k">Formule<em>Prélevé chaque mois, résiliable à tout moment.</em></span><span class="v">10 € / mois</span></div>
+    <div class="l"><span class="k">Gérer mon abonnement<em>Changer de carte, voir les factures, résilier.</em></span><span class="act">Ouvrir</span></div>
+
+    <h5>Session</h5>
+    <div class="l"><span class="k">Se déconnecter<em>Il faudra ressaisir ton code à la prochaine ouverture.</em></span><span class="act dgr">Déconnexion</span></div>
+    <div style="height:26px"></div>
+  </div>
 </div>
-<script>
+
+<div class="pied">Maquette statique — aucune donnée n'est modifiable depuis cette page. L'application en production n'est pas touchée.</div>
+</div><script>
 (function(){
   var h=document.documentElement;
   function set(t){
