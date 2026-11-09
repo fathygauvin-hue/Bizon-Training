@@ -193,6 +193,15 @@ html[data-t="sombre"] .switch button.on{background:var(--or);color:#101010}
 .rg .l .act.dgr{border-color:var(--rouge);color:var(--rouge)}
 .rg .l .act.dgr:hover{background:var(--rouge);color:var(--papier)}
 html[data-t="sombre"] .rg .l{border-color:#2D2A24}
+
+/* ── sommaire ── */
+.somm{position:sticky;top:0;z-index:40;display:flex;flex-wrap:wrap;gap:0;background:var(--encre);margin:-30px -30px 24px}
+.somm a{font-family:var(--u);font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+ color:#8d8880;text-decoration:none;padding:13px 18px;border-right:1px solid rgba(255,255,255,.12);transition:.16s}
+.somm a:hover{color:var(--or)}
+.somm a.ici{background:var(--or);color:#101010}
+.somm b{font-family:var(--b);font-size:17px;letter-spacing:.13em;color:var(--or);padding:11px 18px;margin-right:auto}
+.page{scroll-margin-top:52px}
 </style></head>
 <body><div class="wrap">
 
@@ -495,4 +504,29 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 </script>
 <noscript><style>.page{opacity:1!important;transform:none!important}</style></noscript>
 <script>setTimeout(function(){document.querySelectorAll(".page").forEach(function(p){p.classList.add("vu")})},2500);</script>
+<script>
+(function(){
+  var noms=['Accueil joueur','Fiche d’évaluation','Bureau coach','Ma carte','Profil'];
+  var pages=document.querySelectorAll('.page');
+  var nav=document.createElement('div'); nav.className='somm';
+  nav.innerHTML='<b>BIZON TRAINING</b>';
+  pages.forEach(function(p,i){
+    p.id='ecran-'+(i+1);
+    var a=document.createElement('a');
+    a.href='#ecran-'+(i+1);
+    a.textContent=(i+1)+' · '+(noms[i]||'Écran '+(i+1));
+    nav.appendChild(a);
+  });
+  document.querySelector('.wrap').insertBefore(nav, document.querySelector('.wrap').firstChild);
+  var liens=nav.querySelectorAll('a');
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      var k=[].indexOf.call(pages, e.target);
+      liens.forEach(function(l,j){ l.classList.toggle('ici', j===k); });
+    });
+  },{rootMargin:'-45% 0px -45% 0px'});
+  pages.forEach(function(p){ io.observe(p); });
+})();
+</script>
 </body></html>
