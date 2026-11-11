@@ -269,6 +269,20 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 .ouv-w{right:-4px;bottom:212px;width:186px}
 .ouv-ombre{right:12px;bottom:199px;width:172px;height:30px}
 .ouv-reflet{right:-4px;top:568px;width:186px}
+
+/* le coach au premier plan */
+.ouv-halo{position:absolute;right:-56px;bottom:150px;width:340px;height:450px;z-index:0;opacity:0;
+ background:radial-gradient(ellipse at 52% 58%,rgba(201,162,39,.20) 0%,rgba(201,162,39,.07) 42%,rgba(201,162,39,0) 70%);
+ filter:blur(12px);animation:haloIn 2s .5s ease forwards}
+@keyframes haloIn{from{opacity:0}to{opacity:1}}
+.ouv-w{right:-2px;bottom:178px;width:236px;
+ filter:drop-shadow(0 22px 30px rgba(0,0,0,.78)) brightness(1.14) contrast(1.07) saturate(1.06)}
+.ouv-ombre{right:18px;bottom:163px;width:206px;height:34px}
+.ouv-reflet{right:-2px;top:602px;width:236px}
+.ouv-logo{width:116px;top:20px;left:18px}
+.ouv-voile{background:
+ radial-gradient(120% 70% at 72% 52%,rgba(0,0,0,0) 30%,rgba(5,5,8,.55) 78%),
+ linear-gradient(180deg,rgba(7,7,10,.34) 0%,rgba(7,7,10,0) 24%,rgba(7,7,10,.52) 56%,rgba(7,7,10,.96) 84%)}
 </style></head>
 <body><div class="wrap">
 
@@ -282,6 +296,7 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
       <img src="salle.webp" alt="">
     </div>
     <div class="ouv-voile"></div>
+    <span class="ouv-halo"></span>
     <span class="ouv-ombre"></span>
     <img class="ouv-reflet" src="williams.webp" alt="">
     <img class="ouv-w" src="williams.webp" alt="William Zonzon">
