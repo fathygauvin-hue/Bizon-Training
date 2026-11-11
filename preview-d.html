@@ -202,10 +202,113 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 .somm a.ici{background:var(--or);color:#101010}
 .somm b{font-family:var(--b);font-size:17px;letter-spacing:.13em;color:var(--or);padding:11px 18px;margin-right:auto}
 .page{scroll-margin-top:52px}
+
+/* ════ ÉCRAN 0 — OUVERTURE ════ */
+.ouv-wrap{display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;padding:26px}
+.ouv{position:relative;width:390px;height:780px;background:#07070A;overflow:hidden;flex:none}
+.ouv-gym{position:absolute;inset:0;animation:gymZoom 18s ease-in-out infinite alternate}
+@keyframes gymZoom{from{transform:scale(1.04)}to{transform:scale(1.14) translateY(-10px)}}
+.ouv-gym svg{position:absolute;inset:0;width:100%;height:100%}
+.ouv-voile{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,7,10,.55) 0%,rgba(7,7,10,0) 26%,rgba(7,7,10,.55) 58%,rgba(7,7,10,.96) 84%)}
+.ouv-w{position:absolute;left:50%;bottom:188px;width:300px;transform:translateX(-50%);
+ filter:drop-shadow(0 26px 40px rgba(0,0,0,.75));opacity:0;animation:wArrive 1.5s .45s cubic-bezier(.18,.72,.26,1) forwards, wFlotte 7s 2s ease-in-out infinite alternate}
+@keyframes wArrive{from{opacity:0;transform:translateX(-50%) translateY(46px) scale(.965)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+@keyframes wFlotte{from{filter:drop-shadow(0 26px 40px rgba(0,0,0,.75))}to{filter:drop-shadow(0 34px 52px rgba(0,0,0,.85))}}
+.ouv-logo{position:absolute;top:64px;left:50%;transform:translateX(-50%);width:208px;opacity:0;animation:fadeDown 1.1s .15s ease forwards}
+@keyframes fadeDown{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.ouv-skip{position:absolute;top:26px;right:22px;font-family:var(--u);font-size:12px;font-weight:600;letter-spacing:.08em;
+ text-transform:uppercase;color:rgba(255,255,255,.5);cursor:pointer;z-index:3;transition:.15s}
+.ouv-skip:hover{color:var(--or)}
+.ouv-bas{position:absolute;left:0;right:0;bottom:0;padding:0 24px 30px;z-index:3}
+.ouv-msg{min-height:124px}
+.ouv-msg .m{display:none}
+.ouv-msg .m.on{display:block;animation:monte .6s cubic-bezier(.2,.7,.3,1)}
+@keyframes monte{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.ouv-msg .t{font-family:var(--d);font-size:36px;line-height:1.02;color:#fff;letter-spacing:.004em}
+.ouv-msg .s{font-family:var(--s);font-style:italic;font-size:16.5px;line-height:1.45;color:rgba(255,255,255,.72);margin-top:9px}
+.ouv-pts{display:flex;gap:7px;margin:16px 0 18px}
+.ouv-pts i{width:26px;height:3px;background:rgba(255,255,255,.22);cursor:pointer;transition:.3s}
+.ouv-pts i.on{background:var(--or);width:40px}
+.ouv-cta{display:block;width:100%;background:var(--or);color:#101010;border:0;font-family:var(--d);font-size:21px;
+ letter-spacing:.02em;padding:17px 20px;text-align:left;cursor:pointer;transition:.18s;opacity:.35;pointer-events:none}
+.ouv-cta.pret{opacity:1;pointer-events:auto}
+.ouv-cta:hover{padding-left:30px}
+.ouv-cta em{float:right;font-style:normal}
+.ouv-rejouer{font-family:var(--u);font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+ border:2px solid var(--encre);background:transparent;color:var(--encre);padding:9px 16px;cursor:pointer;margin-top:14px;transition:.18s}
+.ouv-rejouer:hover{background:var(--encre);color:var(--papier)}
 </style></head>
 <body><div class="wrap">
 
 <!-- ════════ ÉCRAN 1 ════════ -->
+<div class="tag">Écran 0 — Ouverture <b>· première chose que le joueur voit</b></div>
+<div class="page">
+<div class="ouv-wrap">
+
+  <div class="ouv" id="ouv">
+    <div class="ouv-gym">
+      <svg viewBox="0 0 390 780" preserveAspectRatio="xMidYMid slice">
+        <rect width="390" height="780" fill="#0A0A0C"/>
+        <ellipse cx="195" cy="120" rx="280" ry="190" fill="#C9A227" opacity=".10"/>
+        <ellipse cx="195" cy="640" rx="320" ry="150" fill="#C9A227" opacity=".05"/>
+        <g fill="#FFF3D0" opacity=".55">
+          <circle cx="54" cy="96" r="3.5"/><circle cx="118" cy="74" r="4"/><circle cx="195" cy="66" r="4.5"/>
+          <circle cx="272" cy="74" r="4"/><circle cx="336" cy="96" r="3.5"/>
+        </g>
+        <g stroke="#FFF3D0" opacity=".10" stroke-width="1">
+          <path d="M54 96 L30 240 M118 74 L96 250 M195 66 L195 258 M272 74 L294 250 M336 96 L360 240"/>
+        </g>
+        <g stroke="#9A907A" stroke-width="2" fill="none" opacity=".30">
+          <rect x="132" y="152" width="126" height="78"/>
+          <rect x="170" y="186" width="50" height="38"/>
+          <path d="M195 230 v16"/>
+          <ellipse cx="195" cy="252" rx="26" ry="7"/>
+        </g>
+        <g stroke="#C9A227" stroke-width="1" fill="none" opacity=".22">
+          <path d="M-40 700 A 250 250 0 0 1 430 700"/>
+          <path d="M60 780 V 712 H 330 V 780"/>
+        </g>
+      </svg>
+    </div>
+    <div class="ouv-voile"></div>
+    <img class="ouv-w" src="williams.webp" alt="William Zonzon">
+    <img class="ouv-logo" src="logo-bizon.webp" alt="Bizon Training">
+    <span class="ouv-skip" id="ouvSkip">Passer</span>
+
+    <div class="ouv-bas">
+      <div class="ouv-msg" id="ouvMsg">
+        <div class="m on"><div class="t">BIENVENUE CHEZ<br>BIZON TRAINING.</div>
+          <div class="s">Ici, on ne compte pas les heures. On mesure le geste.</div></div>
+        <div class="m"><div class="t">TU FILMES.<br>WILLIAM CORRIGE.</div>
+          <div class="s">Une vidéo par exercice, un retour du coach, un critère qui passe au vert.</div></div>
+        <div class="m"><div class="t">TON NIVEAU,<br>NOIR SUR BLANC.</div>
+          <div class="s">Chaque critère noté sur 5, séance après séance. Rien d'inventé.</div></div>
+      </div>
+      <div class="ouv-pts" id="ouvPts"><i class="on"></i><i></i><i></i></div>
+      <button class="ouv-cta" id="ouvCta">ENTRER MON CODE <em>→</em></button>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h4>COMMENT ÇA MARCHE</h4>
+    <ul>
+      <li><b>Trois messages</b> qui s'enchaînent tout seuls, 3,5 s chacun. On peut taper pour avancer, ou cliquer un trait.</li>
+      <li><b>« Passer »</b> saute directement au bouton — on ne force personne.</li>
+      <li><b>Le bouton reste éteint</b> jusqu'au dernier message, puis s'allume en or. Il mène à l'écran de code.</li>
+      <li><b>William monte dans le cadre</b> à l'ouverture, puis respire légèrement. Le gymnase zoome très lentement derrière.</li>
+      <li><b>Vu une fois.</b> À la deuxième ouverture, on va droit au code.</li>
+    </ul>
+    <h4 style="margin-top:22px">CE QUI MANQUE</h4>
+    <ul>
+      <li>Le gymnase est <b>dessiné</b>, pas filmé. Dans la vidéo que tu m'as montrée c'est une vraie séquence — si tu en tournes une, elle se glisse à la place du dessin sans rien changer d'autre.</li>
+      <li>La découpe de William vient d'une <b>capture d'écran</b> (258 px de large). Donne-moi le fichier d'origine et ça devient net.</li>
+    </ul>
+    <button class="ouv-rejouer" id="ouvRejouer">Rejouer l'ouverture</button>
+  </div>
+
+</div>
+</div>
+
 <div class="tag">Écran 1 — Accueil joueur <b>· photo d'abord</b></div>
 <div class="page">
   <div class="photo e1-photo">
@@ -506,7 +609,7 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 <script>setTimeout(function(){document.querySelectorAll(".page").forEach(function(p){p.classList.add("vu")})},2500);</script>
 <script>
 (function(){
-  var noms=['Accueil joueur','Fiche d’évaluation','Bureau coach','Ma carte','Profil'];
+  var noms=['Ouverture','Accueil joueur','Fiche d’évaluation','Bureau coach','Ma carte','Profil'];
   var pages=document.querySelectorAll('.page');
   var nav=document.createElement('div'); nav.className='somm';
   nav.innerHTML='<b>BIZON TRAINING</b>';
@@ -527,6 +630,43 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
     });
   },{rootMargin:'-45% 0px -45% 0px'});
   pages.forEach(function(p){ io.observe(p); });
+})();
+</script>
+<script>
+(function(){
+  var msgs=document.querySelectorAll('#ouvMsg .m');
+  var pts=document.querySelectorAll('#ouvPts i');
+  var cta=document.getElementById('ouvCta');
+  var i=0, timer=null;
+  function montre(k){
+    i=k;
+    msgs.forEach(function(m,j){ m.classList.toggle('on', j===k); });
+    pts.forEach(function(p,j){ p.classList.toggle('on', j===k); });
+    cta.classList.toggle('pret', k===msgs.length-1);
+  }
+  function suite(){
+    clearInterval(timer);
+    timer=setInterval(function(){
+      if(i>=msgs.length-1){ clearInterval(timer); return; }
+      montre(i+1);
+    },3500);
+  }
+  pts.forEach(function(p,j){ p.addEventListener('click',function(){ montre(j); suite(); }); });
+  document.getElementById('ouvSkip').addEventListener('click',function(){ clearInterval(timer); montre(msgs.length-1); });
+  document.getElementById('ouv').addEventListener('click',function(e){
+    if(e.target.closest('.ouv-skip')||e.target.closest('.ouv-pts')||e.target.closest('.ouv-cta')) return;
+    if(i<msgs.length-1){ montre(i+1); suite(); }
+  });
+  cta.addEventListener('click',function(){
+    var p=document.getElementById('ecran-2'); if(p) p.scrollIntoView({behavior:'smooth'});
+  });
+  document.getElementById('ouvRejouer').addEventListener('click',function(){
+    var o=document.getElementById('ouv');
+    var w=o.querySelector('.ouv-w'), l=o.querySelector('.ouv-logo');
+    [w,l].forEach(function(el){ el.style.animation='none'; el.offsetHeight; el.style.animation=''; });
+    montre(0); suite();
+  });
+  suite();
 })();
 </script>
 </body></html>
