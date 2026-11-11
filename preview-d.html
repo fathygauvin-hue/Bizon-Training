@@ -289,6 +289,58 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 .ouv-halo{background:radial-gradient(ellipse at 52% 58%,rgba(201,162,39,.13) 0%,rgba(201,162,39,.045) 44%,rgba(201,162,39,0) 72%)}
 .ouv-reflet{filter:blur(3px) brightness(.45) saturate(.7);animation:refletIn 1.9s .6s ease forwards}
 @keyframes refletIn{from{opacity:0}to{opacity:.26}}
+
+/* ════════ VERSION SOMBRE CONÇUE POUR ELLE-MÊME ════════ */
+.e1-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 38%}
+.photo .lbl{display:none}
+
+html[data-t="sombre"]{--papier:#141210;--papier2:#1C1A16;--encre:#F4F1EA;--trait:#5A554A;
+  --gris:#A09A8E;--gris2:#6A6559;--vert:#4FD894;--rouge:#FF6E5E}
+html[data-t="sombre"] body{background:#09090A}
+html[data-t="sombre"] .page{border:1px solid #262220;border-top:0;border-bottom:0}
+
+/* bandeau de score : panneau chaud, pas un aplat blanc */
+html[data-t="sombre"] .barre{background:#1E1B16;color:#F4F1EA;
+  border-top:1px solid #322C22;border-bottom:1px solid #322C22}
+html[data-t="sombre"] .barre .n{color:#FFF}
+html[data-t="sombre"] .barre .sur,html[data-t="sombre"] .barre .q{color:#8E8778}
+html[data-t="sombre"] .barre:after{background:linear-gradient(135deg,transparent 48%,rgba(201,162,39,.22) 48%,rgba(201,162,39,.22) 56%,transparent 56%)}
+
+/* actions : l'or porte l'action, jamais le blanc */
+html[data-t="sombre"] .cta{background:var(--or);color:#100E0A}
+html[data-t="sombre"] .cta em{color:#100E0A}
+html[data-t="sombre"] .cta:hover{background:#E7C34B}
+html[data-t="sombre"] .ref{background:#1C1A16;border-left:3px solid var(--or)}
+html[data-t="sombre"] .ref .b,html[data-t="sombre"] .rg .l .act{border-color:#4A443A;color:#F4F1EA}
+html[data-t="sombre"] .ref .b:hover,html[data-t="sombre"] .rg .l .act:hover{background:var(--or);border-color:var(--or);color:#100E0A}
+
+/* filets et séparations : discrets, jamais blancs */
+html[data-t="sombre"] .liste,html[data-t="sombre"] .crit,
+html[data-t="sombre"] thead th,html[data-t="sombre"] .rg h5{border-color:#3A332A}
+html[data-t="sombre"] .liste div,html[data-t="sombre"] .crit .r,
+html[data-t="sombre"] tbody td,html[data-t="sombre"] .deux>*,
+html[data-t="sombre"] .rg .l{border-color:#262220}
+html[data-t="sombre"] .crit .r .ech:before{background:#3A332A}
+html[data-t="sombre"] .crit .r .ech i{background:#F4F1EA}
+html[data-t="sombre"] .puce{border-color:#4A443A;color:#D8D2C6}
+html[data-t="sombre"] .puce.or{border-color:var(--or);color:#E7C34B}
+html[data-t="sombre"] .puce.off{border-color:#2E2A24;color:#6A6559}
+html[data-t="sombre"] .mot{border-left-color:var(--or)}
+html[data-t="sombre"] .notes li{color:#C6C0B5}
+html[data-t="sombre"] .pied{background:#141210;color:#6A6559}
+html[data-t="sombre"] .tag{color:#7A746A}
+html[data-t="sombre"] tbody svg[stroke="#101010"]{stroke:#CFC8BA}
+html[data-t="sombre"] tbody tr:hover{background:rgba(201,162,39,.08)}
+html[data-t="sombre"] .liste div:hover,html[data-t="sombre"] .crit .r:hover,
+html[data-t="sombre"] .rg .l:hover{background:rgba(201,162,39,.07)}
+
+/* la carte à partager ne suit pas le thème : c'est une image exportée */
+html[data-t="sombre"] .story,html[data-t="sombre"] .carre{--papier:#FBFAF7;--encre:#101010;--gris:#6E6A64;--gris2:#A9A49C;--trait:#101010}
+
+/* chiffres clés en or sur fond sombre */
+html[data-t="sombre"] .e2-note{color:#FFF}
+html[data-t="sombre"] .e3-top .c div b{color:var(--or)}
+html[data-t="sombre"] td.note{color:#F4F1EA}
 </style></head>
 <body><div class="wrap">
 
@@ -347,16 +399,7 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 <div class="tag">Écran 1 — Accueil joueur <b>· photo d'abord</b></div>
 <div class="page">
   <div class="photo e1-photo">
-    <svg viewBox="0 0 900 330" preserveAspectRatio="xMidYMid slice">
-      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#2E2A20"/><stop offset=".55" stop-color="#16150F"/><stop offset="1" stop-color="#0A0A08"/>
-      </linearGradient></defs>
-      <rect width="900" height="330" fill="url(#g1)"/>
-      <circle cx="690" cy="96" r="72" fill="none" stroke="#C9A227" stroke-opacity=".30" stroke-width="2"/>
-      <path d="M618 96h144M690 24v144M636 48c36 32 36 64 0 96M744 48c-36 32-36 64 0 96" stroke="#C9A227" stroke-opacity=".20" stroke-width="2" fill="none"/>
-      <path d="M0 268h900" stroke="#fff" stroke-opacity=".08" stroke-width="1"/>
-      <rect width="900" height="330" fill="#000" opacity=".30"/>
-    </svg>
+    <img class="e1-img" src="salle.webp?3" alt="">
     <div class="lbl">PHOTO DU JOUEUR / FRAME VIDÉO</div>
     <div class="e1-over">
       <div class="e1-kicker">Semaine 45 — coaché par William Zonzon</div>
@@ -599,7 +642,7 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
     });
   }
   var init='clair';
-  try{ init = localStorage.getItem('bz_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'sombre':'clair'); }catch(e){}
+  try{ init = localStorage.getItem('bz_theme') || 'sombre'; }catch(e){}
   set(init);
   document.querySelectorAll('.switch button').forEach(function(b){
     b.addEventListener('click',function(){ set(b.dataset.th); });
