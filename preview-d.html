@@ -341,6 +341,46 @@ html[data-t="sombre"] .story,html[data-t="sombre"] .carre{--papier:#FBFAF7;--enc
 html[data-t="sombre"] .e2-note{color:#FFF}
 html[data-t="sombre"] .e3-top .c div b{color:var(--or)}
 html[data-t="sombre"] td.note{color:#F4F1EA}
+
+/* ── semaine ── */
+.sem{display:flex;gap:6px;margin:0 0 20px}
+.sem span{flex:1;text-align:center;padding:9px 0 7px;border:1px solid #2E2A24;
+ font-family:var(--u);font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--gris2)}
+.sem span.ok{background:var(--or);border-color:var(--or);color:#100E0A}
+.sem span.auj{border-color:var(--or);color:var(--or)}
+html[data-t="clair"] .sem span{border-color:#DAD5CC}
+/* ── exercices avec état ── */
+.liste div.fait span.t{color:var(--gris)}
+.et{font-family:var(--u);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+ border:1px solid #3A332A;padding:3px 7px;color:var(--gris2);margin-left:12px;white-space:nowrap}
+.et.ok{border-color:var(--vert);color:var(--vert)}
+.et.go{border-color:var(--or);color:var(--or)}
+/* ── série en avant ── */
+.serie{display:flex;align-items:baseline;gap:12px;border-top:2px solid var(--trait);
+ border-bottom:1px solid #262220;padding:14px 0;margin-bottom:22px}
+.serie b{font-family:var(--d);font-size:40px;line-height:.9;color:var(--or)}
+.serie span{font-family:var(--u);font-size:13px;color:var(--gris)}
+.serie em{margin-left:auto;font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gris2)}
+/* ── repère "avant" sur l'échelle ── */
+.crit .r .ech u{position:absolute;top:1px;width:2px;height:7px;background:var(--gris2);opacity:.75}
+.crit .r .ech s{position:absolute;top:4px;height:1px;background:var(--vert);opacity:.5}
+/* ── historique ── */
+.hist{margin:22px 26px 0;border-top:2px solid var(--trait);padding-top:16px}
+.hist-t{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.hist-t b{font-family:var(--d);font-size:20px}
+.hist-t span{font-family:var(--s);font-style:italic;font-size:14px;color:var(--gris)}
+.hist svg{width:100%;display:block}
+.hist-l{display:flex;justify-content:space-between;margin-top:6px;
+ font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gris2)}
+/* ── à traiter (bureau coach) ── */
+.trier{margin:0 26px 20px;border:1px solid #3A332A;border-left:4px solid var(--or)}
+.trier h6{font-family:var(--u);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+ color:var(--gris);padding:11px 16px 0;margin:0}
+.trier ul{list-style:none;margin:0;padding:6px 16px 14px}
+.trier li{display:flex;align-items:baseline;gap:10px;padding:7px 0;font-family:var(--u);font-size:14.5px}
+.trier li b{font-weight:600}
+.trier li em{font-style:italic;font-family:var(--s);font-size:13px;color:var(--gris)}
+.trier li span{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--or)}
 </style></head>
 <body><div class="wrap">
 
@@ -413,12 +453,12 @@ html[data-t="sombre"] td.note{color:#F4F1EA}
   </div>
   <div class="deux">
     <div class="bloc">
-      <div class="h">À FAIRE CETTE SEMAINE</div>
+      <div class="sem"><span class="ok">LUN</span><span class="ok">MAR</span><span>MER</span><span class="ok">JEU</span><span class="auj">VEN</span><span>SAM</span><span>DIM</span></div><div class="serie"><b>3</b><span>séances d’affilée</span><em>RECORD 6</em></div><div class="h">À FAIRE CETTE SEMAINE</div>
       <div class="sous">Trois exercices, posés par William.</div>
       <div class="liste">
-        <div><span class="i">01</span><span class="t">Lancer franc</span><span class="m">1:58</span></div>
-        <div><span class="i">02</span><span class="t">Tir en course</span><span class="m">2:40</span></div>
-        <div><span class="i">03</span><span class="t">Gainage</span><span class="m">5:20</span></div>
+        <div class="fait"><span class="i">01</span><span class="t">Lancer franc</span><span class="et ok">Filmé</span><span class="m">1:58</span></div>
+        <div class=""><span class="i">02</span><span class="t">Tir en course</span><span class="et go">À filmer</span><span class="m">2:40</span></div>
+        <div class=""><span class="i">03</span><span class="t">Gainage</span><span class="et">Non filmé</span><span class="m">5:20</span></div>
       </div>
       <div class="mot">
         <p>« Garde le coude plus près du corps sur la poussée, et reste sur tes appuis après le tir. »</p>
@@ -455,14 +495,15 @@ html[data-t="sombre"] td.note{color:#F4F1EA}
     </div>
   </div>
   <div class="crit">
-    <div class="r"><span class="nom">Alignement du bras de tir</span><span class="ech"><i style="left:100%;margin-left:-3px"></i></span><span class="dl" style="color:var(--vert)">+4,0</span><span class="vl">5,0</span></div>
-    <div class="r"><span class="nom">Dribble de préparation</span><span class="ech"><i style="left:100%;margin-left:-3px"></i></span><span class="dl" style="color:var(--vert)">+3,0</span><span class="vl">5,0</span></div>
-    <div class="r"><span class="nom">Attraper / Placement</span><span class="ech"><i style="left:94%"></i></span><span class="dl" style="color:var(--vert)">+3,0</span><span class="vl">4,7</span></div>
-    <div class="r"><span class="nom">Posture de départ</span><span class="ech"><i style="left:86%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">4,3</span></div>
-    <div class="r"><span class="nom">Footwork de mise en place</span><span class="ech"><i style="left:74%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">3,7</span></div>
-    <div class="r"><span class="nom">Footwork de chargement</span><span class="ech"><i style="left:74%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">3,7</span></div>
+    <div class="r"><span class="nom">Alignement du bras de tir</span><span class="ech"><u style="left:20.0%"></u><s style="left:20.0%;width:80.0%"></s><i style="left:100%;margin-left:-3px"></i></span><span class="dl" style="color:var(--vert)">+4,0</span><span class="vl">5,0</span></div>
+    <div class="r"><span class="nom">Dribble de préparation</span><span class="ech"><u style="left:40.0%"></u><s style="left:40.0%;width:60.0%"></s><i style="left:100%;margin-left:-3px"></i></span><span class="dl" style="color:var(--vert)">+3,0</span><span class="vl">5,0</span></div>
+    <div class="r"><span class="nom">Attraper / Placement</span><span class="ech"><u style="left:34.0%"></u><s style="left:34.0%;width:60.0%"></s><i style="left:94%"></i></span><span class="dl" style="color:var(--vert)">+3,0</span><span class="vl">4,7</span></div>
+    <div class="r"><span class="nom">Posture de départ</span><span class="ech"><u style="left:40.0%"></u><s style="left:40.0%;width:46.0%"></s><i style="left:86%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">4,3</span></div>
+    <div class="r"><span class="nom">Footwork de mise en place</span><span class="ech"><u style="left:28.0%"></u><s style="left:28.0%;width:46.0%"></s><i style="left:74%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">3,7</span></div>
+    <div class="r"><span class="nom">Footwork de chargement</span><span class="ech"><u style="left:28.0%"></u><s style="left:28.0%;width:46.0%"></s><i style="left:74%"></i></span><span class="dl" style="color:var(--vert)">+2,3</span><span class="vl">3,7</span></div>
     <div class="r vide"><span class="nom">Stabilisation</span><span class="ech"></span><span class="dl" style="color:var(--gris2)">non évalué</span><span class="vl">0,0</span></div>
   </div>
+  <div class="hist"><div class="hist-t"><b>DEPUIS LE DÉBUT</b><span>quatre évaluations, 1,4 → 4,4</span></div><svg viewBox="0 0 640 78" preserveAspectRatio="none"><path d="M0 72 H640" stroke="#3A332A" stroke-width="1" fill="none"/><path d="M0 10 H640" stroke="#3A332A" stroke-width="1" fill="none" stroke-dasharray="3 6"/><path d="M18 55 L219 46 L421 35 L622 17" fill="none" stroke="#C9A227" stroke-width="2.5"/><circle cx="18" cy="55" r="3" fill="#8E8778"/><circle cx="219" cy="46" r="3" fill="#8E8778"/><circle cx="421" cy="35" r="3" fill="#8E8778"/><circle cx="622" cy="17" r="4.5" fill="#C9A227"/></svg><div class="hist-l"><span>12 NOV</span><span>8 DÉC</span><span>19 JANV</span><span>10 MARS</span></div></div>
   <div class="ref">
     <span class="t">Vidéo de référence<em>Pivot engagé — choisie par William</em></span>
     <span class="b">REGARDER</span>
@@ -484,6 +525,7 @@ html[data-t="sombre"] td.note{color:#F4F1EA}
     </div>
   </div>
   <div style="padding:0 26px 26px">
+  <div class="trier"><h6>À traiter en premier</h6><ul><li><b>Célestine Segretain</b><em>vidéo en attente depuis 3 jours</em><span>REGARDER</span></li><li><b>Abdrahaman Traoré</b><em>tendance en baisse sur 3 évaluations</em><span>REVOIR</span></li><li><b>Anton Bogat</b><em>aucune donnée — Sheet à remplir</em><span>OUVRIR LE SHEET</span></li></ul></div>
   <table>
     <thead><tr><th colspan="2">Joueur</th><th>Poste · niveau</th><th>Tendance</th><th style="text-align:right">Note</th><th style="text-align:right">État</th></tr></thead>
     <tbody>
@@ -491,7 +533,7 @@ html[data-t="sombre"] td.note{color:#F4F1EA}
         <td style="width:50px"><span class="vign"><svg viewBox="0 0 38 38"><rect width="38" height="38" fill="#232017"/><circle cx="26" cy="12" r="7" fill="none" stroke="#C9A227" stroke-opacity=".5"/></svg></span></td>
         <td class="j">Célestine Segretain<em>3/2 · WNCAA D1 Weber</em></td>
         <td style="color:var(--gris)">Meneuse</td>
-        <td><svg width="84" height="18" fill="none" stroke="#101010" stroke-width="1.5"><path d="M2 13l14-3 14 2 14-7 14-1 14-3"/></svg></td>
+        <td><svg width="84" height="18" fill="none" stroke="#101010" stroke-width="1.5"><path d="M3 15 L24 12 L45 7 L66 4" stroke="#4FD894"/><circle cx="66" cy="4" r="2.4" fill="#4FD894" stroke="none"/></svg></td>
         <td class="note">4,0</td>
         <td style="text-align:right"><span class="puce or">1 vidéo</span></td>
       </tr>
@@ -499,7 +541,7 @@ html[data-t="sombre"] td.note{color:#F4F1EA}
         <td><span class="vign"><svg viewBox="0 0 38 38"><rect width="38" height="38" fill="#1C1A13"/><circle cx="12" cy="26" r="7" fill="none" stroke="#C9A227" stroke-opacity=".5"/></svg></span></td>
         <td class="j">Jahyan Siméon<em>4 · U18 Espoir Limoges</em></td>
         <td style="color:var(--gris)">Ailier fort</td>
-        <td><svg width="84" height="18" fill="none" stroke="#101010" stroke-width="1.5"><path d="M2 9l14 2 14-4 14 5 14-2 14 1"/></svg></td>
+        <td><svg width="84" height="18" fill="none" stroke="#101010" stroke-width="1.5"><path d="M3 11 L24 9 L45 10 L66 8" stroke="#CFC8BA"/><circle cx="66" cy="8" r="2.4" fill="#CFC8BA" stroke="none"/></svg></td>
         <td class="note">4,0</td>
         <td style="text-align:right"><span class="puce">Relancer</span></td>
       </tr>
@@ -507,7 +549,7 @@ html[data-t="sombre"] td.note{color:#F4F1EA}
         <td><span class="vign"><svg viewBox="0 0 38 38"><rect width="38" height="38" fill="#26221A"/><circle cx="19" cy="19" r="8" fill="none" stroke="#C9A227" stroke-opacity=".5"/></svg></span></td>
         <td class="j">Abdrahaman Traoré<em>4 · Pro N1 ASA CIV</em></td>
         <td style="color:var(--gris)">Ailier fort</td>
-        <td><svg width="84" height="18" fill="none" stroke="#B3261E" stroke-width="1.5"><path d="M2 5l14 4 14-2 14 7 14 1 14 3"/></svg></td>
+        <td><svg width="84" height="18" fill="none" stroke="#B3261E" stroke-width="1.5"><path d="M3 5 L24 8 L45 7 L66 13" stroke="#FF6E5E"/><circle cx="66" cy="13" r="2.4" fill="#FF6E5E" stroke="none"/></svg></td>
         <td class="note" style="color:var(--rouge)">4,0</td>
         <td style="text-align:right"><span class="puce">Relancer</span></td>
       </tr>
