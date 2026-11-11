@@ -247,6 +247,23 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 .ouv-sign{font-family:var(--u);font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--or);margin-top:14px}
 
 .ouv-gym img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+.ouv-w{left:auto;right:-6px;bottom:118px;width:214px;transform:none;z-index:2;
+ filter:drop-shadow(0 18px 26px rgba(0,0,0,.72));
+ animation:wPose 1.7s .35s cubic-bezier(.16,.74,.22,1) forwards, wSouffle 6.5s 2.2s ease-in-out infinite alternate}
+@keyframes wPose{from{opacity:0;transform:translateY(30px) scale(.962)}to{opacity:1;transform:none}}
+@keyframes wSouffle{from{transform:none}to{transform:scale(1.007) translateY(-2px)}}
+.ouv-ombre{position:absolute;right:14px;bottom:102px;width:198px;height:34px;z-index:1;opacity:0;
+ background:radial-gradient(ellipse at center,rgba(0,0,0,.78) 0%,rgba(0,0,0,.42) 42%,rgba(0,0,0,0) 72%);
+ filter:blur(5px);animation:ombreIn 1.7s .45s ease forwards}
+@keyframes ombreIn{from{opacity:0;transform:scaleX(.8)}to{opacity:1;transform:none}}
+.ouv-reflet{position:absolute;right:-6px;top:662px;width:214px;z-index:1;opacity:0;transform:scaleY(-1);
+ filter:blur(2.4px) brightness(.5) saturate(.75);
+ -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,0) 8%,rgba(0,0,0,.95) 100%);
+ mask-image:linear-gradient(to bottom,rgba(0,0,0,0) 8%,rgba(0,0,0,.95) 100%);
+ animation:refletIn 1.9s .6s ease forwards}
+@keyframes refletIn{from{opacity:0}to{opacity:.34}}
+.ouv-logo{width:132px;top:22px;left:20px}
 </style></head>
 <body><div class="wrap">
 
@@ -260,6 +277,8 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
       <img src="salle.webp" alt="">
     </div>
     <div class="ouv-voile"></div>
+    <span class="ouv-ombre"></span>
+    <img class="ouv-reflet" src="williams.webp" alt="">
     <img class="ouv-w" src="williams.webp" alt="William Zonzon">
     <img class="ouv-logo" src="logo-bizon.webp" alt="Bizon Training">
     <span class="ouv-skip" id="ouvSkip">Passer</span>
