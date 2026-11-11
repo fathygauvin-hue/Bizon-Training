@@ -301,7 +301,7 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
   <div class="notes">
     <h4>COMMENT ÇA MARCHE</h4>
     <ul>
-      <li><b>Trois messages</b> qui s'enchaînent tout seuls, 3,5 s chacun. On peut taper pour avancer, ou cliquer un trait.</li>
+      <li><b>Trois messages</b> qui s'enchaînent tout seuls, 4 s chacun. On peut taper pour avancer, ou cliquer un trait.</li>
       <li><b>« Passer »</b> saute directement au bouton — on ne force personne.</li>
       <li><b>Le bouton reste éteint</b> jusqu'au dernier message, puis s'allume en or. Il mène à l'écran de code.</li>
       <li><b>William monte dans le cadre</b> à l'ouverture, puis respire légèrement. Le gymnase zoome très lentement derrière.</li>
@@ -658,7 +658,7 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
     timer=setInterval(function(){
       if(i>=msgs.length-1){ clearInterval(timer); return; }
       montre(i+1);
-    },3500);
+    },4000);
   }
   pts.forEach(function(p,j){ p.addEventListener('click',function(){ montre(j); suite(); }); });
   document.getElementById('ouvSkip').addEventListener('click',function(){ clearInterval(timer); montre(msgs.length-1); });
