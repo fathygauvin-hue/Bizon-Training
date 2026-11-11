@@ -283,6 +283,12 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 .ouv-voile{background:
  radial-gradient(120% 70% at 72% 52%,rgba(0,0,0,0) 30%,rgba(5,5,8,.55) 78%),
  linear-gradient(180deg,rgba(7,7,10,.34) 0%,rgba(7,7,10,0) 24%,rgba(7,7,10,.52) 56%,rgba(7,7,10,.96) 84%)}
+
+/* plus de contour de sticker : ombre de contact douce, pas de liseré */
+.ouv-w{filter:drop-shadow(0 30px 38px rgba(0,0,0,.42)) brightness(1.04)}
+.ouv-halo{background:radial-gradient(ellipse at 52% 58%,rgba(201,162,39,.13) 0%,rgba(201,162,39,.045) 44%,rgba(201,162,39,0) 72%)}
+.ouv-reflet{filter:blur(3px) brightness(.45) saturate(.7);animation:refletIn 1.9s .6s ease forwards}
+@keyframes refletIn{from{opacity:0}to{opacity:.26}}
 </style></head>
 <body><div class="wrap">
 
@@ -293,13 +299,13 @@ html[data-t="sombre"] .rg .l{border-color:#2D2A24}
 
   <div class="ouv" id="ouv">
     <div class="ouv-gym">
-      <img src="salle.webp" alt="">
+      <img src="salle.webp?2" alt="">
     </div>
     <div class="ouv-voile"></div>
     <span class="ouv-halo"></span>
     <span class="ouv-ombre"></span>
-    <img class="ouv-reflet" src="williams.webp" alt="">
-    <img class="ouv-w" src="williams.webp" alt="William Zonzon">
+    <img class="ouv-reflet" src="williams.webp?2" alt="">
+    <img class="ouv-w" src="williams.webp?2" alt="William Zonzon">
     <img class="ouv-logo" src="logo-bizon.webp" alt="Bizon Training">
     <span class="ouv-skip" id="ouvSkip">Passer</span>
 
