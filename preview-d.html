@@ -381,7 +381,75 @@ html[data-t="clair"] .sem span{border-color:#DAD5CC}
 .trier li b{font-weight:600}
 .trier li em{font-style:italic;font-family:var(--s);font-size:13px;color:var(--gris)}
 .trier li span{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--or)}
-</style></head>
+
+/* ════════ TÉLÉPHONE ════════ */
+@media (max-width:560px){
+ body{padding:0}
+ .wrap{max-width:100%}
+ .somm{margin:0 0 14px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+ .somm b{padding:10px 12px;font-size:15px}
+ .somm a{padding:11px 12px;font-size:10px;white-space:nowrap}
+ .tag{margin:20px 14px 8px;font-size:10px}
+ .page{border-left:0;border-right:0}
+ .bloc,.rg,.e2-top,.e3-top,.pf-top{padding-left:16px;padding-right:16px}
+ .crit,.hist,.ref,.trier{margin-left:16px;margin-right:16px}
+ .barre{padding:14px 16px;gap:12px;flex-wrap:wrap}
+ .barre .n{font-size:38px}
+ .barre .d{font-size:26px}
+ .cta{padding:17px 16px;font-size:20px}
+ .deux{grid-template-columns:1fr}
+ .deux>*{border-right:0;border-bottom:1px solid #262220}
+ .deux>*:last-child{border-bottom:0}
+ /* accueil */
+ .e1-photo{height:240px}
+ .e1-nom{font-size:52px}
+ .e1-kicker{font-size:13px}
+ .sem span{font-size:9px;padding:8px 0 6px}
+ .serie b{font-size:34px}
+ .liste span.t{font-size:15px}
+ .et{font-size:9px;padding:2px 5px;margin-left:8px}
+ .mot p{font-size:17px}
+ /* fiche */
+ .e2-top{flex-direction:column;align-items:flex-start;gap:4px}
+ .e2-top>div:last-child{text-align:left!important;display:flex;align-items:baseline;gap:12px}
+ .e2-note{font-size:88px}
+ .e2-note i{top:-24px;font-size:18px}
+ .crit .r{grid-template-columns:1fr 54px 44px;grid-template-areas:'nom dl vl' 'ech ech ech';gap:6px 10px;padding:11px 0}
+ .crit .r span.nom{grid-area:nom;font-size:14.5px}
+ .crit .r .dl{grid-area:dl;font-size:11.5px}
+ .crit .r .vl{grid-area:vl;font-size:19px}
+ .crit .r .ech{grid-area:ech;height:8px}
+ .hist-t{flex-direction:column;gap:2px}
+ .ref{flex-wrap:wrap;gap:10px}
+ /* bureau coach */
+ .e3-top{flex-direction:column;align-items:flex-start;gap:14px}
+ .e3-top .g{font-size:40px}
+ .e3-top .c{gap:18px;text-align:left}
+ .e3-top .c div b{font-size:26px}
+ .trier li{flex-wrap:wrap;gap:4px 10px}
+ .trier li span{margin-left:0;width:100%}
+ table{font-size:12.5px}
+ thead th:nth-child(3),tbody td:nth-child(3){display:none}
+ thead th:nth-child(4),tbody td:nth-child(4){display:none}
+ .vign{width:30px;height:30px}
+ td.j{font-size:13.5px}
+ td.j em{font-size:11.5px}
+ td.note{font-size:20px}
+ .puce{font-size:9.5px;padding:3px 6px}
+ /* profil */
+ .pf-nom{font-size:30px}
+ .rg .l{flex-wrap:wrap;gap:8px 12px}
+ .rg .l .k{font-size:15px}
+ .rg .l .v,.rg .l .act{margin-left:auto}
+ /* ouverture */
+ .ouv{width:100%;height:78vh;min-height:560px}
+ .ouv-wrap{padding:0;gap:18px}
+ .notes{padding:0 16px 20px}
+ .cartes{padding:16px}
+ .story{width:100%;max-width:340px;height:auto;aspect-ratio:9/16}
+ .carre{width:100%;max-width:300px}
+ .pied{padding:14px 16px}
+}</style></head>
 <body><div class="wrap">
 
 <!-- ════════ ÉCRAN 1 ════════ -->
