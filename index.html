@@ -4241,9 +4241,18 @@ async function loadPlayerIronmanBox(playerId, playerName){
   const _queue = window.queueVideo;
   if (typeof _api !== 'function' || typeof _queue !== 'function') return;
 
-  let fichier = null, submissionId = null, resume = null, enCours = false;
+  let fichier = null, submissionId = null, resume = null, enCours = false, mainTir = null;
 
-  // 1. on recupere le fichier au moment de la mise en file d'attente
+  async function mainDeTir() {
+    if (mainTir) return mainTir;
+    try {
+      const r = await _api('login', { code: localStorage.getItem('bizon_access_code') });
+      mainTir = (r && r.profile && r.profile.shooting_hand === 'G') ? 'G' : 'D';
+    } catch (e) { mainTir = 'D'; }
+    return mainTir;
+  }
+
+  // 1. le fichier, au moment de la mise en file d'attente
   window.queueVideo = function (job) {
     try {
       if (job && job.file) { fichier = job.file; submissionId = null; resume = null; analyser(); }
@@ -4251,8 +4260,14 @@ async function loadPlayerIronmanBox(playerId, playerName){
     return _queue.apply(this, arguments);
   };
 
-  // 2. on note l'identifiant de l'envoi des que le serveur le renvoie
-  window.callApi = async function (action) {
+  // 2. l'identifiant de l'envoi, et la main de tir ajoutee au profil
+  window.callApi = async function (action, payload) {
+    try {
+      if (action === 'updateProfile' && window.__BZ_MAIN && payload && typeof payload === 'object') {
+        payload.shooting_hand = window.__BZ_MAIN;
+        mainTir = window.__BZ_MAIN;
+      }
+    } catch (e) {}
     const r = await _api.apply(this, arguments);
     try {
       if (action === 'requestVideoUpload' && r) {
@@ -4267,12 +4282,13 @@ async function loadPlayerIronmanBox(playerId, playerName){
   async function analyser() {
     if (enCours || !fichier) return;
     enCours = true;
-    const v = document.createElement('video');
-    v.playsInline = true; v.muted = true;
+    const main = await mainDeTir();
+    const el = document.createElement('video');
+    el.playsInline = true; el.muted = true;
     const url = URL.createObjectURL(fichier);
-    v.src = url;
+    el.src = url;
     try {
-      const r = await moteur.analyserVideo(v, { main: 'D' });
+      const r = await moteur.analyserVideo(el, { main: main });
       resume = r && !r.erreur ? moteur.resume(r) : null;
     } catch (e) { resume = null; }
     try { URL.revokeObjectURL(url); } catch (e) {}
@@ -4288,6 +4304,42 @@ async function loadPlayerIronmanBox(playerId, playerName){
     try { await _api('saveShotMetrics', { submissionId: sid, source: 'video', mesures }); }
     catch (e) {}
   }
+
+  // 5. choix de la main de tir dans Informations et preferences
+  function injecter() {
+    const ancre = document.getElementById('profile-level');
+    if (!ancre || document.getElementById('bz-main-tir')) return;
+    const hote = ancre.parentElement; if (!hote || !hote.parentElement) return;
+    const bloc = document.createElement('div');
+    bloc.id = 'bz-main-tir';
+    bloc.style.marginTop = '14px';
+    const titre = document.createElement('div');
+    titre.textContent = 'Main de tir';
+    titre.style.cssText = 'font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;margin-bottom:6px';
+    const ligne = document.createElement('div');
+    ligne.style.cssText = 'display:flex;gap:8px';
+    const choix = [['D','Droitier'],['G','Gaucher']];
+    function peindre() {
+      Array.prototype.forEach.call(ligne.children, function (b) {
+        const actif = b.dataset.v === window.__BZ_MAIN;
+        b.style.borderColor = actif ? '#C9A227' : 'rgba(255,255,255,.18)';
+        b.style.color = actif ? '#C9A227' : 'inherit';
+        b.style.fontWeight = actif ? '700' : '400';
+      });
+    }
+    choix.forEach(function (o) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = o[1]; b.dataset.v = o[0];
+      b.style.cssText = 'flex:1;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:inherit;font:inherit;cursor:pointer';
+      b.onclick = function () { window.__BZ_MAIN = o[0]; peindre(); };
+      ligne.appendChild(b);
+    });
+    bloc.appendChild(titre); bloc.appendChild(ligne);
+    hote.parentElement.insertBefore(bloc, hote.nextSibling);
+    mainDeTir().then(function (m) { if (!window.__BZ_MAIN) window.__BZ_MAIN = m; peindre(); });
+  }
+  try { new MutationObserver(injecter).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+  injecter();
 })();
 </script>
 </body>
