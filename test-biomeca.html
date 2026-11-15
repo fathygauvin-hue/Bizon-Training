@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Bizon — test biomécanique</title>
+<style>
+  :root{--fond:#141210;--carte:#1C1A16;--trait:#322C22;--encre:#F4F1EA;
+        --gris:#A09A8E;--gris2:#6A6559;--or:#C9A227;--vert:#4FD894;--rouge:#FF6E5E}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--fond);color:var(--encre);
+       font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  header{padding:18px 18px 14px;border-bottom:1px solid var(--trait)}
+  h1{font-size:19px;margin:0;letter-spacing:-.2px}
+  .sous{font-size:12px;color:var(--gris);margin-top:3px;letter-spacing:.06em;text-transform:uppercase}
+  main{padding:18px;max-width:720px;margin:0 auto}
+  .carte{background:var(--carte);border:1px solid var(--trait);border-radius:12px;padding:16px;margin-bottom:14px}
+  .cta{display:block;width:100%;background:var(--or);color:#100E0A;border:0;border-radius:10px;
+       padding:14px;font-size:16px;font-weight:700;cursor:pointer}
+  .cta:disabled{opacity:.45}
+  .sec{background:transparent;color:var(--encre);border:1px solid var(--trait);border-radius:10px;
+       padding:10px 14px;font-size:14px;cursor:pointer}
+  .sec.on{border-color:var(--or);color:var(--or)}
+  input[type=file]{display:none}
+  .etat{font-size:13px;color:var(--gris);margin-top:10px;min-height:1.4em}
+  .barre{height:4px;background:var(--trait);border-radius:2px;overflow:hidden;margin-top:10px}
+  .barre i{display:block;height:100%;width:0;background:var(--or);transition:width .2s}
+  canvas{width:100%;border-radius:10px;display:block;background:#000}
+  video{display:none}
+  .mes{display:flex;align-items:baseline;gap:10px;padding:11px 0;border-bottom:1px solid var(--trait)}
+  .mes:last-child{border-bottom:0}
+  .mes .n{flex:1;font-size:14px}
+  .mes .v{font-variant-numeric:tabular-nums;font-weight:700;font-size:16px}
+  .mes .c{font-size:11px;color:var(--gris2);width:74px;text-align:right}
+  .ok{color:var(--vert)} .ko{color:var(--rouge)} .nd{color:var(--gris2);font-weight:400;font-size:13px}
+  .tit{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);margin:0 0 10px}
+  .note{font-size:12px;color:var(--gris);line-height:1.5}
+  .pastille{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+            border:1px solid var(--trait);border-radius:20px;padding:2px 8px;color:var(--gris2);margin-left:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Test biomécanique</h1>
+  <div class="sous">Bizon Training · banc d'essai</div>
+</header>
+
+<main>
+
+<div class="carte">
+  <p class="tit">1 · Main de tir</p>
+  <div style="display:flex;gap:10px">
+    <button class="sec on" id="bD">Droitier</button>
+    <button class="sec" id="bG">Gaucher</button>
+  </div>
+</div>
+
+<div class="carte">
+  <p class="tit">2 · Vidéo du tir</p>
+  <label class="cta" for="f" style="text-align:center">Choisir une vidéo</label>
+  <input type="file" id="f" accept="video/*">
+  <div class="etat" id="etat">Filme de face ou de trois quarts, le joueur entier dans le cadre.</div>
+  <div class="barre"><i id="prog"></i></div>
+</div>
+
+<div class="carte" id="carteVue" style="display:none">
+  <p class="tit">3 · Image du relâcher</p>
+  <canvas id="cv"></canvas>
+  <div class="note" style="margin-top:10px">Le squelette est celui détecté à l'instant du relâcher du ballon.</div>
+</div>
+
+<div class="carte" id="carteRes" style="display:none">
+  <p class="tit">4 · Mesures</p>
+  <div id="res"></div>
+</div>
+
+<div class="carte" id="carteCrit" style="display:none">
+  <p class="tit">5 · Critères de Williams</p>
+  <div id="crit"></div>
+  <div class="note" style="margin-top:12px">
+    Les critères marqués <span class="pastille">coach</span> ne sont pas mesurables à partir du squelette seul :
+    ils restent jugés par l'œil du coach.
+  </div>
+</div>
+
+<video id="v" playsinline muted></video>
+
+</main>
+
+<script type="module">
+import {FilesetResolver, PoseLandmarker} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+const $=i=>document.getElementById(i);
+const etat=$('etat'), prog=$('prog'), v=$('v'), cv=$('cv'), ctx=cv.getContext('2d');
+let MAIN='D';
+$('bD').onclick=()=>{MAIN='D';$('bD').classList.add('on');$('bG').classList.remove('on')};
+$('bG').onclick=()=>{MAIN='G';$('bG').classList.add('on');$('bD').classList.remove('on')};
+
+/* ---------- points du squelette (MediaPipe Pose) ---------- */
+const P={nez:0, epG:11, epD:12, coG:13, coD:14, poG:15, poD:16, idxG:19, idxD:20,
+         haG:23, haD:24, geG:25, geD:26, chG:27, chD:28};
+
+const ang=(a,b,c)=>{ // angle en b, en degrés, en 3D
+  const u=[a.x-b.x,a.y-b.y,a.z-b.z], w=[c.x-b.x,c.y-b.y,c.z-b.z];
+  const d=u[0]*w[0]+u[1]*w[1]+u[2]*w[2];
+  const n=Math.hypot(...u)*Math.hypot(...w);
+  return n? Math.acos(Math.max(-1,Math.min(1,d/n)))*180/Math.PI : NaN;
+};
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,(a.z||0)-(b.z||0));
+
+/* ---------- chargement du modèle ---------- */
+let pose=null;
+async function modele(){
+  if(pose) return pose;
+  etat.textContent='Chargement du modèle…';
+  const vis=await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  pose=await PoseLandmarker.createFromOptions(vis,{
+    baseOptions:{modelAssetPath:
+      "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+      delegate:"GPU"},
+    runningMode:"VIDEO", numPoses:1, minPoseDetectionConfidence:0.5});
+  return pose;
+}
+
+/* ---------- lecture de la vidéo image par image ---------- */
+$('f').onchange=async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  $('carteVue').style.display='none'; $('carteRes').style.display='none'; $('carteCrit').style.display='none';
+  prog.style.width='0';
+  try{
+    const pl=await modele();
+    etat.textContent='Lecture de la vidéo…';
+    v.src=URL.createObjectURL(file);
+    await new Promise(r=>v.onloadedmetadata=r);
+    cv.width=v.videoWidth; cv.height=v.videoHeight;
+
+    const frames=[];
+    await v.play().catch(()=>{});
+    await new Promise(fin=>{
+      const pas=()=>{
+        if(v.ended||v.currentTime>=v.duration-0.02) return fin();
+        const t=performance.now();
+        let r=null;
+        try{ r=pl.detectForVideo(v, t); }catch(err){}
+        if(r && r.landmarks && r.landmarks[0]){
+          frames.push({t:v.currentTime, n:r.landmarks[0], w:(r.worldLandmarks&&r.worldLandmarks[0])||r.landmarks[0]});
+        }
+        prog.style.width=Math.min(100,(v.currentTime/v.duration)*100)+'%';
+        if(v.requestVideoFrameCallback) v.requestVideoFrameCallback(pas);
+        else setTimeout(pas,33);
+      };
+      if(v.requestVideoFrameCallback) v.requestVideoFrameCallback(pas); else setTimeout(pas,33);
+    });
+    v.pause();
+    prog.style.width='100%';
+
+    if(frames.length<8){ etat.textContent="Je n'ai pas réussi à détecter le joueur. Essaie une vidéo où il est entier dans le cadre, bien éclairé."; return; }
+    etat.textContent=frames.length+' images analysées.';
+    calculer(frames);
+  }catch(err){
+    etat.textContent='Erreur : '+(err&&err.message?err.message:err);
+  }
+};
+
+/* ---------- repérage du relâcher et des mesures ---------- */
+function calculer(F){
+  const po = MAIN==='D'? P.poD : P.poG;   // poignet du bras de tir
+  const co = MAIN==='D'? P.coD : P.coG;
+  const ep = MAIN==='D'? P.epD : P.epG;
+  const ix = MAIN==='D'? P.idxD : P.idxG;
+  const poAutre = MAIN==='D'? P.poG : P.poD;
+
+  // relâcher = image où le poignet de tir est le plus haut (y le plus petit en normalisé)
+  let iR=0; for(let i=1;i<F.length;i++) if(F[i].n[po].y < F[iR].n[po].y) iR=i;
+  const R=F[iR];
+
+  // flexion maximale des genoux avant le relâcher = début du geste
+  let iF=0, meilleur=1e9;
+  for(let i=0;i<iR;i++){
+    const a=ang(F[i].w[P.haD],F[i].w[P.geD],F[i].w[P.chD]);
+    if(a<meilleur){meilleur=a; iF=i;}
+  }
+
+  const larg = dist(R.w[P.epG],R.w[P.epD]) || 1;
+  const haut = Math.abs(((R.n[P.chG].y+R.n[P.chD].y)/2) - ((R.n[P.epG].y+R.n[P.epD].y)/2)) || 1;
+
+  // 1. extension du bras au relâcher
+  const extension = ang(R.w[ep],R.w[co],R.w[po]);
+
+  // 2. écart du coude (plan frontal, rapporté à la largeur d'épaules)
+  const ecartCoude = Math.abs(R.w[co].x - R.w[ep].x)/larg;
+
+  // 3. largeur des appuis / largeur d'épaules
+  const appuis = dist(R.w[P.chG],R.w[P.chD])/larg;
+
+  // 4. équilibre : dérive horizontale des hanches entre le départ et la fin
+  const hx=f=>(f.n[P.haG].x+f.n[P.haD].x)/2;
+  const derive = Math.abs(hx(F[F.length-1])-hx(F[iF]))/haut;
+
+  // 5. main guide : déplacement du poignet non-tireur après le relâcher
+  const apres = F[Math.min(F.length-1, iR+Math.round(0.25*(F.length/(v.duration||1))))] || F[F.length-1];
+  const mainGuide = dist(apres.w[poAutre],R.w[poAutre])/larg;
+
+  // 6. suivi du poignet après le relâcher
+  const poignet = ang(apres.w[co],apres.w[po],apres.w[ix]);
+
+  // 7. hauteur du point de relâcher
+  const hauteurR = (R.n[ep].y - R.n[po].y)/haut;
+
+  // 8. durée du geste
+  const duree = R.t - F[iF].t;
+
+  dessiner(R);
+  rendre({extension,ecartCoude,appuis,derive,mainGuide,poignet,hauteurR,duree}, F.length);
+}
+
+/* ---------- affichage ---------- */
+const LIENS=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+function dessiner(R){
+  $('carteVue').style.display='block';
+  ctx.drawImage(v,0,0,cv.width,cv.height);
+  ctx.fillStyle='rgba(16,14,10,.45)'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.lineWidth=Math.max(2,cv.width/230); ctx.strokeStyle='#C9A227';
+  for(const [a,b] of LIENS){
+    ctx.beginPath();
+    ctx.moveTo(R.n[a].x*cv.width,R.n[a].y*cv.height);
+    ctx.lineTo(R.n[b].x*cv.width,R.n[b].y*cv.height);
+    ctx.stroke();
+  }
+  ctx.fillStyle='#F4F1EA';
+  for(const i of [11,12,13,14,15,16,23,24,25,26,27,28]){
+    ctx.beginPath(); ctx.arc(R.n[i].x*cv.width,R.n[i].y*cv.height,Math.max(3,cv.width/150),0,7); ctx.fill();
+  }
+}
+
+const n1=x=>isFinite(x)?x.toFixed(1):'—';
+function ligne(nom,val,unite,bon,cible){
+  const ko = bon===false;
+  return `<div class="mes"><div class="n">${nom}</div>
+    <div class="v ${bon===null?'nd':(ko?'ko':'ok')}">${val}${unite?'<span style="font-size:12px;font-weight:400"> '+unite+'</span>':''}</div>
+    <div class="c">${cible||''}</div></div>`;
+}
+
+function rendre(m, nbImages){
+  $('carteRes').style.display='block';
+  $('res').innerHTML=
+    ligne('Extension du bras au relâcher', n1(m.extension), '°', m.extension>=160, 'cible ≥ 160°')+
+    ligne('Écart du coude', n1(m.ecartCoude*100), '%', m.ecartCoude<=0.22, 'cible ≤ 22%')+
+    ligne('Largeur des appuis', n1(m.appuis*100), '%', m.appuis>=0.85&&m.appuis<=1.35, 'cible 85–135%')+
+    ligne('Dérive à la retombée', n1(m.derive*100), '%', m.derive<=0.10, 'cible ≤ 10%')+
+    ligne('Poussée de la main guide', n1(m.mainGuide*100), '%', m.mainGuide<=0.25, 'cible ≤ 25%')+
+    ligne('Flexion du poignet après tir', n1(m.poignet), '°', m.poignet<=150, 'cible ≤ 150°')+
+    ligne('Hauteur du relâcher', n1(m.hauteurR*100), '%', null, 'repère')+
+    ligne('Durée du geste', n1(m.duree*1000), 'ms', null, 'repère');
+
+  $('carteCrit').style.display='block';
+  const C=[
+    ['Alignement du corps et largeur des épaules pour les appuis','Largeur des appuis '+n1(m.appuis*100)+'%',m.appuis>=0.85&&m.appuis<=1.35],
+    ['Équilibre général','Dérive '+n1(m.derive*100)+'%',m.derive<=0.10],
+    ['Coude aligné sous le ballon','Écart '+n1(m.ecartCoude*100)+'%',m.ecartCoude<=0.22],
+    ['Extension complète du bras au relâcher',n1(m.extension)+'°',m.extension>=160],
+    ['Suivi du geste, poignet fléchi',n1(m.poignet)+'°',m.poignet<=150],
+    ['Main guide stabilisatrice','Poussée '+n1(m.mainGuide*100)+'%',m.mainGuide<=0.25],
+    ['Arc de tir suffisant',null,null],
+    ['Régularité et fluidité du geste',null,null],
+    ['Regard fixé sur la cible',null,null]
+  ];
+  $('crit').innerHTML=C.map(([nom,mes,bon])=>
+    mes
+     ? `<div class="mes"><div class="n">${nom}</div><div class="v ${bon?'ok':'ko'}" style="font-size:13px">${mes}</div></div>`
+     : `<div class="mes"><div class="n">${nom}<span class="pastille">coach</span></div></div>`
+  ).join('');
+}
+</script>
+</body>
+</html>
