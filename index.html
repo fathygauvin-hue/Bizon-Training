@@ -4339,8 +4339,96 @@ async function loadPlayerIronmanBox(playerId, playerName){
     modale.insertBefore(ligne, titre.nextSibling);
     mainDeTir().then(function (m) { if (!window.__BZ_MAIN) window.__BZ_MAIN = m; peindre(); });
   }
-  try { new MutationObserver(injecter).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
-  injecter();
+  // 6. cote coach : les mesures a cote du premier avis IA
+  let estCoach = null;
+  async function coach() {
+    if (estCoach !== null) return estCoach;
+    try {
+      const r = await _api('login', { code: localStorage.getItem('bizon_access_code') });
+      estCoach = !!(r && r.profile && r.profile.role === 'coach');
+    } catch (e) { estCoach = false; }
+    return estCoach;
+  }
+
+  function fmt(cle, val) {
+    const s = moteur.SEUILS[cle];
+    if (!s || !isFinite(val)) return null;
+    if (s.pourcent) return (val * 100).toFixed(1) + ' %';
+    if (s.unite === 's') return val.toFixed(2) + ' s';
+    return val.toFixed(1) + ' ' + s.unite;
+  }
+
+  async function mesuresCoach() {
+    const blocs = document.querySelectorAll('[id^="ai-block-"]');
+    for (const b of blocs) {
+      if (b.dataset.bzFait) continue;
+      b.dataset.bzFait = '1';
+      const sid = b.id.slice('ai-block-'.length);
+      let m = null;
+      try {
+        const r = await _api('listShotMetrics', { submissionId: sid });
+        m = r && r.metrics && r.metrics[0];
+      } catch (e) { m = null; }
+      if (!m || !m.moyennes) continue;
+      const panneau = document.createElement('div');
+      panneau.setAttribute('style', 'margin:10px 0;padding:12px 14px;border:1px solid rgba(201,162,39,.28);border-radius:12px');
+      const tt = document.createElement('div');
+      tt.textContent = 'Mesure du geste · ' + m.nb_tirs + (m.nb_tirs > 1 ? ' tirs' : ' tir') +
+        (m.main === 'G' ? ' · gaucher' : ' · droitier');
+      tt.setAttribute('style', 'font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#C9A227;margin-bottom:8px');
+      panneau.appendChild(tt);
+      if (m.cadrage !== null && m.cadrage < 0.7) {
+        const al = document.createElement('div');
+        al.textContent = 'Cadrage incomplet (' + Math.round(m.cadrage * 100) + ' %) : mesures moins fiables.';
+        al.setAttribute('style', 'font-size:12px;color:#E8C9A0;margin-bottom:8px');
+        panneau.appendChild(al);
+      }
+      const estCo = await coach();
+      Object.keys(moteur.SEUILS).forEach(function (cle) {
+        const val = m.moyennes[cle];
+        const txt = fmt(cle, val);
+        if (txt === null) return;
+        const avis = moteur.juger(cle, val);
+        const l = document.createElement('div');
+        l.setAttribute('style', 'display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px');
+        const n = document.createElement('div');
+        n.style.flex = '1';
+        n.textContent = moteur.SEUILS[cle].libelle;
+        const cible = m.tirs_dans_la_cible && m.tirs_dans_la_cible[cle];
+        if (cible) {
+          const c = document.createElement('span');
+          c.textContent = '  ' + cible;
+          c.setAttribute('style', 'opacity:.5;font-size:11px');
+          n.appendChild(c);
+        }
+        const val2 = document.createElement('div');
+        val2.textContent = txt;
+        val2.setAttribute('style', 'font-weight:700;font-variant-numeric:tabular-nums;color:' +
+          (avis === null ? '#8C8C84' : (avis ? '#4FD894' : '#FF6E5E')));
+        l.appendChild(n); l.appendChild(val2);
+        if (estCo) {
+          const sig = document.createElement('button');
+          sig.type = 'button'; sig.textContent = 'fausse';
+          sig.setAttribute('style', 'border:1px solid rgba(255,255,255,.18);background:transparent;color:#8C8C84;border-radius:12px;font-size:10px;padding:2px 8px;cursor:pointer');
+          sig.onclick = async function () {
+            sig.disabled = true; sig.textContent = '…';
+            try {
+              await _api('saveMetricFeedback', { metricId: m.id, mesure: cle, valeur: val, avis: 'fausse' });
+              sig.textContent = 'signalee';
+              sig.style.borderColor = '#FF6E5E'; sig.style.color = '#FF6E5E';
+            } catch (e) { sig.textContent = 'fausse'; sig.disabled = false; }
+          };
+          l.appendChild(sig);
+        }
+        panneau.appendChild(l);
+      });
+      b.parentElement.insertBefore(panneau, b);
+    }
+  }
+
+  function balayer() { injecter(); mesuresCoach(); }
+  try { new MutationObserver(balayer).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+  balayer();
 })();
 </script>
 </body>
