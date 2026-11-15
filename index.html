@@ -4305,37 +4305,38 @@ async function loadPlayerIronmanBox(playerId, playerName){
     catch (e) {}
   }
 
-  // 5. choix de la main de tir dans Informations et preferences
+  // 5. choix de la main de tir, insere dans Informations et preferences
   function injecter() {
     const ancre = document.getElementById('profile-level');
     if (!ancre || document.getElementById('bz-main-tir')) return;
-    const hote = ancre.parentElement; if (!hote || !hote.parentElement) return;
-    const bloc = document.createElement('div');
-    bloc.id = 'bz-main-tir';
-    bloc.style.marginTop = '14px';
+    const modale = ancre.parentElement; if (!modale) return;
+
     const titre = document.createElement('div');
+    titre.id = 'bz-main-tir';
     titre.textContent = 'Main de tir';
-    titre.style.cssText = 'font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;margin-bottom:6px';
+    titre.setAttribute('style', 'font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8C8C84;margin:12px 0 6px');
+
     const ligne = document.createElement('div');
-    ligne.style.cssText = 'display:flex;gap:8px';
-    const choix = [['D','Droitier'],['G','Gaucher']];
+    ligne.setAttribute('style', 'display:flex;gap:8px');
+
     function peindre() {
       Array.prototype.forEach.call(ligne.children, function (b) {
         const actif = b.dataset.v === window.__BZ_MAIN;
-        b.style.borderColor = actif ? '#C9A227' : 'rgba(255,255,255,.18)';
-        b.style.color = actif ? '#C9A227' : 'inherit';
-        b.style.fontWeight = actif ? '700' : '400';
+        b.setAttribute('style', actif
+          ? 'flex:1 1 0%;background:var(--gold2);color:#241005;font-weight:700'
+          : 'flex:1 1 0%;background:var(--s3);color:var(--w2);font-weight:500');
       });
     }
-    choix.forEach(function (o) {
+
+    [['D','Droitier'], ['G','Gaucher']].forEach(function (o) {
       const b = document.createElement('button');
-      b.type = 'button'; b.textContent = o[1]; b.dataset.v = o[0];
-      b.style.cssText = 'flex:1;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:inherit;font:inherit;cursor:pointer';
+      b.type = 'button'; b.className = 'gbtn'; b.textContent = o[1]; b.dataset.v = o[0];
       b.onclick = function () { window.__BZ_MAIN = o[0]; peindre(); };
       ligne.appendChild(b);
     });
-    bloc.appendChild(titre); bloc.appendChild(ligne);
-    hote.parentElement.insertBefore(bloc, hote.nextSibling);
+
+    modale.insertBefore(titre, ancre.nextSibling);
+    modale.insertBefore(ligne, titre.nextSibling);
     mainDeTir().then(function (m) { if (!window.__BZ_MAIN) window.__BZ_MAIN = m; peindre(); });
   }
   try { new MutationObserver(injecter).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
