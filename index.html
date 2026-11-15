@@ -4228,5 +4228,67 @@ async function loadPlayerIronmanBox(playerId, playerName){
   }catch(e){ el.innerHTML = '<div style="font-size:12px;color:var(--red)">'+tr(e.message)+'</div>'; }
 }
 </script>
+
+<!-- Mesure biomecanique du geste de tir. Ajout autonome : aucune fonction
+     existante n'est modifiee, elles sont seulement enveloppees. Si le moteur
+     ne se charge pas, l'envoi de video se comporte exactement comme avant. -->
+<script type="module">
+(async () => {
+  let moteur = null;
+  try { moteur = await import('./biomeca.js'); } catch (e) { return; }
+
+  const _api = window.callApi;
+  const _queue = window.queueVideo;
+  if (typeof _api !== 'function' || typeof _queue !== 'function') return;
+
+  let fichier = null, submissionId = null, resume = null, enCours = false;
+
+  // 1. on recupere le fichier au moment de la mise en file d'attente
+  window.queueVideo = function (job) {
+    try {
+      if (job && job.file) { fichier = job.file; submissionId = null; resume = null; analyser(); }
+    } catch (e) {}
+    return _queue.apply(this, arguments);
+  };
+
+  // 2. on note l'identifiant de l'envoi des que le serveur le renvoie
+  window.callApi = async function (action) {
+    const r = await _api.apply(this, arguments);
+    try {
+      if (action === 'requestVideoUpload' && r) {
+        submissionId = r.submission_id || r.submissionId || r.id || null;
+        enregistrer();
+      }
+    } catch (e) {}
+    return r;
+  };
+
+  // 3. l'analyse tourne sur l'appareil du joueur, pendant l'envoi
+  async function analyser() {
+    if (enCours || !fichier) return;
+    enCours = true;
+    const v = document.createElement('video');
+    v.playsInline = true; v.muted = true;
+    const url = URL.createObjectURL(fichier);
+    v.src = url;
+    try {
+      const r = await moteur.analyserVideo(v, { main: 'D' });
+      resume = r && !r.erreur ? moteur.resume(r) : null;
+    } catch (e) { resume = null; }
+    try { URL.revokeObjectURL(url); } catch (e) {}
+    enCours = false;
+    enregistrer();
+  }
+
+  // 4. on envoie des nombres, jamais d'image
+  async function enregistrer() {
+    if (!resume || !submissionId) return;
+    const mesures = resume, sid = submissionId;
+    resume = null; submissionId = null; fichier = null;
+    try { await _api('saveShotMetrics', { submissionId: sid, source: 'video', mesures }); }
+    catch (e) {}
+  }
+})();
+</script>
 </body>
 </html>
