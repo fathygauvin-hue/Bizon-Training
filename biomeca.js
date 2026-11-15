@@ -35,18 +35,24 @@ const ecartType = t => {
   return Math.sqrt(moyenne(t.map(x => (x-m)*(x-m))));
 };
 
+const MODELE_LEGER = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/' +
+                     'pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+
 /* ----------------------------------------------------------------- modèle */
-let _pose = null;
-export async function chargerModele(surAvancement) {
-  if (_pose) return _pose;
+/* Deux variantes : 'complet' pour l'analyse d'une vidéo déjà enregistrée,
+   'leger' pour le direct, où il faut tenir la cadence sur un téléphone. */
+const _poses = {};
+export async function chargerModele(surAvancement, variante) {
+  const v = variante === 'leger' ? 'leger' : 'complet';
+  if (_poses[v]) return _poses[v];
   if (surAvancement) surAvancement('Chargement du modèle…');
   const m = await import(CDN);
   const vision = await m.FilesetResolver.forVisionTasks(CDN + '/wasm');
-  _pose = await m.PoseLandmarker.createFromOptions(vision, {
-    baseOptions: { modelAssetPath: MODELE, delegate: 'GPU' },
+  _poses[v] = await m.PoseLandmarker.createFromOptions(vision, {
+    baseOptions: { modelAssetPath: v === 'leger' ? MODELE_LEGER : MODELE, delegate: 'GPU' },
     runningMode: 'VIDEO', numPoses: 1, minPoseDetectionConfidence: 0.5
   });
-  return _pose;
+  return _poses[v];
 }
 
 /* --------------------------------------------------- lecture de la vidéo */
@@ -179,6 +185,61 @@ export function juger(cle, valeur) {
   return true;
 }
 
+/* -------------------------------------------- côté du corps qui tire */
+export function coteDe(main) {
+  return main === 'G'
+    ? { po:P.poG, co:P.coG, ep:P.epG, ix:P.idxG, poAutre:P.poD, ge:P.geG, ha:P.haG, ch:P.chG }
+    : { po:P.poD, co:P.coD, ep:P.epD, ix:P.idxD, poAutre:P.poG, ge:P.geD, ha:P.haD, ch:P.chD };
+}
+
+/* ------------------------------------------------- séance en direct */
+/* Même logique de mesure que pour une vidéo, mais au fil de l'eau :
+   on garde trois secondes d'images en mémoire et on décide qu'un tir a eu
+   lieu une fois qu'on a vu la suite du geste. Rien n'est enregistré. */
+export function creerSeance(main) {
+  const cot = coteDe(main);
+  const images = [];
+  let dernierTir = -99;
+
+  return {
+    tirs: [],
+    /* renvoie les mesures du tir quand un tir vient d'être reconnu, sinon null */
+    ajouter(landmarks, world, t) {
+      images.push({ t, n: landmarks, w: world || landmarks, entier: true });
+      while (images.length && t - images[0].t > 3) images.shift();
+      if (images.length < 12 || t - images[0].t < 0.8) return null;
+
+      // on examine l'image d'il y a 0,30 s : on connaît ce qui précède et ce qui suit
+      let c = 0, meilleur = 1e9;
+      for (let i = 0; i < images.length; i++) {
+        const d = Math.abs((t - 0.30) - images[i].t);
+        if (d < meilleur) { meilleur = d; c = i; }
+      }
+      if (images[c].t - dernierTir < 0.8) return null;
+
+      const yc = images[c].n[cot.po].y;
+      let min = Infinity, max = -Infinity, estMin = true;
+      for (let i = 0; i < images.length; i++) {
+        if (Math.abs(images[i].t - images[c].t) > 0.30) continue;
+        const y = images[i].n[cot.po].y;
+        if (y < yc - 1e-9) estMin = false;
+        if (y < min) min = y;
+        if (y > max) max = y;
+      }
+      if (!estMin) return null;
+
+      const haut = Math.abs((images[c].n[P.chG].y + images[c].n[P.chD].y) / 2 -
+                            (images[c].n[P.epG].y + images[c].n[P.epD].y) / 2) || 0.4;
+      if ((max - yc) < 0.18 * haut) return null;
+
+      dernierTir = images[c].t;
+      const m = mesurerTir(images, c, cot);
+      this.tirs.push(m);
+      return m;
+    }
+  };
+}
+
 /* --------------------------------------------------------- point d'entrée */
 export async function analyserVideo(video, options = {}) {
   const main = options.main === 'G' ? 'G' : 'D';
@@ -189,9 +250,7 @@ export async function analyserVideo(video, options = {}) {
     return { erreur: 'joueur_non_detecte', images: images.length, cadrage };
   }
 
-  const cote = main === 'D'
-    ? { po:P.poD, co:P.coD, ep:P.epD, ix:P.idxD, poAutre:P.poG, ge:P.geD, ha:P.haD, ch:P.chD }
-    : { po:P.poG, co:P.coG, ep:P.epG, ix:P.idxG, poAutre:P.poD, ge:P.geG, ha:P.haG, ch:P.chG };
+  const cote = coteDe(main);
 
   const ref = images[Math.floor(images.length/2)];
   const hauteurCorps = Math.abs((ref.n[P.chG].y + ref.n[P.chD].y)/2 -

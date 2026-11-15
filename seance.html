@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Bizon — séance de tir</title>
+<style>
+  :root{--fond:#141210;--carte:#1C1A16;--trait:#322C22;--encre:#F4F1EA;
+        --gris:#A09A8E;--gris2:#6A6559;--or:#C9A227;--vert:#4FD894;--rouge:#FF6E5E}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--fond);color:var(--encre);overflow:hidden;
+       font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  #vue{position:fixed;inset:0;object-fit:cover;width:100%;height:100%;background:#000}
+  #voile{position:fixed;inset:0;background:linear-gradient(180deg,rgba(10,9,7,.75) 0%,rgba(10,9,7,.1) 32%,rgba(10,9,7,.1) 58%,rgba(10,9,7,.88) 100%)}
+  .ecran{position:fixed;inset:0;display:flex;flex-direction:column;padding:22px;overflow:auto}
+  .tit{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);margin:0 0 10px}
+  .carte{background:var(--carte);border:1px solid var(--trait);border-radius:14px;padding:16px;margin-bottom:14px}
+  .cta{display:block;width:100%;background:var(--or);color:#100E0A;border:0;border-radius:12px;
+       padding:16px;font-size:17px;font-weight:700;cursor:pointer}
+  .sec{background:transparent;color:var(--encre);border:1px solid var(--trait);border-radius:12px;
+       padding:12px 16px;font-size:15px;cursor:pointer}
+  .sec.on{border-color:var(--or);color:var(--or);font-weight:700}
+  .haut{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .compte{font-size:64px;line-height:.9;font-weight:800;font-variant-numeric:tabular-nums}
+  .compte small{display:block;font-size:11px;font-weight:400;letter-spacing:.16em;
+                text-transform:uppercase;color:var(--gris);margin-top:6px}
+  .score{text-align:right;font-variant-numeric:tabular-nums}
+  .score b{font-size:30px}
+  .bas{position:relative;margin-top:auto}
+  .duo{display:flex;gap:12px}
+  .duo button{flex:1;border:0;border-radius:14px;padding:20px 0;font-size:17px;font-weight:700;cursor:pointer}
+  .panier{background:var(--vert);color:#06281A}
+  .rate{background:#2A2622;color:var(--encre);border:1px solid var(--trait)!important}
+  .retour{position:relative;background:rgba(20,18,16,.86);border:1px solid var(--trait);
+          border-radius:12px;padding:12px 14px;margin-bottom:12px;min-height:54px}
+  .retour .c{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--or)}
+  .retour .m{font-size:15px;margin-top:3px}
+  .mes{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--trait);font-size:14px}
+  .mes:last-child{border-bottom:0}
+  .mes .n{flex:1}
+  .mes .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .ok{color:var(--vert)} .ko{color:var(--rouge)} .nd{color:var(--gris2);font-weight:400}
+  .note{font-size:12px;color:var(--gris);line-height:1.5}
+  .err{color:var(--rouge);font-size:14px;margin-top:10px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<video id="vue" playsinline muted hidden></video>
+<div id="voile" hidden></div>
+
+<!-- ============ 1. réglages ============ -->
+<div class="ecran" id="ecranDepart">
+  <h1 style="font-size:22px;margin:0 0 4px">Séance de tir</h1>
+  <div class="note" style="margin-bottom:18px">Bizon Training · mesure en direct</div>
+
+  <div class="carte">
+    <p class="tit">Main de tir</p>
+    <div style="display:flex;gap:10px">
+      <button class="sec on" id="mD" style="flex:1">Droitier</button>
+      <button class="sec" id="mG" style="flex:1">Gaucher</button>
+    </div>
+  </div>
+
+  <div class="carte">
+    <p class="tit">Coach vocal</p>
+    <div style="display:flex;gap:10px">
+      <button class="sec on" id="vOui" style="flex:1">Avec la voix</button>
+      <button class="sec" id="vNon" style="flex:1">En silence</button>
+    </div>
+    <div class="note" style="margin-top:10px">
+      La correction est lue à voix haute après chaque tir, une phrase, la plus utile.
+      Mets tes écouteurs : le son part dedans automatiquement.
+    </div>
+  </div>
+
+  <div class="carte">
+    <p class="tit">Avant de commencer</p>
+    <div class="note">
+      Pose le téléphone à trois ou quatre mètres, calé contre un mur ou sur un trépied,
+      de face ou de trois quarts. Tu dois apparaître <b>en entier, pieds compris</b>.
+      L'écran reste allumé pendant la séance.
+    </div>
+  </div>
+
+  <button class="cta" id="demarrer">Démarrer la séance</button>
+  <div class="err" id="erreur"></div>
+  <div class="note" style="margin-top:14px">
+    Les images ne quittent jamais ce téléphone et ne sont pas enregistrées.
+    Seuls les chiffres du geste sont conservés, à la fin, si tu enregistres la séance.
+  </div>
+</div>
+
+<!-- ============ 2. séance ============ -->
+<div class="ecran" id="ecranSeance" hidden>
+  <div class="haut">
+    <div>
+      <div class="compte" id="nbTirs">0</div>
+      <small>tirs mesurés</small>
+    </div>
+    <div class="score">
+      <b id="score">0/0</b>
+      <small style="display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);margin-top:6px">réussite</small>
+    </div>
+  </div>
+
+  <div class="bas">
+    <div class="retour" id="retour">
+      <div class="c" id="retourTitre">En attente</div>
+      <div class="m" id="retourTexte">Place-toi dans le cadre et tire.</div>
+    </div>
+    <div class="duo" style="margin-bottom:12px">
+      <button class="panier" id="bPanier">Panier</button>
+      <button class="rate" id="bRate">Raté</button>
+    </div>
+    <button class="sec" id="arreter" style="width:100%">Terminer la séance</button>
+  </div>
+</div>
+
+<!-- ============ 3. bilan ============ -->
+<div class="ecran" id="ecranBilan" hidden>
+  <h1 style="font-size:22px;margin:0 0 14px">Bilan de la séance</h1>
+  <div class="carte">
+    <p class="tit">Moyenne sur la série</p>
+    <div id="bilan"></div>
+  </div>
+  <div class="carte" id="carteReg" hidden>
+    <p class="tit">Régularité</p>
+    <div id="regularite"></div>
+  </div>
+  <button class="cta" id="enregistrer">Enregistrer la séance</button>
+  <div class="err" id="erreur2"></div>
+  <button class="sec" id="recommencer" style="width:100%;margin-top:12px">Nouvelle séance</button>
+</div>
+
+<script type="module">
+import { chargerModele, creerSeance, moyennes, resume, juger, SEUILS, VERSION } from './biomeca.js';
+
+const $ = i => document.getElementById(i);
+let MAIN = 'D', VOIX = true;
+let flux = null, boucle = null, seance = null, verrou = null;
+let pl = null, marques = 0, tentatives = 0, dernierMot = 0;
+
+$('mD').onclick = () => { MAIN='D'; $('mD').classList.add('on'); $('mG').classList.remove('on'); };
+$('mG').onclick = () => { MAIN='G'; $('mG').classList.add('on'); $('mD').classList.remove('on'); };
+$('vOui').onclick = () => { VOIX=true; $('vOui').classList.add('on'); $('vNon').classList.remove('on'); };
+$('vNon').onclick = () => { VOIX=false; $('vNon').classList.add('on'); $('vOui').classList.remove('on'); };
+
+/* ---------------------------------------------------- la voix du coach */
+const PHRASES = {
+  extension:  'Tends ton bras jusqu’au bout.',
+  ecartCoude: 'Ramène ton coude sous le ballon.',
+  appuisEtroit:'Écarte tes appuis, largeur d’épaules.',
+  appuisLarge: 'Resserre tes appuis.',
+  derive:     'Retombe sur place, reste équilibré.',
+  mainGuide:  'Ta main guide pousse. Laisse-la tranquille.',
+  poignet:    'Casse ton poignet après le tir.'
+};
+function parler(texte) {
+  if (!VOIX || !window.speechSynthesis) return;
+  const t = Date.now(); if (t - dernierMot < 2600) return; dernierMot = t;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texte);
+    u.lang = 'fr-FR'; u.rate = 1.05; u.pitch = 1;
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* quelle correction dire : le critère le plus loin de sa cible */
+function correction(m) {
+  const cands = [];
+  const d = (cle, ecart, phrase) => cands.push({ cle, ecart, phrase });
+  if (isFinite(m.extension) && m.extension < 160) d('extension', (160 - m.extension) / 160, PHRASES.extension);
+  if (isFinite(m.ecartCoude) && m.ecartCoude > 0.22) d('ecartCoude', (m.ecartCoude - 0.22) / 0.22, PHRASES.ecartCoude);
+  if (isFinite(m.appuis) && m.appuis < 0.85) d('appuis', (0.85 - m.appuis) / 0.85, PHRASES.appuisEtroit);
+  if (isFinite(m.appuis) && m.appuis > 1.35) d('appuis', (m.appuis - 1.35) / 1.35, PHRASES.appuisLarge);
+  if (isFinite(m.derive) && m.derive > 0.10) d('derive', (m.derive - 0.10) / 0.10, PHRASES.derive);
+  if (isFinite(m.mainGuide) && m.mainGuide > 0.25) d('mainGuide', (m.mainGuide - 0.25) / 0.25, PHRASES.mainGuide);
+  if (isFinite(m.poignet) && m.poignet > 150) d('poignet', (m.poignet - 150) / 150, PHRASES.poignet);
+  if (!cands.length) return null;
+  cands.sort((a, b) => b.ecart - a.ecart);
+  return cands[0];
+}
+
+/* ------------------------------------------------------------ démarrage */
+$('demarrer').onclick = async () => {
+  $('erreur').textContent = '';
+  try {
+    // amorcer la voix pendant le geste de l'utilisateur (exigence iOS)
+    if (VOIX && window.speechSynthesis) {
+      const u = new SpeechSynthesisUtterance(' '); u.volume = 0; window.speechSynthesis.speak(u);
+    }
+    try { verrou = await navigator.wakeLock.request('screen'); } catch (e) {}
+
+    $('demarrer').textContent = 'Chargement du modèle…';
+    pl = await chargerModele(null, 'leger');
+
+    $('demarrer').textContent = 'Accès à la caméra…';
+    flux = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    const v = $('vue');
+    v.srcObject = flux; v.hidden = false; $('voile').hidden = false;
+    await v.play();
+
+    seance = creerSeance(MAIN);
+    marques = 0; tentatives = 0;
+    $('nbTirs').textContent = '0'; $('score').textContent = '0/0';
+    $('ecranDepart').hidden = true; $('ecranSeance').hidden = false;
+    tourner();
+  } catch (e) {
+    $('demarrer').textContent = 'Démarrer la séance';
+    $('erreur').textContent = 'Impossible de démarrer : ' + (e && e.message ? e.message : e);
+  }
+};
+
+function tourner() {
+  const v = $('vue');
+  const pas = () => {
+    if (!seance) return;
+    let r = null;
+    try { r = pl.detectForVideo(v, performance.now()); } catch (e) {}
+    if (r && r.landmarks && r.landmarks[0]) {
+      const t = performance.now() / 1000;
+      const m = seance.ajouter(r.landmarks[0], (r.worldLandmarks && r.worldLandmarks[0]) || r.landmarks[0], t);
+      if (m) surTir(m);
+    }
+    boucle = requestAnimationFrame(pas);
+  };
+  boucle = requestAnimationFrame(pas);
+}
+
+function surTir(m) {
+  $('nbTirs').textContent = seance.tirs.length;
+  const c = correction(m);
+  if (c) {
+    $('retourTitre').textContent = SEUILS[c.cle] ? SEUILS[c.cle].libelle : 'À corriger';
+    $('retourTexte').textContent = c.phrase;
+    parler(c.phrase);
+  } else {
+    $('retourTitre').textContent = 'Geste propre';
+    $('retourTexte').textContent = 'Rien à corriger sur ce tir.';
+    parler('C’est le bon geste. Refais exactement ça.');
+  }
+}
+
+$('bPanier').onclick = () => { marques++; tentatives++; majScore(); };
+$('bRate').onclick  = () => { tentatives++; majScore(); };
+function majScore() { $('score').textContent = marques + '/' + tentatives; }
+
+/* --------------------------------------------------------------- bilan */
+$('arreter').onclick = () => {
+  if (boucle) cancelAnimationFrame(boucle);
+  if (flux) flux.getTracks().forEach(t => t.stop());
+  try { if (verrou) verrou.release(); } catch (e) {}
+  try { window.speechSynthesis.cancel(); } catch (e) {}
+  $('vue').hidden = true; $('voile').hidden = true;
+  $('ecranSeance').hidden = true; $('ecranBilan').hidden = false;
+  afficherBilan();
+};
+
+let dernierResume = null;
+function afficherBilan() {
+  const R = {
+    version: VERSION, main: MAIN, tirs: seance.tirs,
+    regularite: null, qualite: { cadrage: 1, suffisant: true }
+  };
+  if (seance.tirs.length >= 3) {
+    const ext = seance.tirs.map(t => t.extension).filter(isFinite);
+    const dur = seance.tirs.map(t => t.duree).filter(isFinite);
+    const moy = a => a.reduce((s, x) => s + x, 0) / (a.length || 1);
+    const et  = a => Math.sqrt(moy(a.map(x => (x - moy(a)) * (x - moy(a)))));
+    R.regularite = { nbTirs: ext.length, extensionEcartType: et(ext),
+                     dureeEcartType: et(dur), dureeMoyenne: moy(dur) };
+  }
+  const M = moyennes(R) || {};
+  dernierResume = resume(R);
+  if (dernierResume) dernierResume.reussite = tentatives ? (marques + '/' + tentatives) : null;
+
+  if (!seance.tirs.length) {
+    $('bilan').innerHTML = '<div class="note">Aucun tir n’a été reconnu. La prochaine fois, ' +
+      'recule le téléphone pour être entier dans le cadre, et vérifie la lumière.</div>';
+    $('enregistrer').disabled = true; $('enregistrer').style.opacity = .45;
+    return;
+  }
+  $('bilan').innerHTML =
+    '<div class="mes"><div class="n">Tirs mesurés</div><div class="v nd">' + seance.tirs.length + '</div></div>' +
+    (tentatives ? '<div class="mes"><div class="n">Réussite</div><div class="v nd">' + marques + '/' + tentatives + '</div></div>' : '') +
+    Object.keys(SEUILS).map(cle => {
+      const v = M[cle]; if (!v) return '';
+      const s = SEUILS[cle], bon = juger(cle, v.moyenne);
+      const u = s.pourcent ? '%' : s.unite;
+      const val = s.pourcent ? (v.moyenne * 100).toFixed(1)
+                             : (s.unite === 's' ? v.moyenne.toFixed(2) : v.moyenne.toFixed(1));
+      return '<div class="mes"><div class="n">' + s.libelle +
+             (v.juges ? ' <span style="opacity:.5;font-size:11px">' + v.dans + '/' + v.juges + '</span>' : '') +
+             '</div><div class="v ' + (bon === null ? 'nd' : (bon ? 'ok' : 'ko')) + '">' + val + ' ' + u + '</div></div>';
+    }).join('');
+
+  if (R.regularite) {
+    $('carteReg').hidden = false;
+    $('regularite').innerHTML =
+      '<div class="mes"><div class="n">Constance de l’extension</div><div class="v ' +
+        (R.regularite.extensionEcartType <= 6 ? 'ok' : 'ko') + '">± ' + R.regularite.extensionEcartType.toFixed(1) + ' °</div></div>' +
+      '<div class="mes"><div class="n">Constance du rythme</div><div class="v ' +
+        (R.regularite.dureeEcartType <= 0.12 ? 'ok' : 'ko') + '">± ' + (R.regularite.dureeEcartType * 1000).toFixed(0) + ' ms</div></div>';
+  }
+}
+
+/* ------------------------------------------------ enregistrement */
+async function api(action, charge) {
+  const src = await fetch('./index.html', { cache: 'reload' }).then(r => r.text());
+  const url = (src.match(/https:\/\/[a-z0-9]+\.supabase\.co\/functions\/v1\/api/i) || [])[0];
+  const cle = (src.match(/sb_publishable_[A-Za-z0-9_\-]+/) || [])[0];
+  const code = localStorage.getItem('bizon_access_code');
+  if (!url || !cle || !code) throw new Error('Connecte-toi d’abord dans l’application.');
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': cle, 'Authorization': 'Bearer ' + cle },
+    body: JSON.stringify(Object.assign({ action: action, access_code: code }, charge || {}))
+  });
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error(j.error || ('Erreur ' + r.status));
+  return j;
+}
+
+$('enregistrer').onclick = async () => {
+  $('erreur2').textContent = '';
+  if (!dernierResume) return;
+  $('enregistrer').disabled = true;
+  $('enregistrer').textContent = 'Enregistrement…';
+  try {
+    await api('saveShotMetrics', { source: 'direct', mesures: dernierResume, tirs: seance.tirs });
+    $('enregistrer').textContent = 'Séance enregistrée';
+    $('enregistrer').style.background = '#4FD894';
+  } catch (e) {
+    $('enregistrer').disabled = false;
+    $('enregistrer').textContent = 'Enregistrer la séance';
+    $('erreur2').textContent = e.message || String(e);
+  }
+};
+
+$('recommencer').onclick = () => location.reload();
+</script>
+</body>
+</html>
