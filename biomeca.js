@@ -228,14 +228,39 @@ export async function analyserVideo(video, options = {}) {
   };
 }
 
+/* ------------------------------------------------ moyenne sur la série */
+/* Moyenne de chaque mesure sur TOUS les tirs détectés, qu'ils soient
+   marqués ou ratés : on mesure le geste, pas le résultat. Pour chaque
+   mesure on renvoie aussi combien de tirs sont dans la cible. */
+export function moyennes(r) {
+  if (!r || r.erreur) return null;
+  const out = {};
+  for (const cle of Object.keys(SEUILS)) {
+    const vals = r.tirs.map(t => t[cle]).filter(isFinite);
+    if (!vals.length) continue;
+    const avis = r.tirs.map(t => juger(cle, t[cle])).filter(a => a !== null);
+    out[cle] = {
+      moyenne: moyenne(vals),
+      min: Math.min(...vals),
+      max: Math.max(...vals),
+      ecartType: ecartType(vals),
+      dans: avis.filter(Boolean).length,
+      juges: avis.length,
+      total: r.tirs.length
+    };
+  }
+  return out;
+}
+
 /* ------------------------------------------- résumé prêt à être stocké */
 /* Ce que l'application enverra à Supabase : des nombres, jamais d'image. */
 export function resume(r) {
   if (!r || r.erreur) return null;
-  const m = {};
-  for (const cle of Object.keys(SEUILS)) {
-    const vals = r.tirs.map(t => t[cle]).filter(isFinite);
-    if (vals.length) m[cle] = +moyenne(vals).toFixed(3);
+  const moy = moyennes(r) || {};
+  const m = {}, conf = {};
+  for (const [cle, v] of Object.entries(moy)) {
+    m[cle] = +v.moyenne.toFixed(3);
+    if (v.juges) conf[cle] = v.dans + '/' + v.juges;
   }
   return {
     version: r.version,
@@ -243,6 +268,7 @@ export function resume(r) {
     nb_tirs: r.tirs.length,
     cadrage: +r.qualite.cadrage.toFixed(2),
     moyennes: m,
+    tirs_dans_la_cible: conf,
     regularite: r.regularite ? {
       extension_ecart_type: +r.regularite.extensionEcartType.toFixed(1),
       duree_ecart_type: +r.regularite.dureeEcartType.toFixed(3)

@@ -80,8 +80,17 @@
   <div class="note" style="margin-top:10px">Squelette à l'instant du relâcher du tir sélectionné.</div>
 </div>
 
+<div class="carte" id="cMoy" style="display:none">
+  <p class="tit">4 · Moyenne sur la série</p>
+  <div id="moy"></div>
+  <div class="note" style="margin-top:12px">
+    Moyenne sur <b id="nbT">0</b> tirs, marqués comme ratés — on mesure le geste, pas le résultat.
+    La colonne de droite indique combien de tirs sont dans la cible.
+  </div>
+</div>
+
 <div class="carte" id="cMes" style="display:none">
-  <p class="tit">4 · Mesures de ce tir</p>
+  <p class="tit">5 · Mesures de ce tir</p>
   <div id="res"></div>
   <div class="note" style="margin-top:12px">
     Touche <span class="faux">mesure fausse</span> quand un chiffre ne correspond pas à ce que tu vois.
@@ -90,17 +99,17 @@
 </div>
 
 <div class="carte" id="cReg" style="display:none">
-  <p class="tit">5 · Régularité sur la séquence</p>
+  <p class="tit">6 · Régularité sur la séquence</p>
   <div id="reg"></div>
 </div>
 
 <div class="carte" id="cCrit" style="display:none">
-  <p class="tit">6 · Critères de Williams</p>
+  <p class="tit">7 · Critères de Williams</p>
   <div id="crit"></div>
 </div>
 
 <div class="carte" id="cJson" style="display:none">
-  <p class="tit">7 · Ce qui serait enregistré</p>
+  <p class="tit">8 · Ce qui serait enregistré</p>
   <pre id="json"></pre>
   <div class="note" style="margin-top:10px">Des nombres uniquement — aucune image ne quitte le téléphone.</div>
 </div>
@@ -109,7 +118,7 @@
 </main>
 
 <script type="module">
-import { analyserVideo, resume, juger, SEUILS, P } from './biomeca.js';
+import { analyserVideo, resume, moyennes, juger, SEUILS, P } from './biomeca.js';
 
 const $ = i => document.getElementById(i);
 let MAIN='D', R=null, tirActif=0;
@@ -120,7 +129,7 @@ $('bG').onclick=()=>{MAIN='G';$('bG').classList.add('on');$('bD').classList.remo
 
 $('f').onchange = async e => {
   const file = e.target.files[0]; if (!file) return;
-  for (const id of ['cTirs','cMes','cReg','cCrit','cJson']) $(id).style.display='none';
+  for (const id of ['cTirs','cMoy','cMes','cReg','cCrit','cJson']) $(id).style.display='none';
   $('alerte').innerHTML=''; $('prog').style.width='0'; faux.clear();
   const v=$('v'); v.src=URL.createObjectURL(file);
 
@@ -145,6 +154,8 @@ $('f').onchange = async e => {
 
   tirActif = 0;
   dessinerOnglets();
+  afficherMoyennes();
+  afficherCriteres();
   afficherTir(0);
   afficherRegularite();
   $('cJson').style.display='block';
@@ -220,7 +231,6 @@ function afficherTir(i){
     if(faux.has(id)) faux.delete(id); else faux.add(id);
     afficherTir(i);
   });
-  afficherCriteres(t);
 }
 
 function afficherRegularite(){
@@ -244,20 +254,43 @@ function afficherRegularite(){
        <div class="c">repère</div></div>`;
 }
 
-function afficherCriteres(t){
+let M=null;
+function afficherMoyennes(){
+  M = moyennes(R);
+  $('cMoy').style.display='block';
+  $('nbT').textContent = R.tirs.length;
+  $('moy').innerHTML = Object.keys(SEUILS).map(cle=>{
+    const v=M[cle]; if(!v) return '';
+    const bon=juger(cle,v.moyenne);
+    const u=SEUILS[cle].pourcent?'%':SEUILS[cle].unite;
+    const etendue = SEUILS[cle].pourcent
+      ? (v.min*100).toFixed(0)+'–'+(v.max*100).toFixed(0)
+      : (SEUILS[cle].unite==='s' ? v.min.toFixed(2)+'–'+v.max.toFixed(2)
+                                 : v.min.toFixed(0)+'–'+v.max.toFixed(0));
+    return `<div class="mes">
+      <div class="n">${SEUILS[cle].libelle}
+        <div style="font-size:11px;color:var(--gris2)">amplitude ${etendue}${u}</div></div>
+      <div class="v ${bon===null?'nd':(bon?'ok':'ko')}">${fmt(cle,v.moyenne)}<span style="font-size:11px;font-weight:400"> ${u}</span></div>
+      <div class="c">${v.juges ? v.dans+'/'+v.juges+' dans la cible' : 'repère'}</div></div>`;
+  }).join('');
+}
+
+function afficherCriteres(){
   const g=R.regularite;
   const C=[
-    ['Alignement du corps et largeur des appuis','appuis',t.appuis],
-    ['Équilibre général','derive',t.derive],
-    ['Coude aligné sous le ballon','ecartCoude',t.ecartCoude],
-    ['Extension complète du bras','extension',t.extension],
-    ['Suivi du geste, poignet fléchi','poignet',t.poignet],
-    ['Main guide stabilisatrice','mainGuide',t.mainGuide]
+    ['Alignement du corps et largeur des appuis','appuis'],
+    ['Équilibre général','derive'],
+    ['Coude aligné sous le ballon','ecartCoude'],
+    ['Extension complète du bras','extension'],
+    ['Suivi du geste, poignet fléchi','poignet'],
+    ['Main guide stabilisatrice','mainGuide']
   ];
-  let h = C.map(([nom,cle,val])=>{
-    const bon=juger(cle,val);
-    return `<div class="mes"><div class="n">${nom}</div>
-      <div class="v ${bon?'ok':'ko'}" style="font-size:14px">${fmt(cle,val)}${SEUILS[cle].pourcent?'%':SEUILS[cle].unite}</div></div>`;
+  let h = C.map(([nom,cle])=>{
+    const v=M && M[cle]; if(!v) return '';
+    const bon=juger(cle,v.moyenne);
+    return `<div class="mes"><div class="n">${nom}
+        <div style="font-size:11px;color:var(--gris2)">${v.dans}/${v.juges} tirs dans la cible</div></div>
+      <div class="v ${bon?'ok':'ko'}" style="font-size:14px">${fmt(cle,v.moyenne)}${SEUILS[cle].pourcent?'%':SEUILS[cle].unite}</div></div>`;
   }).join('');
   h += g
     ? `<div class="mes"><div class="n">Régularité et fluidité du geste</div>
