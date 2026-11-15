@@ -4426,7 +4426,29 @@ async function loadPlayerIronmanBox(playerId, playerName){
     }
   }
 
-  function balayer() { injecter(); mesuresCoach(); }
+  // 7. entree vers la seance en direct, dans la grille des ateliers du joueur
+  const ICONE_SEANCE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/>' +
+    '<path d="M3 9V6.5A2.5 2.5 0 0 1 5.5 4H8M21 9V6.5A2.5 2.5 0 0 0 18.5 4H16"/>' +
+    '<path d="M3 15v2.5A2.5 2.5 0 0 0 5.5 20H8M21 15v2.5a2.5 2.5 0 0 1-2.5 2.5H16"/><\/svg>';
+
+  function entreeSeance() {
+    try {
+      if (document.getElementById('bz-entree-seance')) return;
+      if (typeof window.tileHTML !== 'function') return;
+      const grilles = document.querySelectorAll('.app-grid-3');
+      let grille = null;
+      for (const g of grilles) if (/S\u00e9ances de tir/i.test(g.textContent || '')) grille = g;
+      if (!grille) return;
+      const d = document.createElement('div');
+      d.id = 'bz-entree-seance';
+      d.style.display = 'contents';
+      d.innerHTML = window.tileHTML("location.href='./seance.html'", ICONE_SEANCE,
+        'var(--gold4)', 'Mesure en direct', 'Ton geste corrig\u00e9 \u00e0 chaque tir');
+      grille.appendChild(d);
+    } catch (e) {}
+  }
+  function balayer() { injecter(); entreeSeance(); mesuresCoach(); }
   try { new MutationObserver(balayer).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
   balayer();
 })();
