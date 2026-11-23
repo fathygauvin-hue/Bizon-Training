@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Bizon — exemple de bilan 360</title>
+<style>
+  :root{--fond:#141210;--carte:#1C1A16;--trait:#322C22;--encre:#F4F1EA;
+        --gris:#A09A8E;--gris2:#6A6559;--or:#C9A227;--vert:#4FD894;--rouge:#FF6E5E}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--fond);color:var(--encre);
+       font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  main{max-width:720px;margin:0 auto;padding:22px}
+  h1{font-size:22px;margin:0 0 4px}
+  .tit{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);margin:0 0 10px}
+  .carte{background:var(--carte);border:1px solid var(--trait);border-radius:14px;padding:16px;margin-bottom:14px}
+  .bandeau{border:1px solid #5A3A20;background:#2A1E12;border-radius:12px;padding:12px 14px;
+           font-size:13px;color:#E8C9A0;margin-bottom:16px}
+  .mes{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--trait);font-size:14px}
+  .mes:last-child{border-bottom:0}
+  .mes .n{flex:1}
+  .mes .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .src{display:block;font-size:10.5px;color:var(--gris2);margin-top:2px}
+  .ok{color:var(--vert)} .ko{color:var(--rouge)} .nd{color:var(--gris2);font-weight:400}
+  .note{font-size:12px;color:var(--gris);line-height:1.5}
+  .th{font-weight:700;font-size:14px}
+  .etape{margin:18px 0 6px;display:flex;align-items:baseline;gap:8px}
+  .moyE{font-size:12px;color:var(--or);font-variant-numeric:tabular-nums}
+  .b5{width:26px;height:26px;padding:0;border-radius:7px;font-size:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bilan 360° — exemple</h1>
+  <div class="note" style="margin-bottom:16px">40 lancers francs · 4 positions de caméra · droitier</div>
+  <div class="bandeau">
+    Données fabriquées pour l'exemple. Les calculs, eux, sont ceux du vrai moteur :
+    choix des angles, moyennes, notes proposées et moyennes par étape.
+  </div>
+
+  <div class="carte">
+    <p class="tit" id="titreMes">Mesures</p>
+    <div id="mesures"></div>
+  </div>
+
+  <div class="carte">
+    <p class="tit">Dérive sur la série</p>
+    <div id="fatigue"></div>
+  </div>
+
+  <div class="carte">
+    <p class="tit">Grille de Williams · lancer franc</p>
+    <div class="note" style="margin:-4px 0 14px">
+      Note proposée par la mesure, à corriger d'un geste. Les critères sans mesure restent au coach.
+    </div>
+    <div id="grille"></div>
+  </div>
+</main>
+
+<script type="module">
+import { SEUILS, ANGLES, bilan360, fatigue, remplirGrille } from './biomeca.js';
+
+/* ---- un joueur plausible : coude qui s'écarte, bras pas tout à fait tendu,
+       finish qui part à droite, et un geste qui se dégrade sur la fin ---- */
+let graine = 7;
+const alea = () => { graine = (graine * 1103515245 + 12345) % 2147483648; return graine / 2147483648; };
+const bruit = a => (alea() - 0.5) * 2 * a;
+
+function tir(k) {
+  const usure = k / 39;
+  return {
+    extension:      154 - 6 * usure + bruit(4),
+    ecartCoude:     0.29 + 0.03 * usure + bruit(0.04),
+    appuis:         1.02 + bruit(0.06),
+    derive:         0.07 + 0.03 * usure + bruit(0.02),
+    mainGuide:      0.16 + bruit(0.05),
+    poignet:        144 + bruit(7),
+    axeFinish:      0.34 + bruit(0.05),
+    hauteurRel:     0.53 + bruit(0.02),
+    duree:          0.82 + 0.09 * usure + bruit(0.04),
+    flexion:        121 + bruit(5),
+    ouverturePieds: 21 + bruit(7),
+    poidsLateral:   0.08 + bruit(0.03),
+    postureGenou:   167 + bruit(4),
+    genouxValgus:   0.10 + bruit(0.03),
+    poidsCharge:    0.12 + bruit(0.03),
+    descenteDuree:  0.40 + bruit(0.05),
+    synchro:        0.13 + bruit(0.05),
+    parasites:      6.5 + 2 * usure + bruit(2),
+    avantBras:      13 + bruit(4),
+    coudeHaut:      0.03 + bruit(0.02),
+    maintien:       1.05 - 0.25 * usure + bruit(0.15),
+    stabilite:      0.06 + 0.02 * usure + bruit(0.02)
+  };
+}
+
+const ORDRE = ['face', 'cote_tir', 'cote_oppose', 'derriere'];
+let k = 0, tous = [];
+const series = ORDRE.map(a => {
+  const t = []; for (let i = 0; i < 10; i++) { const m = tir(k++); t.push(m); tous.push(m); }
+  return { angle: a, tirs: t };
+});
+
+const B = bilan360(series);
+const fat = fatigue(tous);
+const NOM = a => (ANGLES[a] ? ANGLES[a].label : a);
+const F = (cle, v) => {
+  const s = SEUILS[cle];
+  if (!s || !isFinite(v)) return '—';
+  if (s.pourcent) return (v * 100).toFixed(1) + ' %';
+  if (s.unite === 's') return v.toFixed(2) + ' s';
+  return v.toFixed(1) + ' ' + s.unite;
+};
+const juge = (cle, v) => {
+  const s = SEUILS[cle];
+  if (!s || !isFinite(v)) return null;
+  if (s.min !== undefined && v < s.min) return false;
+  if (s.max !== undefined && v > s.max) return false;
+  if (s.min === undefined && s.max === undefined) return null;
+  return true;
+};
+
+document.getElementById('titreMes').textContent = tous.length + ' tirs · 4 positions';
+document.getElementById('mesures').innerHTML = Object.keys(SEUILS).map(cle => {
+  const v = B[cle]; if (!v) return '';
+  const bon = juge(cle, v.moyenne);
+  return '<div class="mes"><div class="n">' + SEUILS[cle].libelle +
+    (v.juges ? ' <span style="opacity:.5;font-size:11px">' + v.dans + '/' + v.juges + '</span>' : '') +
+    '<span class="src">' + v.angles.map(NOM).join(' + ') + ' · ' + v.nbTirs + ' tirs' +
+    (v.niveau === 'estimee' ? ' · estimé' : '') + (SEUILS[cle].acaler ? ' · seuil à caler' : '') +
+    '</span></div><div class="v ' + (bon === null ? 'nd' : (bon ? 'ok' : 'ko')) + '">' +
+    F(cle, v.moyenne) + '</div></div>';
+}).join('');
+
+document.getElementById('fatigue').innerHTML =
+  '<div class="mes"><div class="n">Extension du bras<span class="src">' +
+    fat.extensionDebut.toFixed(1) + ' ° au début → ' + fat.extensionFin.toFixed(1) + ' ° à la fin</span></div>' +
+  '<div class="v ' + (fat.extensionDelta < -4 ? 'ko' : 'ok') + '">' +
+    (fat.extensionDelta >= 0 ? '+' : '') + fat.extensionDelta.toFixed(1) + ' °</div></div>' +
+  '<div class="mes"><div class="n">Rythme du geste<span class="src">' +
+    (fat.dureeDelta >= 0 ? 'plus lent sur la fin' : 'plus rapide sur la fin') + '</span></div>' +
+  '<div class="v ' + (Math.abs(fat.dureeDelta) > 0.12 ? 'ko' : 'ok') + '">' +
+    (fat.dureeDelta >= 0 ? '+' : '') + (fat.dureeDelta * 1000).toFixed(0) + ' ms</div></div>' +
+  '<div class="note" style="margin-top:10px">Les ' + fat.tirsCompares +
+    ' premiers tirs comparés aux ' + fat.tirsCompares + ' derniers.</div>';
+
+const ext = tous.map(t => t.extension);
+const moyE = ext.reduce((s, x) => s + x, 0) / ext.length;
+const routine = Math.sqrt(ext.reduce((s, x) => s + (x - moyE) * (x - moyE), 0) / ext.length);
+let lignes = remplirGrille(B, { routine: routine });
+
+const MANQUE = { ballon: 'ballon non suivi', mains: 'mains non détectées', coach: 'jugé par le coach' };
+
+function dessiner() {
+  const etapes = [];
+  lignes.forEach((l, i) => {
+    let e = etapes.find(x => x.nom === l.etape);
+    if (!e) { e = { nom: l.etape, lignes: [] }; etapes.push(e); }
+    e.lignes.push({ l: l, i: i });
+  });
+  document.getElementById('grille').innerHTML = etapes.map(e => {
+    const n = e.lignes.map(x => x.l.note).filter(v => v !== null);
+    const moy = n.length ? (n.reduce((s, v) => s + v, 0) / n.length).toFixed(1) + ' / 5' : '—';
+    return '<div class="etape"><div class="th" style="flex:1">' + e.nom + '</div>' +
+      '<div class="moyE">' + moy + '</div></div>' +
+      e.lignes.map(x => {
+        const l = x.l;
+        const sous = l.mesure && l.valeur !== null
+          ? (SEUILS[l.mesure] ? SEUILS[l.mesure].libelle + ' ' + F(l.mesure, l.valeur) : 'Routine ± ' + l.valeur.toFixed(1) + ' °') +
+            (l.angles ? ' · ' + l.angles.map(NOM).join(' + ') : '') + (l.acaler ? ' · seuil à caler' : '')
+          : (l.manque ? MANQUE[l.manque] : 'mesure sans cible');
+        const b = [1, 2, 3, 4, 5].map(v =>
+          '<button class="b5" data-i="' + x.i + '" data-n="' + v + '" style="border:1px solid ' +
+          (l.note === v ? 'var(--or)' : 'var(--trait)') + ';background:' + (l.note === v ? 'var(--or)' : 'transparent') +
+          ';color:' + (l.note === v ? '#100E0A' : 'var(--gris)') + ';font-weight:' + (l.note === v ? '700' : '400') + '">' +
+          v + '</button>').join('');
+        return '<div class="mes"><div class="n">' + l.critere +
+          '<span class="src">' + sous + (l.corrigee ? ' · corrigé' : (l.note !== null ? ' · proposé' : '')) +
+          '</span></div><div style="display:flex;gap:4px">' + b + '</div></div>';
+      }).join('');
+  }).join('');
+  document.querySelectorAll('button[data-n]').forEach(b => {
+    b.onclick = () => { lignes[+b.dataset.i].note = +b.dataset.n; lignes[+b.dataset.i].corrigee = true; dessiner(); };
+  });
+}
+dessiner();
+</script>
+</body>
+</html>
