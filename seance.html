@@ -13,7 +13,7 @@
   body{margin:0;background:var(--fond);color:var(--encre);overflow:hidden;
        font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
   #vue{position:fixed;inset:0;object-fit:cover;width:100%;height:100%;background:#000}
-  #voile{position:fixed;inset:0;background:linear-gradient(180deg,rgba(10,9,7,.75) 0%,rgba(10,9,7,.1) 32%,rgba(10,9,7,.1) 58%,rgba(10,9,7,.88) 100%)}
+  #voile{position:fixed;inset:0;background:linear-gradient(180deg,rgba(10,9,7,.78) 0%,rgba(10,9,7,.12) 30%,rgba(10,9,7,.12) 56%,rgba(10,9,7,.9) 100%)}
   .ecran{position:fixed;inset:0;display:flex;flex-direction:column;padding:22px;overflow:auto}
   .tit{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);margin:0 0 10px}
   .carte{background:var(--carte);border:1px solid var(--trait);border-radius:14px;padding:16px;margin-bottom:14px}
@@ -23,17 +23,18 @@
        padding:12px 16px;font-size:15px;cursor:pointer}
   .sec.on{border-color:var(--or);color:var(--or);font-weight:700}
   .haut{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-  .compte{font-size:64px;line-height:.9;font-weight:800;font-variant-numeric:tabular-nums}
-  .compte small{display:block;font-size:11px;font-weight:400;letter-spacing:.16em;
-                text-transform:uppercase;color:var(--gris);margin-top:6px}
+  .compte{font-size:60px;line-height:.9;font-weight:800;font-variant-numeric:tabular-nums}
+  .lab{font-size:11px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);margin-top:6px}
   .score{text-align:right;font-variant-numeric:tabular-nums}
-  .score b{font-size:30px}
+  .score b{font-size:28px}
+  .jauge{position:relative;height:5px;background:rgba(255,255,255,.14);border-radius:3px;margin-top:14px;overflow:hidden}
+  .jauge i{display:block;height:100%;width:0;background:var(--or);transition:width .25s}
   .bas{position:relative;margin-top:auto}
   .duo{display:flex;gap:12px}
   .duo button{flex:1;border:0;border-radius:14px;padding:20px 0;font-size:17px;font-weight:700;cursor:pointer}
   .panier{background:var(--vert);color:#06281A}
   .rate{background:#2A2622;color:var(--encre);border:1px solid var(--trait)!important}
-  .retour{position:relative;background:rgba(20,18,16,.86);border:1px solid var(--trait);
+  .retour{position:relative;background:rgba(20,18,16,.88);border:1px solid var(--trait);
           border-radius:12px;padding:12px 14px;margin-bottom:12px;min-height:54px}
   .retour .c{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--or)}
   .retour .m{font-size:15px;margin-top:3px}
@@ -41,9 +42,18 @@
   .mes:last-child{border-bottom:0}
   .mes .n{flex:1}
   .mes .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .src{display:block;font-size:10.5px;color:var(--gris2);letter-spacing:.04em;margin-top:2px}
   .ok{color:var(--vert)} .ko{color:var(--rouge)} .nd{color:var(--gris2);font-weight:400}
   .note{font-size:12px;color:var(--gris);line-height:1.5}
   .err{color:var(--rouge);font-size:14px;margin-top:10px}
+  .pos{position:relative;text-align:center;margin:auto 0}
+  .pos .n{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--or)}
+  .pos h2{font-size:30px;margin:8px 0 12px}
+  .pos p{font-size:16px;color:var(--encre);opacity:.86;max-width:420px;margin:0 auto}
+  .plan{display:flex;gap:6px;justify-content:center;margin-top:22px}
+  .plan span{width:34px;height:4px;border-radius:2px;background:rgba(255,255,255,.18)}
+  .plan span.fait{background:var(--vert)}
+  .plan span.encours{background:var(--or)}
   [hidden]{display:none!important}
 </style>
 </head>
@@ -52,10 +62,24 @@
 <video id="vue" playsinline muted hidden></video>
 <div id="voile" hidden></div>
 
-<!-- ============ 1. réglages ============ -->
+<!-- ======================= 1. réglages ======================= -->
 <div class="ecran" id="ecranDepart">
   <h1 style="font-size:22px;margin:0 0 4px">Séance de tir</h1>
   <div class="note" style="margin-bottom:18px">Bizon Training · mesure en direct</div>
+
+  <div class="carte">
+    <p class="tit">Type de séance</p>
+    <div style="display:flex;gap:10px;flex-direction:column">
+      <button class="sec on" id="m360" style="text-align:left">
+        <b>Bilan 360°</b> — 40 lancers francs
+        <div class="note" style="margin-top:3px">4 séries de 10, une par position de caméra. Vue complète du geste.</div>
+      </button>
+      <button class="sec" id="mLibre" style="text-align:left">
+        <b>Séance libre</b>
+        <div class="note" style="margin-top:3px">Tu tires, ça mesure, tu arrêtes quand tu veux.</div>
+      </button>
+    </div>
+  </div>
 
   <div class="carte">
     <p class="tit">Main de tir</p>
@@ -72,21 +96,19 @@
       <button class="sec" id="vNon" style="flex:1">En silence</button>
     </div>
     <div class="note" style="margin-top:10px">
-      La correction est lue à voix haute après chaque tir, une phrase, la plus utile.
-      Mets tes écouteurs : le son part dedans automatiquement.
+      Une phrase après chaque tir, la plus utile. Mets tes écouteurs : le son part dedans.
     </div>
   </div>
 
   <div class="carte">
     <p class="tit">Avant de commencer</p>
     <div class="note">
-      Pose le téléphone à trois ou quatre mètres, calé contre un mur ou sur un trépied,
-      de face ou de trois quarts. Tu dois apparaître <b>en entier, pieds compris</b>.
-      L'écran reste allumé pendant la séance.
+      Téléphone à trois ou quatre mètres, calé contre un mur ou sur un trépied.
+      Le joueur doit apparaître <b>en entier, pieds compris</b>. L'écran reste allumé.
     </div>
   </div>
 
-  <button class="cta" id="demarrer">Démarrer la séance</button>
+  <button class="cta" id="demarrer">Démarrer</button>
   <div class="err" id="erreur"></div>
   <div class="note" style="margin-top:14px">
     Les images ne quittent jamais ce téléphone et ne sont pas enregistrées.
@@ -94,16 +116,29 @@
   </div>
 </div>
 
-<!-- ============ 2. séance ============ -->
+<!-- ======================= 2. placement ======================= -->
+<div class="ecran" id="ecranPosition" hidden>
+  <div class="pos">
+    <div class="n" id="posRang">Série 1 sur 4</div>
+    <h2 id="posTitre">Face</h2>
+    <p id="posConsigne"></p>
+    <div class="plan" id="posPlan"></div>
+  </div>
+  <button class="cta" id="posPret">Je suis en place</button>
+</div>
+
+<!-- ======================= 3. séance ======================= -->
 <div class="ecran" id="ecranSeance" hidden>
   <div class="haut">
     <div>
       <div class="compte" id="nbTirs">0</div>
-      <small>tirs mesurés</small>
+      <div class="lab" id="labTirs">tirs mesurés</div>
+      <div class="jauge" id="jauge" hidden><i></i></div>
     </div>
     <div class="score">
       <b id="score">0/0</b>
-      <small style="display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);margin-top:6px">réussite</small>
+      <div class="lab">réussite</div>
+      <div class="lab" id="posActuelle" style="color:var(--or);margin-top:10px"></div>
     </div>
   </div>
 
@@ -120,12 +155,16 @@
   </div>
 </div>
 
-<!-- ============ 3. bilan ============ -->
+<!-- ======================= 4. bilan ======================= -->
 <div class="ecran" id="ecranBilan" hidden>
-  <h1 style="font-size:22px;margin:0 0 14px">Bilan de la séance</h1>
+  <h1 style="font-size:22px;margin:0 0 14px" id="titreBilan">Bilan de la séance</h1>
   <div class="carte">
-    <p class="tit">Moyenne sur la série</p>
+    <p class="tit" id="titreMesures">Moyenne sur la série</p>
     <div id="bilan"></div>
+  </div>
+  <div class="carte" id="carteFatigue" hidden>
+    <p class="tit">Dérive sur la série</p>
+    <div id="fatigue"></div>
   </div>
   <div class="carte" id="carteReg" hidden>
     <p class="tit">Régularité</p>
@@ -137,60 +176,75 @@
 </div>
 
 <script type="module">
-import { chargerModele, creerSeance, moyennes, resume, juger, SEUILS, VERSION } from './biomeca.js';
+import { chargerModele, creerSeance, moyennes, resume, juger, SEUILS, VERSION,
+         ANGLES, bilan360, fatigue, fiabilite } from './biomeca.js';
 
 const $ = i => document.getElementById(i);
-let MAIN = 'D', VOIX = true;
-let flux = null, boucle = null, seance = null, verrou = null;
-let pl = null, marques = 0, tentatives = 0, dernierMot = 0;
+let MAIN = 'D', VOIX = true, MODE = '360';
+const ORDRE = ['face', 'cote_tir', 'cote_oppose', 'derriere'];
+const PAR_SERIE = 10;
 
+let flux = null, boucle = null, seance = null, verrou = null, pl = null;
+let marques = 0, tentatives = 0, dernierMot = 0;
+let iAngle = 0, series = [];
+
+$('m360').onclick   = () => { MODE='360';   $('m360').classList.add('on');   $('mLibre').classList.remove('on'); };
+$('mLibre').onclick = () => { MODE='libre'; $('mLibre').classList.add('on'); $('m360').classList.remove('on'); };
 $('mD').onclick = () => { MAIN='D'; $('mD').classList.add('on'); $('mG').classList.remove('on'); };
 $('mG').onclick = () => { MAIN='G'; $('mG').classList.add('on'); $('mD').classList.remove('on'); };
 $('vOui').onclick = () => { VOIX=true; $('vOui').classList.add('on'); $('vNon').classList.remove('on'); };
 $('vNon').onclick = () => { VOIX=false; $('vNon').classList.add('on'); $('vOui').classList.remove('on'); };
 
-/* ---------------------------------------------------- la voix du coach */
+/* ------------------------------------------------------ la voix du coach */
 const PHRASES = {
-  extension:  'Tends ton bras jusqu’au bout.',
-  ecartCoude: 'Ramène ton coude sous le ballon.',
+  extension:   'Tends ton bras jusqu’au bout.',
+  ecartCoude:  'Ramène ton coude sous le ballon.',
   appuisEtroit:'Écarte tes appuis, largeur d’épaules.',
   appuisLarge: 'Resserre tes appuis.',
-  derive:     'Retombe sur place, reste équilibré.',
-  mainGuide:  'Ta main guide pousse. Laisse-la tranquille.',
-  poignet:    'Casse ton poignet après le tir.'
+  derive:      'Retombe sur place, reste équilibré.',
+  mainGuide:   'Ta main guide pousse. Laisse-la tranquille.',
+  poignet:     'Casse ton poignet après le tir.',
+  axeFinish:   'Finis dans l’axe, ta main part sur le côté.'
 };
-function parler(texte) {
+function parler(texte, force) {
   if (!VOIX || !window.speechSynthesis) return;
-  const t = Date.now(); if (t - dernierMot < 2600) return; dernierMot = t;
+  const t = Date.now();
+  if (!force && t - dernierMot < 2600) return;
+  dernierMot = t;
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(texte);
-    u.lang = 'fr-FR'; u.rate = 1.05; u.pitch = 1;
+    u.lang = 'fr-FR'; u.rate = 1.05;
     window.speechSynthesis.speak(u);
   } catch (e) {}
 }
 
-/* quelle correction dire : le critère le plus loin de sa cible */
+/* la correction à dire : le critère le plus loin de sa cible,
+   et uniquement s'il est fiable sous l'angle filmé */
 function correction(m) {
-  const cands = [];
-  const d = (cle, ecart, phrase) => cands.push({ cle, ecart, phrase });
-  if (isFinite(m.extension) && m.extension < 160) d('extension', (160 - m.extension) / 160, PHRASES.extension);
-  if (isFinite(m.ecartCoude) && m.ecartCoude > 0.22) d('ecartCoude', (m.ecartCoude - 0.22) / 0.22, PHRASES.ecartCoude);
-  if (isFinite(m.appuis) && m.appuis < 0.85) d('appuis', (0.85 - m.appuis) / 0.85, PHRASES.appuisEtroit);
-  if (isFinite(m.appuis) && m.appuis > 1.35) d('appuis', (m.appuis - 1.35) / 1.35, PHRASES.appuisLarge);
-  if (isFinite(m.derive) && m.derive > 0.10) d('derive', (m.derive - 0.10) / 0.10, PHRASES.derive);
-  if (isFinite(m.mainGuide) && m.mainGuide > 0.25) d('mainGuide', (m.mainGuide - 0.25) / 0.25, PHRASES.mainGuide);
-  if (isFinite(m.poignet) && m.poignet > 150) d('poignet', (m.poignet - 150) / 150, PHRASES.poignet);
-  if (!cands.length) return null;
-  cands.sort((a, b) => b.ecart - a.ecart);
-  return cands[0];
+  const angle = MODE === '360' ? ORDRE[iAngle] : null;
+  const c = [];
+  const d = (cle, ecart, phrase) => {
+    if (angle && fiabilite(cle, angle) === 'nulle') return;
+    c.push({ cle, ecart, phrase });
+  };
+  if (isFinite(m.extension) && m.extension < 160)  d('extension', (160 - m.extension) / 160, PHRASES.extension);
+  if (isFinite(m.ecartCoude) && m.ecartCoude > .22) d('ecartCoude', (m.ecartCoude - .22) / .22, PHRASES.ecartCoude);
+  if (isFinite(m.appuis) && m.appuis < .85)        d('appuis', (.85 - m.appuis) / .85, PHRASES.appuisEtroit);
+  if (isFinite(m.appuis) && m.appuis > 1.35)       d('appuis', (m.appuis - 1.35) / 1.35, PHRASES.appuisLarge);
+  if (isFinite(m.derive) && m.derive > .10)        d('derive', (m.derive - .10) / .10, PHRASES.derive);
+  if (isFinite(m.mainGuide) && m.mainGuide > .25)  d('mainGuide', (m.mainGuide - .25) / .25, PHRASES.mainGuide);
+  if (isFinite(m.poignet) && m.poignet > 150)      d('poignet', (m.poignet - 150) / 150, PHRASES.poignet);
+  if (isFinite(m.axeFinish) && m.axeFinish > .25)  d('axeFinish', (m.axeFinish - .25) / .25, PHRASES.axeFinish);
+  if (!c.length) return null;
+  c.sort((a, b) => b.ecart - a.ecart);
+  return c[0];
 }
 
 /* ------------------------------------------------------------ démarrage */
 $('demarrer').onclick = async () => {
   $('erreur').textContent = '';
   try {
-    // amorcer la voix pendant le geste de l'utilisateur (exigence iOS)
     if (VOIX && window.speechSynthesis) {
       const u = new SpeechSynthesisUtterance(' '); u.volume = 0; window.speechSynthesis.speak(u);
     }
@@ -208,16 +262,49 @@ $('demarrer').onclick = async () => {
     v.srcObject = flux; v.hidden = false; $('voile').hidden = false;
     await v.play();
 
-    seance = creerSeance(MAIN);
-    marques = 0; tentatives = 0;
-    $('nbTirs').textContent = '0'; $('score').textContent = '0/0';
-    $('ecranDepart').hidden = true; $('ecranSeance').hidden = false;
-    tourner();
+    marques = 0; tentatives = 0; iAngle = 0; series = [];
+    $('score').textContent = '0/0';
+    $('ecranDepart').hidden = true;
+
+    if (MODE === '360') montrerPosition();
+    else { ouvrirSeance(); }
   } catch (e) {
-    $('demarrer').textContent = 'Démarrer la séance';
+    $('demarrer').textContent = 'Démarrer';
     $('erreur').textContent = 'Impossible de démarrer : ' + (e && e.message ? e.message : e);
   }
 };
+
+/* ------------------------------------------------- écran de placement */
+function montrerPosition() {
+  const a = ANGLES[ORDRE[iAngle]];
+  $('posRang').textContent = 'Série ' + (iAngle + 1) + ' sur ' + ORDRE.length;
+  $('posTitre').textContent = a.label;
+  $('posConsigne').textContent = a.consigne;
+  $('posPlan').innerHTML = ORDRE.map((_, k) =>
+    '<span class="' + (k < iAngle ? 'fait' : (k === iAngle ? 'encours' : '')) + '"></span>').join('');
+  $('ecranSeance').hidden = true;
+  $('ecranPosition').hidden = false;
+  parler(iAngle === 0 ? ('Première série. ' + a.consigne) : ('Série suivante. ' + a.consigne), true);
+}
+
+$('posPret').onclick = () => { $('ecranPosition').hidden = true; ouvrirSeance(); };
+
+function ouvrirSeance() {
+  seance = creerSeance(MAIN);
+  $('nbTirs').textContent = '0';
+  if (MODE === '360') {
+    $('labTirs').textContent = 'sur ' + PAR_SERIE + ' lancers francs';
+    $('jauge').hidden = false; $('jauge').firstElementChild.style.width = '0';
+    $('posActuelle').textContent = ANGLES[ORDRE[iAngle]].label;
+  } else {
+    $('labTirs').textContent = 'tirs mesurés';
+    $('jauge').hidden = true; $('posActuelle').textContent = '';
+  }
+  $('retourTitre').textContent = 'En attente';
+  $('retourTexte').textContent = 'Place-toi dans le cadre et tire.';
+  $('ecranSeance').hidden = false;
+  tourner();
+}
 
 function tourner() {
   const v = $('vue');
@@ -236,7 +323,11 @@ function tourner() {
 }
 
 function surTir(m) {
-  $('nbTirs').textContent = seance.tirs.length;
+  const n = seance.tirs.length;
+  $('nbTirs').textContent = n;
+  if (MODE === '360') {
+    $('jauge').firstElementChild.style.width = Math.min(100, (n / PAR_SERIE) * 100) + '%';
+  }
   const c = correction(m);
   if (c) {
     $('retourTitre').textContent = SEUILS[c.cle] ? SEUILS[c.cle].libelle : 'À corriger';
@@ -247,59 +338,142 @@ function surTir(m) {
     $('retourTexte').textContent = 'Rien à corriger sur ce tir.';
     parler('C’est le bon geste. Refais exactement ça.');
   }
+  if (MODE === '360' && n >= PAR_SERIE) finirSerie();
+}
+
+function finirSerie() {
+  if (boucle) cancelAnimationFrame(boucle);
+  series.push({ angle: ORDRE[iAngle], tirs: seance.tirs.slice() });
+  seance = null;
+  iAngle++;
+  if (iAngle < ORDRE.length) { setTimeout(montrerPosition, 900); }
+  else { setTimeout(terminer, 900); }
 }
 
 $('bPanier').onclick = () => { marques++; tentatives++; majScore(); };
 $('bRate').onclick  = () => { tentatives++; majScore(); };
 function majScore() { $('score').textContent = marques + '/' + tentatives; }
 
-/* --------------------------------------------------------------- bilan */
+/* ------------------------------------------------------------- fin */
 $('arreter').onclick = () => {
+  if (MODE === '360' && seance && seance.tirs.length) {
+    series.push({ angle: ORDRE[iAngle], tirs: seance.tirs.slice() });
+  }
+  terminer();
+};
+
+function terminer() {
   if (boucle) cancelAnimationFrame(boucle);
   if (flux) flux.getTracks().forEach(t => t.stop());
   try { if (verrou) verrou.release(); } catch (e) {}
   try { window.speechSynthesis.cancel(); } catch (e) {}
   $('vue').hidden = true; $('voile').hidden = true;
-  $('ecranSeance').hidden = true; $('ecranBilan').hidden = false;
-  afficherBilan();
-};
+  $('ecranSeance').hidden = true; $('ecranPosition').hidden = true;
+  $('ecranBilan').hidden = false;
+  if (MODE === '360') bilanTrois60(); else bilanLibre();
+}
 
-let dernierResume = null;
-function afficherBilan() {
-  const R = {
-    version: VERSION, main: MAIN, tirs: seance.tirs,
-    regularite: null, qualite: { cadrage: 1, suffisant: true }
+const F = (cle, v) => {
+  const s = SEUILS[cle];
+  if (!s || !isFinite(v)) return null;
+  if (s.pourcent) return (v * 100).toFixed(1) + ' %';
+  if (s.unite === 's') return v.toFixed(2) + ' s';
+  return v.toFixed(1) + ' ' + s.unite;
+};
+const NOM_ANGLE = a => (ANGLES[a] ? ANGLES[a].label : a);
+
+let aEnvoyer = null;
+
+/* ---------------------------------------------------- bilan 360° */
+function bilanTrois60() {
+  $('titreBilan').textContent = 'Bilan 360°';
+  const tous = series.reduce((a, s) => a.concat(s.tirs), []);
+  const B = bilan360(series);
+  const fat = fatigue(tous);
+
+  $('titreMesures').textContent = tous.length + ' tirs · ' + series.length + ' positions';
+  if (!tous.length) {
+    $('bilan').innerHTML = '<div class="note">Aucun tir n’a été reconnu.</div>';
+    $('enregistrer').disabled = true; $('enregistrer').style.opacity = .45;
+    return;
+  }
+
+  $('bilan').innerHTML = Object.keys(SEUILS).map(cle => {
+    const v = B[cle]; if (!v) return '';
+    const bon = juger(cle, v.moyenne);
+    const src = v.angles.map(NOM_ANGLE).join(' + ') +
+                ' · ' + v.nbTirs + ' tirs' +
+                (v.niveau === 'estimee' ? ' · estimé' : '');
+    return '<div class="mes"><div class="n">' + SEUILS[cle].libelle +
+           (v.juges ? ' <span style="opacity:.5;font-size:11px">' + v.dans + '/' + v.juges + '</span>' : '') +
+           '<span class="src">' + src + '</span></div>' +
+           '<div class="v ' + (bon === null ? 'nd' : (bon ? 'ok' : 'ko')) + '">' + F(cle, v.moyenne) + '</div></div>';
+  }).join('');
+
+  if (fat) {
+    $('carteFatigue').hidden = false;
+    const dE = fat.extensionDelta, dD = fat.dureeDelta;
+    $('fatigue').innerHTML =
+      '<div class="mes"><div class="n">Extension du bras<span class="src">' +
+        fat.extensionDebut.toFixed(1) + ' ° au début → ' + fat.extensionFin.toFixed(1) + ' ° à la fin</span></div>' +
+      '<div class="v ' + (dE < -4 ? 'ko' : 'ok') + '">' + (dE >= 0 ? '+' : '') + dE.toFixed(1) + ' °</div></div>' +
+      '<div class="mes"><div class="n">Rythme du geste<span class="src">' +
+        (dD >= 0 ? 'plus lent sur la fin' : 'plus rapide sur la fin') + '</span></div>' +
+      '<div class="v ' + (Math.abs(dD) > 0.12 ? 'ko' : 'ok') + '">' +
+        (dD >= 0 ? '+' : '') + (dD * 1000).toFixed(0) + ' ms</div></div>' +
+      '<div class="note" style="margin-top:10px">Comparaison des ' + fat.tirsCompares +
+        ' premiers tirs avec les ' + fat.tirsCompares + ' derniers.</div>';
+  }
+
+  const moy = {}, cible = {}, prov = {};
+  Object.keys(B).forEach(c => {
+    moy[c] = +B[c].moyenne.toFixed(3);
+    if (B[c].juges) cible[c] = B[c].dans + '/' + B[c].juges;
+    prov[c] = { angles: B[c].angles, niveau: B[c].niveau, n: B[c].nbTirs };
+  });
+  aEnvoyer = {
+    mesures: {
+      version: VERSION, main: MAIN, nb_tirs: tous.length, cadrage: 1,
+      moyennes: moy, tirs_dans_la_cible: cible,
+      regularite: null, protocole: '360', reussite: tentatives ? marques + '/' + tentatives : null
+    },
+    tirs: { protocole: '360', provenance: prov, fatigue: fat,
+            series: series.map(s => ({ angle: s.angle, tirs: s.tirs })) }
   };
-  if (seance.tirs.length >= 3) {
-    const ext = seance.tirs.map(t => t.extension).filter(isFinite);
-    const dur = seance.tirs.map(t => t.duree).filter(isFinite);
+}
+
+/* ---------------------------------------------------- bilan libre */
+function bilanLibre() {
+  const R = { version: VERSION, main: MAIN, tirs: seance ? seance.tirs : [],
+              regularite: null, qualite: { cadrage: 1, suffisant: true } };
+  if (R.tirs.length >= 3) {
     const moy = a => a.reduce((s, x) => s + x, 0) / (a.length || 1);
     const et  = a => Math.sqrt(moy(a.map(x => (x - moy(a)) * (x - moy(a)))));
+    const ext = R.tirs.map(t => t.extension).filter(isFinite);
+    const dur = R.tirs.map(t => t.duree).filter(isFinite);
     R.regularite = { nbTirs: ext.length, extensionEcartType: et(ext),
                      dureeEcartType: et(dur), dureeMoyenne: moy(dur) };
   }
   const M = moyennes(R) || {};
-  dernierResume = resume(R);
-  if (dernierResume) dernierResume.reussite = tentatives ? (marques + '/' + tentatives) : null;
+  const res = resume(R);
+  if (res) res.reussite = tentatives ? marques + '/' + tentatives : null;
+  aEnvoyer = res ? { mesures: res, tirs: R.tirs } : null;
 
-  if (!seance.tirs.length) {
-    $('bilan').innerHTML = '<div class="note">Aucun tir n’a été reconnu. La prochaine fois, ' +
-      'recule le téléphone pour être entier dans le cadre, et vérifie la lumière.</div>';
+  if (!R.tirs.length) {
+    $('bilan').innerHTML = '<div class="note">Aucun tir n’a été reconnu. ' +
+      'Recule le téléphone pour être entier dans le cadre, et vérifie la lumière.</div>';
     $('enregistrer').disabled = true; $('enregistrer').style.opacity = .45;
     return;
   }
+  $('titreMesures').textContent = R.tirs.length + ' tirs mesurés';
   $('bilan').innerHTML =
-    '<div class="mes"><div class="n">Tirs mesurés</div><div class="v nd">' + seance.tirs.length + '</div></div>' +
     (tentatives ? '<div class="mes"><div class="n">Réussite</div><div class="v nd">' + marques + '/' + tentatives + '</div></div>' : '') +
     Object.keys(SEUILS).map(cle => {
       const v = M[cle]; if (!v) return '';
-      const s = SEUILS[cle], bon = juger(cle, v.moyenne);
-      const u = s.pourcent ? '%' : s.unite;
-      const val = s.pourcent ? (v.moyenne * 100).toFixed(1)
-                             : (s.unite === 's' ? v.moyenne.toFixed(2) : v.moyenne.toFixed(1));
-      return '<div class="mes"><div class="n">' + s.libelle +
+      const bon = juger(cle, v.moyenne);
+      return '<div class="mes"><div class="n">' + SEUILS[cle].libelle +
              (v.juges ? ' <span style="opacity:.5;font-size:11px">' + v.dans + '/' + v.juges + '</span>' : '') +
-             '</div><div class="v ' + (bon === null ? 'nd' : (bon ? 'ok' : 'ko')) + '">' + val + ' ' + u + '</div></div>';
+             '</div><div class="v ' + (bon === null ? 'nd' : (bon ? 'ok' : 'ko')) + '">' + F(cle, v.moyenne) + '</div></div>';
     }).join('');
 
   if (R.regularite) {
@@ -331,11 +505,11 @@ async function api(action, charge) {
 
 $('enregistrer').onclick = async () => {
   $('erreur2').textContent = '';
-  if (!dernierResume) return;
+  if (!aEnvoyer) return;
   $('enregistrer').disabled = true;
   $('enregistrer').textContent = 'Enregistrement…';
   try {
-    await api('saveShotMetrics', { source: 'direct', mesures: dernierResume, tirs: seance.tirs });
+    await api('saveShotMetrics', { source: 'direct', mesures: aEnvoyer.mesures, tirs: aEnvoyer.tirs });
     $('enregistrer').textContent = 'Séance enregistrée';
     $('enregistrer').style.background = '#4FD894';
   } catch (e) {

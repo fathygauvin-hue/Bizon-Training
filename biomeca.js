@@ -146,6 +146,9 @@ function mesurerTir(images, iR, cote) {
                         (R.n[P.epG].y + R.n[P.epD].y)/2) || 1;
   const hanches = f => (f.n[P.haG].x + f.n[P.haD].x) / 2;
 
+  // axe du finish : le poignet de tir finit-il dans l'axe du corps ?
+  const axeChevilles = (R.w[P.chG].x + R.w[P.chD].x) / 2;
+
   return {
     t:           +R.t.toFixed(2),
     extension:   angle(R.w[ep], R.w[co], R.w[po]),                 // degrés
@@ -155,6 +158,7 @@ function mesurerTir(images, iR, cote) {
     mainGuide:   ecart(A.w[poAutre], R.w[poAutre]) / larg,         // ratio
     poignet:     angle(A.w[co], A.w[po], A.w[ix]),                 // degrés
     hauteurRel:  (R.n[ep].y - R.n[po].y) / haut,                   // ratio
+    axeFinish:   Math.abs(A.w[po].x - axeChevilles) / larg,        // ratio
     duree:       R.t - images[iF].t,                               // secondes
     flexion:     flexionMin,                                       // degrés
     cadrageOk:   R.entier
@@ -171,10 +175,96 @@ export const SEUILS = {
   derive:     { max: 0.10, libelle: 'Dérive à la retombée', unite: '%', pourcent: true },
   mainGuide:  { max: 0.25, libelle: 'Poussée de la main guide', unite: '%', pourcent: true },
   poignet:    { max: 150, libelle: 'Flexion du poignet après tir', unite: '°' },
+  axeFinish:  { max: 0.25, libelle: 'Finish dans l\'axe du corps', unite: '%', pourcent: true },
   hauteurRel: { libelle: 'Hauteur du relâcher', unite: '%', pourcent: true },
   duree:      { libelle: 'Durée du geste', unite: 's' },
   flexion:    { libelle: 'Flexion des genoux', unite: '°' }
 };
+
+/* ================================================================== 360°
+   Une mesure n'est pas également fiable sous tous les angles : un coude
+   écarté ne se voit pas de profil, une main guide qui pousse ne se voit pas
+   du côté du bras de tir. On le dit, au lieu de faire semblant.
+   'bonne'   : le mouvement se fait dans le plan filmé
+   'estimee' : reconstitué en 3D, moins sûr
+   'nulle'   : le corps cache le mouvement, on ne retient pas la valeur   */
+
+export const ANGLES = {
+  face: { label: 'Face', ordre: 1,
+    consigne: 'Pose le téléphone face au joueur, dos au panier, à 3 ou 4 mètres.' },
+  cote_tir: { label: 'Côté main de tir', ordre: 2,
+    consigne: 'Déplace le téléphone sur le côté de sa main de tir, de profil.' },
+  cote_oppose: { label: 'Côté opposé', ordre: 3,
+    consigne: 'Passe de l’autre côté, toujours de profil.' },
+  derriere: { label: 'Derrière', ordre: 4,
+    consigne: 'Place-toi derrière le joueur, dans l’axe du panier.' }
+};
+
+export const FIABILITE = {
+  extension:  { cote_tir:'bonne',   cote_oppose:'estimee', face:'estimee', derriere:'estimee' },
+  ecartCoude: { face:'bonne',       derriere:'bonne',      cote_tir:'nulle', cote_oppose:'nulle' },
+  appuis:     { face:'bonne',       derriere:'bonne',      cote_tir:'nulle', cote_oppose:'nulle' },
+  derive:     { face:'bonne',       derriere:'bonne',      cote_tir:'bonne', cote_oppose:'bonne' },
+  mainGuide:  { cote_oppose:'bonne',face:'bonne',          derriere:'estimee', cote_tir:'nulle' },
+  poignet:    { cote_tir:'bonne',   cote_oppose:'estimee', face:'estimee', derriere:'estimee' },
+  axeFinish:  { face:'bonne',       derriere:'bonne',      cote_tir:'nulle', cote_oppose:'nulle' },
+  hauteurRel: { face:'bonne',       derriere:'bonne',      cote_tir:'bonne', cote_oppose:'bonne' },
+  duree:      { face:'bonne',       derriere:'bonne',      cote_tir:'bonne', cote_oppose:'bonne' },
+  flexion:    { cote_tir:'bonne',   cote_oppose:'bonne',   face:'estimee', derriere:'estimee' }
+};
+
+export function fiabilite(cle, angle) {
+  const f = FIABILITE[cle];
+  return (f && f[angle]) || 'estimee';
+}
+
+/* séries = [{ angle:'face', tirs:[...] }, ...]
+   Pour chaque mesure on ne retient que les angles où elle est fiable ;
+   à défaut, les angles où elle est estimée. On dit toujours d'où vient
+   le chiffre et sur combien de tirs il repose. */
+export function bilan360(series) {
+  const out = {};
+  for (const cle of Object.keys(SEUILS)) {
+    for (const niveau of ['bonne', 'estimee']) {
+      const vals = [], angles = [];
+      for (const s of series) {
+        if (fiabilite(cle, s.angle) !== niveau) continue;
+        const v = (s.tirs || []).map(t => t[cle]).filter(isFinite);
+        if (!v.length) continue;
+        vals.push(...v);
+        angles.push(s.angle);
+      }
+      if (!vals.length) continue;
+      const avis = vals.map(v => juger(cle, v)).filter(a => a !== null);
+      out[cle] = {
+        moyenne: moyenne(vals), min: Math.min(...vals), max: Math.max(...vals),
+        ecartType: ecartType(vals), nbTirs: vals.length,
+        dans: avis.filter(Boolean).length, juges: avis.length,
+        niveau, angles
+      };
+      break;
+    }
+  }
+  return out;
+}
+
+/* Dérive de fatigue : le geste du dernier tiers ressemble-t-il encore au
+   premier ? Les tirs doivent être fournis dans l'ordre chronologique. */
+export function fatigue(tirs) {
+  const ext = tirs.map(t => t.extension).filter(isFinite);
+  const dur = tirs.map(t => t.duree).filter(isFinite);
+  if (ext.length < 9) return null;
+  const n = Math.max(3, Math.floor(ext.length / 3));
+  const debut = ext.slice(0, n), fin = ext.slice(-n);
+  const dDebut = dur.slice(0, n), dFin = dur.slice(-n);
+  return {
+    tirsCompares: n,
+    extensionDebut: moyenne(debut),
+    extensionFin: moyenne(fin),
+    extensionDelta: moyenne(fin) - moyenne(debut),
+    dureeDelta: moyenne(dFin) - moyenne(dDebut)
+  };
+}
 
 export function juger(cle, valeur) {
   const s = SEUILS[cle];
