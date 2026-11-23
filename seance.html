@@ -170,6 +170,13 @@
     <p class="tit">Régularité</p>
     <div id="regularite"></div>
   </div>
+  <div class="carte" id="carteGrille" hidden>
+    <p class="tit">Grille de Williams · lancer franc</p>
+    <div class="note" style="margin:-4px 0 14px">
+      Note proposée par la mesure, à corriger d'un geste. Les critères sans mesure restent à toi.
+    </div>
+    <div id="grille"></div>
+  </div>
   <button class="cta" id="enregistrer">Enregistrer la séance</button>
   <div class="err" id="erreur2"></div>
   <button class="sec" id="recommencer" style="width:100%;margin-top:12px">Nouvelle séance</button>
@@ -177,7 +184,7 @@
 
 <script type="module">
 import { chargerModele, creerSeance, moyennes, resume, juger, SEUILS, VERSION,
-         ANGLES, bilan360, fatigue, fiabilite } from './biomeca.js';
+         ANGLES, bilan360, fatigue, fiabilite, remplirGrille } from './biomeca.js';
 
 const $ = i => document.getElementById(i);
 let MAIN = 'D', VOIX = true, MODE = '360';
@@ -425,6 +432,8 @@ function bilanTrois60() {
         ' premiers tirs avec les ' + fat.tirsCompares + ' derniers.</div>';
   }
 
+  afficherGrille(B, fat, tous);
+
   const moy = {}, cible = {}, prov = {};
   Object.keys(B).forEach(c => {
     moy[c] = +B[c].moyenne.toFixed(3);
@@ -437,9 +446,90 @@ function bilanTrois60() {
       moyennes: moy, tirs_dans_la_cible: cible,
       regularite: null, protocole: '360', reussite: tentatives ? marques + '/' + tentatives : null
     },
-    tirs: { protocole: '360', provenance: prov, fatigue: fat,
+    tirs: { protocole: '360', provenance: prov, fatigue: fat, grille: lignesGrille,
             series: series.map(s => ({ angle: s.angle, tirs: s.tirs })) }
   };
+}
+
+/* ------------------------------------------- grille de Williams */
+let lignesGrille = [];
+const MANQUE = { ballon: 'ballon non suivi', mains: 'mains non détectées', coach: 'jugé par le coach' };
+
+function afficherGrille(B, fat, tous) {
+  const ext = tous.map(t => t.extension).filter(isFinite);
+  let routine = null;
+  if (ext.length >= 3) {
+    const m = ext.reduce((s, x) => s + x, 0) / ext.length;
+    routine = Math.sqrt(ext.reduce((s, x) => s + (x - m) * (x - m), 0) / ext.length);
+  }
+  lignesGrille = remplirGrille(B, { routine: routine });
+
+  const etapes = [];
+  lignesGrille.forEach((l, i) => {
+    let e = etapes.find(x => x.nom === l.etape);
+    if (!e) { e = { nom: l.etape, lignes: [] }; etapes.push(e); }
+    e.lignes.push({ l: l, i: i });
+  });
+
+  $('carteGrille').hidden = false;
+  $('grille').innerHTML = etapes.map(e => {
+    const notes = e.lignes.map(x => x.l.note).filter(n => n !== null);
+    const moy = notes.length ? (notes.reduce((s, n) => s + n, 0) / notes.length) : null;
+    return '<div style="margin:18px 0 6px;display:flex;align-items:baseline;gap:8px">' +
+      '<div class="th" style="flex:1">' + e.nom + '</div>' +
+      '<div class="ts" id="moy-' + e.lignes[0].i + '" style="color:var(--or)">' +
+        (moy === null ? '—' : moy.toFixed(1) + ' / 5') + '</div></div>' +
+      e.lignes.map(x => ligneGrilleHTML(x.l, x.i)).join('');
+  }).join('');
+
+  $('grille').querySelectorAll('button[data-n]').forEach(b => {
+    b.onclick = () => {
+      lignesGrille[+b.dataset.i].note = +b.dataset.n;
+      lignesGrille[+b.dataset.i].corrigee = true;
+      majGrille();
+    };
+  });
+}
+
+function ligneGrilleHTML(l, i) {
+  const sous = l.mesure && l.valeur !== null
+    ? (SEUILS[l.mesure] ? SEUILS[l.mesure].libelle + ' ' + (F(l.mesure, l.valeur) || '') : '') +
+      (l.angles ? ' · ' + l.angles.map(NOM_ANGLE).join(' + ') : '') +
+      (l.acaler ? ' · seuil à caler' : '')
+    : (l.manque ? MANQUE[l.manque] : 'pas de mesure');
+  const boutons = [1, 2, 3, 4, 5].map(n =>
+    '<button data-i="' + i + '" data-n="' + n + '" style="width:26px;height:26px;padding:0;border-radius:7px;' +
+    'font-size:12px;border:1px solid ' + (l.note === n ? 'var(--or)' : 'var(--trait)') + ';' +
+    'background:' + (l.note === n ? 'var(--or)' : 'transparent') + ';' +
+    'color:' + (l.note === n ? '#100E0A' : 'var(--gris)') + ';font-weight:' + (l.note === n ? '700' : '400') + '">' +
+    n + '</button>').join('');
+  return '<div class="mes" style="align-items:flex-start">' +
+    '<div class="n">' + l.critere +
+      '<span class="src">' + sous + (l.corrigee ? ' · corrigé' : (l.note !== null ? ' · proposé' : '')) + '</span></div>' +
+    '<div style="display:flex;gap:4px" id="btn-' + i + '">' + boutons + '</div></div>';
+}
+
+function majGrille() {
+  lignesGrille.forEach((l, i) => {
+    const c = document.getElementById('btn-' + i);
+    if (!c) return;
+    Array.prototype.forEach.call(c.children, b => {
+      const on = +b.dataset.n === l.note;
+      b.style.borderColor = on ? 'var(--or)' : 'var(--trait)';
+      b.style.background = on ? 'var(--or)' : 'transparent';
+      b.style.color = on ? '#100E0A' : 'var(--gris)';
+      b.style.fontWeight = on ? '700' : '400';
+    });
+  });
+  const vus = {};
+  lignesGrille.forEach((l, i) => { if (vus[l.etape] === undefined) vus[l.etape] = i; });
+  Object.keys(vus).forEach(nom => {
+    const el = document.getElementById('moy-' + vus[nom]);
+    if (!el) return;
+    const notes = lignesGrille.filter(l => l.etape === nom && l.note !== null).map(l => l.note);
+    el.textContent = notes.length ? (notes.reduce((s, n) => s + n, 0) / notes.length).toFixed(1) + ' / 5' : '—';
+  });
+  if (aEnvoyer && aEnvoyer.tirs) aEnvoyer.tirs.grille = lignesGrille;
 }
 
 /* ---------------------------------------------------- bilan libre */

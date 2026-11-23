@@ -16,7 +16,8 @@ const MODELE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/
 
 /* ------------------------------------------------------------------ points */
 export const P = { nez:0, epG:11, epD:12, coG:13, coD:14, poG:15, poD:16,
-                   idxG:19, idxD:20, haG:23, haD:24, geG:25, geD:26, chG:27, chD:28 };
+                   idxG:19, idxD:20, haG:23, haD:24, geG:25, geD:26, chG:27, chD:28,
+                   talG:29, talD:30, piedG:31, piedD:32 };
 
 /* ------------------------------------------------------------- géométrie */
 export function angle(a, b, c) {              // angle en b, en degrés, en 3D
@@ -125,17 +126,47 @@ function repererTirs(images, poignet, hauteurCorps) {
   return gardes;
 }
 
+/* ---------------------------------------------------- phases du tir */
+/* La grille de Williams ne note pas un instant : elle note une posture,
+   un chargement, une montée, un relâcher, un follow-through, une retombée.
+   On découpe donc le geste avant de mesurer quoi que ce soit.            */
+export function phasesDuTir(images, iR, cote) {
+  const { ge, ha, ch } = cote;
+  const genou = i => angle(images[i].w[ha], images[i].w[ge], images[i].w[ch]);
+
+  // flexion maximale (genou le plus fermé) dans la seconde et demie avant le relâcher
+  let iF = Math.max(0, iR - 1), flexionMax = Infinity;
+  for (let i = iR; i >= 0 && images[iR].t - images[i].t <= 1.5; i--) {
+    const a = genou(i);
+    if (isFinite(a) && a < flexionMax) { flexionMax = a; iF = i; }
+  }
+  // posture de départ : genou le plus ouvert avant la descente
+  let iD = iF, repos = -Infinity;
+  for (let i = iF; i >= 0 && images[iF].t - images[i].t <= 1.8; i--) {
+    const a = genou(i);
+    if (isFinite(a) && a > repos) { repos = a; iD = i; }
+  }
+  // fin de la poussée : le genou a retrouvé 90 % de son amplitude
+  let iPoussee = iF;
+  const seuil = flexionMax + 0.9 * (repos - flexionMax);
+  for (let i = iF; i <= iR; i++) { if (genou(i) >= seuil) { iPoussee = i; break; } }
+
+  let iFT = iR, iFin = iR;
+  while (iFT  < images.length - 1 && images[iFT].t  - images[iR].t < 0.60) iFT++;
+  while (iFin < images.length - 1 && images[iFin].t - images[iR].t < 1.40) iFin++;
+
+  return { iD, iF, iPoussee, iR, iFT, iFin, reposGenou: repos, flexionMax };
+}
+
 /* ------------------------------------------------- mesures pour un tir */
 function mesurerTir(images, iR, cote) {
   const R = images[iR];
   const { po, co, ep, ix, poAutre, ge, ha, ch } = cote;
 
-  // début du geste : flexion maximale du genou dans la seconde et demie qui précède
-  let iF = Math.max(0, iR - 1), flexionMin = Infinity;
-  for (let i = iR; i >= 0 && R.t - images[i].t <= 1.5; i--) {
-    const a = angle(images[i].w[ha], images[i].w[ge], images[i].w[ch]);
-    if (isFinite(a) && a < flexionMin) { flexionMin = a; iF = i; }
-  }
+  const ph = phasesDuTir(images, iR, cote);
+  const iF = ph.iF, flexionMin = ph.flexionMax;
+  const D = images[ph.iD], FT = images[ph.iFT], FIN = images[ph.iFin];
+
   // un quart de seconde après le relâcher, pour le suivi du geste
   let iA = iR;
   while (iA < images.length - 1 && images[iA].t - R.t < 0.25) iA++;
@@ -149,8 +180,74 @@ function mesurerTir(images, iR, cote) {
   // axe du finish : le poignet de tir finit-il dans l'axe du corps ?
   const axeChevilles = (R.w[P.chG].x + R.w[P.chD].x) / 2;
 
+  /* ---- posture de départ ---- */
+  const dirPied = (f, tal, pied) => {
+    const a = f.w[tal], b = f.w[pied];
+    if (!a || !b) return NaN;
+    return Math.atan2(b.z - a.z, b.x - a.x) * 180 / Math.PI;
+  };
+  let ouverturePieds = Math.abs(dirPied(D, P.talG, P.piedG) - dirPied(D, P.talD, P.piedD));
+  if (isFinite(ouverturePieds)) { ouverturePieds %= 360; if (ouverturePieds > 180) ouverturePieds = 360 - ouverturePieds; }
+
+  const largD = ecart(D.w[P.epG], D.w[P.epD]) || larg;
+  const milieu = (a, b) => (a + b) / 2;
+  const poidsLateral = Math.abs(milieu(D.w[P.haG].x, D.w[P.haD].x) - milieu(D.w[P.chG].x, D.w[P.chD].x)) / largD;
+
+  /* ---- chargement ---- */
+  const G = images[iF];
+  const valgus = (geI, haI, chI) => {
+    const h = G.w[haI], k = G.w[geI], c = G.w[chI];
+    const p = (c.y - h.y) ? (k.y - h.y) / (c.y - h.y) : 0.5;
+    return Math.abs(k.x - (h.x + p * (c.x - h.x))) / largD;
+  };
+  const genouxValgus = Math.max(valgus(P.geG, P.haG, P.chG), valgus(P.geD, P.haD, P.chD));
+  const poidsCharge = Math.abs(milieu(G.w[P.haG].x, G.w[P.haD].x) - milieu(G.w[P.chG].x, G.w[P.chD].x)) / largD;
+
+  /* ---- montée : les jambes finissent-elles avant le bras ? ---- */
+  const synchro = R.t - images[ph.iPoussee].t;
+
+  /* ---- relâcher : avant-bras vertical ---- */
+  const avB = { x: R.w[po].x - R.w[co].x, y: R.w[po].y - R.w[co].y, z: R.w[po].z - R.w[co].z };
+  const nAvB = Math.hypot(avB.x, avB.y, avB.z);
+  const avantBras = nAvB ? Math.acos(Math.max(-1, Math.min(1, -avB.y / nAvB))) * 180 / Math.PI : NaN;
+
+  /* ---- follow-through ---- */
+  const coudeHaut = (FT.n[ep].y - FT.n[co].y) / haut;
+  let maintien = 0;
+  for (let i = iR; i < images.length; i++) {
+    if (images[i].n[po].y > images[i].n[ep].y) break;
+    maintien = images[i].t - R.t;
+  }
+
+  /* ---- retombée ---- */
+  let stabilite = 0;
+  const refX = milieu(FT.n[P.haG].x, FT.n[P.haD].x);
+  for (let i = ph.iFT; i <= ph.iFin; i++) {
+    stabilite = Math.max(stabilite, Math.abs(milieu(images[i].n[P.haG].x, images[i].n[P.haD].x) - refX) / haut);
+  }
+
+  /* ---- mouvements parasites pendant la montée ---- */
+  let parasites = 0;
+  const incl = i => Math.atan2(images[i].w[P.epD].y - images[i].w[P.epG].y,
+                               images[i].w[P.epD].x - images[i].w[P.epG].x) * 180 / Math.PI;
+  let mn = Infinity, mx = -Infinity;
+  for (let i = iF; i <= iR; i++) { const a = incl(i); if (a < mn) mn = a; if (a > mx) mx = a; }
+  if (isFinite(mn) && isFinite(mx)) parasites = mx - mn;
+
   return {
     t:           +R.t.toFixed(2),
+    // posture de départ
+    ouverturePieds, poidsLateral,
+    postureGenou: ph.reposGenou,
+    // chargement
+    genouxValgus, poidsCharge,
+    descenteDuree: images[iF].t - images[ph.iD].t,
+    // montée
+    synchro, parasites,
+    // relâcher
+    avantBras,
+    // follow-through et retombée
+    coudeHaut, maintien, stabilite,
     extension:   angle(R.w[ep], R.w[co], R.w[po]),                 // degrés
     ecartCoude:  Math.abs(R.w[co].x - R.w[ep].x) / larg,           // ratio
     appuis:      ecart(R.w[P.chG], R.w[P.chD]) / larg,             // ratio
@@ -168,17 +265,46 @@ function mesurerTir(images, iR, cote) {
 /* ------------------------------------------------------------- seuils */
 /* Valeurs de départ, volontairement génériques. Elles ont vocation à être
    remplacées par les seuils calibrés sur les notes de Williams. */
+/* Les seuils marqués « à caler » sont des valeurs de départ, à remplacer par
+   celles de Williams une fois qu'il aura corrigé quelques dizaines de tirs. */
 export const SEUILS = {
-  extension:  { min: 160, libelle: 'Extension du bras au relâcher', unite: '°' },
-  ecartCoude: { max: 0.22, libelle: 'Écart du coude', unite: '%', pourcent: true },
-  appuis:     { min: 0.85, max: 1.35, libelle: 'Largeur des appuis', unite: '%', pourcent: true },
-  derive:     { max: 0.10, libelle: 'Dérive à la retombée', unite: '%', pourcent: true },
-  mainGuide:  { max: 0.25, libelle: 'Poussée de la main guide', unite: '%', pourcent: true },
-  poignet:    { max: 150, libelle: 'Flexion du poignet après tir', unite: '°' },
-  axeFinish:  { max: 0.25, libelle: 'Finish dans l\'axe du corps', unite: '%', pourcent: true },
-  hauteurRel: { libelle: 'Hauteur du relâcher', unite: '%', pourcent: true },
-  duree:      { libelle: 'Durée du geste', unite: 's' },
-  flexion:    { libelle: 'Flexion des genoux', unite: '°' }
+  // ---- posture de départ ----
+  appuis:         { min: 0.85, max: 1.35, phase: 'posture', libelle: 'Largeur des appuis', unite: '%', pourcent: true },
+  ouverturePieds: { max: 30, phase: 'posture', libelle: 'Orientation des pieds', unite: '°', acaler: true },
+  postureGenou:   { min: 150, max: 174, phase: 'posture', libelle: 'Flexion des genoux au départ', unite: '°', acaler: true },
+  poidsLateral:   { max: 0.12, phase: 'posture', libelle: 'Poids centré sur les appuis', unite: '%', pourcent: true, acaler: true },
+  // ---- chargement ----
+  flexion:        { phase: 'chargement', libelle: 'Flexion maximale des genoux', unite: '°' },
+  genouxValgus:   { max: 0.12, phase: 'chargement', libelle: 'Genoux dans l\'axe', unite: '%', pourcent: true, acaler: true },
+  poidsCharge:    { max: 0.14, phase: 'chargement', libelle: 'Répartition du poids en charge', unite: '%', pourcent: true, acaler: true },
+  descenteDuree:  { phase: 'chargement', libelle: 'Durée de la descente', unite: 's' },
+  // ---- montée ----
+  synchro:        { min: 0, max: 0.30, phase: 'montee', libelle: 'Jambes finies avant le bras', unite: 's', acaler: true },
+  parasites:      { max: 8, phase: 'montee', libelle: 'Mouvements parasites des épaules', unite: '°', acaler: true },
+  duree:          { phase: 'montee', libelle: 'Durée du geste' , unite: 's' },
+  // ---- relâcher ----
+  extension:      { min: 160, phase: 'relacher', libelle: 'Extension du bras au relâcher', unite: '°' },
+  ecartCoude:     { max: 0.22, phase: 'relacher', libelle: 'Coude sous le ballon', unite: '%', pourcent: true },
+  avantBras:      { max: 15, phase: 'relacher', libelle: 'Avant-bras vertical', unite: '°', acaler: true },
+  mainGuide:      { max: 0.25, phase: 'relacher', libelle: 'Poussée de la main guide', unite: '%', pourcent: true },
+  hauteurRel:     { phase: 'relacher', libelle: 'Hauteur du relâcher', unite: '%', pourcent: true },
+  // ---- follow-through ----
+  poignet:        { max: 150, phase: 'follow', libelle: 'Cassure du poignet', unite: '°' },
+  coudeHaut:      { min: 0, phase: 'follow', libelle: 'Coude terminé haut', unite: '%', pourcent: true, acaler: true },
+  maintien:       { min: 0.8, phase: 'follow', libelle: 'Maintien de la position', unite: 's', acaler: true },
+  axeFinish:      { max: 0.25, phase: 'follow', libelle: 'Finish dans l\'axe du corps', unite: '%', pourcent: true },
+  // ---- retombée ----
+  derive:         { max: 0.10, phase: 'retombee', libelle: 'Dérive à la retombée', unite: '%', pourcent: true },
+  stabilite:      { max: 0.08, phase: 'retombee', libelle: 'Stabilité après le tir', unite: '%', pourcent: true, acaler: true }
+};
+
+export const PHASES = {
+  posture:    { label: 'Posture de départ', ordre: 1 },
+  chargement: { label: 'Chargement', ordre: 2 },
+  montee:     { label: 'Montée', ordre: 3 },
+  relacher:   { label: 'Relâcher', ordre: 4 },
+  follow:     { label: 'Follow-through', ordre: 5 },
+  retombee:   { label: 'Retombée', ordre: 6 }
 };
 
 /* ================================================================== 360°
@@ -200,17 +326,33 @@ export const ANGLES = {
     consigne: 'Place-toi derrière le joueur, dans l’axe du panier.' }
 };
 
+const FRONTAL  = { face:'bonne', derriere:'bonne', cote_tir:'nulle',   cote_oppose:'nulle' };
+const SAGITTAL = { cote_tir:'bonne', cote_oppose:'bonne', face:'estimee', derriere:'estimee' };
+const TEMPOREL = { face:'bonne', derriere:'bonne', cote_tir:'bonne', cote_oppose:'bonne' };
+
 export const FIABILITE = {
-  extension:  { cote_tir:'bonne',   cote_oppose:'estimee', face:'estimee', derriere:'estimee' },
-  ecartCoude: { face:'bonne',       derriere:'bonne',      cote_tir:'nulle', cote_oppose:'nulle' },
-  appuis:     { face:'bonne',       derriere:'bonne',      cote_tir:'nulle', cote_oppose:'nulle' },
-  derive:     { face:'bonne',       derriere:'bonne',      cote_tir:'bonne', cote_oppose:'bonne' },
-  mainGuide:  { cote_oppose:'bonne',face:'bonne',          derriere:'estimee', cote_tir:'nulle' },
-  poignet:    { cote_tir:'bonne',   cote_oppose:'estimee', face:'estimee', derriere:'estimee' },
-  axeFinish:  { face:'bonne',       derriere:'bonne',      cote_tir:'nulle', cote_oppose:'nulle' },
-  hauteurRel: { face:'bonne',       derriere:'bonne',      cote_tir:'bonne', cote_oppose:'bonne' },
-  duree:      { face:'bonne',       derriere:'bonne',      cote_tir:'bonne', cote_oppose:'bonne' },
-  flexion:    { cote_tir:'bonne',   cote_oppose:'bonne',   face:'estimee', derriere:'estimee' }
+  appuis:         FRONTAL,
+  ouverturePieds: FRONTAL,
+  postureGenou:   SAGITTAL,
+  poidsLateral:   FRONTAL,
+  flexion:        SAGITTAL,
+  genouxValgus:   FRONTAL,
+  poidsCharge:    FRONTAL,
+  descenteDuree:  TEMPOREL,
+  synchro:        TEMPOREL,
+  parasites:      { face:'bonne', derriere:'bonne', cote_tir:'estimee', cote_oppose:'estimee' },
+  duree:          TEMPOREL,
+  extension:      { cote_tir:'bonne', cote_oppose:'estimee', face:'estimee', derriere:'estimee' },
+  ecartCoude:     FRONTAL,
+  avantBras:      { cote_tir:'bonne', cote_oppose:'estimee', face:'estimee', derriere:'estimee' },
+  mainGuide:      { cote_oppose:'bonne', face:'bonne', derriere:'estimee', cote_tir:'nulle' },
+  hauteurRel:     TEMPOREL,
+  poignet:        { cote_tir:'bonne', cote_oppose:'estimee', face:'estimee', derriere:'estimee' },
+  coudeHaut:      { cote_tir:'bonne', cote_oppose:'bonne', face:'estimee', derriere:'estimee' },
+  maintien:       TEMPOREL,
+  axeFinish:      FRONTAL,
+  derive:         TEMPOREL,
+  stabilite:      TEMPOREL
 };
 
 export function fiabilite(cle, angle) {
@@ -375,6 +517,118 @@ export async function analyserVideo(video, options = {}) {
         : 'Le joueur sort du cadre sur une partie de la vidéo : filme-le en entier, pieds compris.'
     }
   };
+}
+
+/* ============================================ grille de Williams
+   Les 47 critères de la fiche d'auto-évaluation du lancer franc, dans
+   l'ordre de la fiche. `mesure` dit quelle mesure automatique l'éclaire ;
+   `manque` dit ce qu'il faudrait pour les critères encore hors de portée :
+   'ballon' (suivi du ballon), 'mains' (21 points par main), 'coach' (l'œil). */
+export const GRILLE = [
+  ['Posture de départ', 'Appuis équilibrés', 'appuis'],
+  ['Posture de départ', 'Orientation des pieds', 'ouverturePieds'],
+  ['Posture de départ', 'Flexion des genoux', 'postureGenou'],
+  ['Footwork de mise en place', 'Routine identique à chaque tir', 'routine'],
+  ['Footwork de mise en place', 'Placement des pieds', 'poidsLateral'],
+  ['Footwork de mise en place', 'Maîtrise de la stabilisation', 'parasites'],
+  ['Dribble de préparation', 'Nombre de dribbles constant', null, 'ballon'],
+  ['Dribble de préparation', 'Hauteur du dribble', null, 'ballon'],
+  ['Dribble de préparation', 'Contrôle de la main', null, 'mains'],
+  ['Dribble de préparation', 'Position du poignet', null, 'mains'],
+  ['Dribble de préparation', 'Position du coude', null, 'mains'],
+  ['Attraper / Placement', 'Prise de balle propre', null, 'mains'],
+  ['Attraper / Placement', 'Verrouillage de la main de tir', null, 'mains'],
+  ['Attraper / Placement', 'Main guide correctement placée', 'mainGuide'],
+  ['Footwork de chargement', 'Répartition du poids', 'poidsCharge'],
+  ['Footwork de chargement', 'Positionnement des genoux', 'genouxValgus'],
+  ['Footwork de chargement', 'Équilibre général', 'derive'],
+  ['Alignement du bras de tir', 'Coude sous le ballon', 'ecartCoude'],
+  ['Alignement du bras de tir', 'Avant-bras vertical', 'avantBras'],
+  ['Alignement du bras de tir', 'Alignement ballon-coude-panier', null, 'ballon'],
+  ['Squat TDF V1', 'Descente contrôlée', 'descenteDuree'],
+  ['Squat TDF V1', 'Maintien de l\'équilibre', 'poidsCharge'],
+  ['Squat TDF V1', 'Création de force vers le haut', 'flexion'],
+  ['Squat TDF V2', 'Synchronisation pieds-jambes-bras', 'synchro'],
+  ['Squat TDF V2', 'Fluidité du mouvement', 'duree'],
+  ['Squat TDF V2', 'Transfert d\'énergie', 'synchro'],
+  ['Lancer du coude', 'Extension du coude', 'extension'],
+  ['Lancer du coude', 'Direction du mouvement', 'axeFinish'],
+  ['Lancer du coude', 'Stabilité de l\'épaule', 'parasites'],
+  ['Lancer de la main', 'Cassure du poignet', 'poignet'],
+  ['Lancer de la main', 'Doigts orientés vers le cercle', null, 'mains'],
+  ['Lancer de la main', 'Sortie de balle propre', null, 'ballon'],
+  ['Stabilisation', 'Corps stable', 'stabilite'],
+  ['Stabilisation', 'Aucun mouvement parasite', 'parasites'],
+  ['Stabilisation', 'Équilibre jusqu\'à la sortie de balle', 'derive'],
+  ['Finalisation', 'Extension complète', 'extension'],
+  ['Finalisation', 'Maintien de la position', 'maintien'],
+  ['Finalisation', 'Regard fixé sur la cible', null, 'coach'],
+  ['Relâchement (Follow Through)', 'Main dans le cercle', null, 'ballon'],
+  ['Relâchement (Follow Through)', 'Coude terminé haut', 'coudeHaut'],
+  ['Relâchement (Follow Through)', 'Maintien 1 à 2 secondes', 'maintien'],
+  ['Évaluation du résultat', 'Trajectoire de balle', null, 'ballon'],
+  ['Évaluation du résultat', 'Rotation de balle', null, 'ballon'],
+  ['Évaluation du résultat', 'Précision du tir', null, 'ballon'],
+  ['Posture finale', 'Position des pieds', 'appuis'],
+  ['Posture finale', 'Alignement du corps', 'stabilite'],
+  ['Posture finale', 'Position finale du bras de tir', 'coudeHaut'],
+  ['Posture finale', 'Équilibre général après le tir', 'derive']
+].map(([etape, critere, mesure, manque]) => ({ etape, critere, mesure: mesure || null, manque: manque || null }));
+
+/* Note sur 5 proposée à partir d'une mesure. Williams garde la main :
+   c'est une suggestion, pas un verdict. */
+export function noteSuggeree(cle, valeur) {
+  const s = SEUILS[cle];
+  if (!s || !isFinite(valeur)) return null;
+  const aMin = s.min !== undefined, aMax = s.max !== undefined;
+  if (!aMin && !aMax) return null;
+
+  let dehors = 0, marge = 1;
+  if (aMin && aMax) {
+    const l = s.max - s.min;
+    if (valeur < s.min) dehors = (s.min - valeur) / l;
+    else if (valeur > s.max) dehors = (valeur - s.max) / l;
+    else marge = Math.min(valeur - s.min, s.max - valeur) / (l / 2);
+  } else if (aMin) {
+    const b = Math.abs(s.min) || 1;
+    if (valeur < s.min) dehors = (s.min - valeur) / b;
+    else marge = Math.min(1, (valeur - s.min) / (0.06 * b));
+  } else {
+    const b = Math.abs(s.max) || 1;
+    if (valeur > s.max) dehors = (valeur - s.max) / b;
+    else marge = Math.min(1, (s.max - valeur) / (0.35 * b));
+  }
+  if (dehors === 0) return marge >= 0.35 ? 5 : 4;
+  if (dehors <= 0.15) return 3;
+  if (dehors <= 0.40) return 2;
+  return 1;
+}
+
+/* Remplit la grille à partir d'un bilan 360 (ou d'une moyenne de série).
+   `mesures` = sortie de bilan360() ou de moyennes(). */
+export function remplirGrille(mesures, extras) {
+  const e = extras || {};
+  return GRILLE.map(g => {
+    const ligne = { etape: g.etape, critere: g.critere, mesure: g.mesure,
+                    manque: g.manque, valeur: null, note: null,
+                    angles: null, niveau: null, acaler: false };
+    if (!g.mesure) return ligne;
+    if (g.mesure === 'routine') {
+      if (e.routine === undefined || e.routine === null) return ligne;
+      ligne.valeur = e.routine;
+      ligne.note = e.routine <= 4 ? 5 : (e.routine <= 6 ? 4 : (e.routine <= 9 ? 3 : (e.routine <= 13 ? 2 : 1)));
+      ligne.acaler = true;
+      return ligne;
+    }
+    const m = mesures && mesures[g.mesure];
+    if (!m) return ligne;
+    ligne.valeur = m.moyenne;
+    ligne.note = noteSuggeree(g.mesure, m.moyenne);
+    ligne.angles = m.angles || null;
+    ligne.niveau = m.niveau || null;
+    ligne.acaler = !!(SEUILS[g.mesure] && SEUILS[g.mesure].acaler);
+    return ligne;
+  });
 }
 
 /* ------------------------------------------------ moyenne sur la série */
