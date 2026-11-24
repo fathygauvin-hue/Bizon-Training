@@ -4432,6 +4432,11 @@ async function loadPlayerIronmanBox(playerId, playerName){
     '<path d="M3 9V6.5A2.5 2.5 0 0 1 5.5 4H8M21 9V6.5A2.5 2.5 0 0 0 18.5 4H16"/>' +
     '<path d="M3 15v2.5A2.5 2.5 0 0 0 5.5 20H8M21 15v2.5a2.5 2.5 0 0 1-2.5 2.5H16"/><\/svg>';
 
+  const ICONE_PROFIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/>' +
+    '<path d="M12 2.2v1.4M18.9 5.1l-1 1M21.8 12h-1.4M2.2 12h1.4M5.1 5.1l1 1"/><\/svg>';
+
   function entreeSeance() {
     try {
       if (document.getElementById('bz-entree-seance')) return;
@@ -4446,6 +4451,15 @@ async function loadPlayerIronmanBox(playerId, playerName){
       d.innerHTML = window.tileHTML("location.href='./seance.html'", ICONE_SEANCE,
         'var(--gold4)', 'Mesure en direct', 'Ton geste corrig\u00e9 \u00e0 chaque tir');
       grille.appendChild(d);
+      // deuxieme porte d'entree : le profil du basketteur (preparation mentale)
+      if (!document.getElementById('bz-entree-profil')) {
+        const p = document.createElement('div');
+        p.id = 'bz-entree-profil';
+        p.style.display = 'contents';
+        p.innerHTML = window.tileHTML("location.href='./profil-mental.html'", ICONE_PROFIL,
+          'var(--gold4)', 'Mon profil de joueur', '27 questions, qui tu es sur le terrain');
+        grille.appendChild(p);
+      }
     } catch (e) {}
   }
   function balayer() { injecter(); entreeSeance(); mesuresCoach(); }
