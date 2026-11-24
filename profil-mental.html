@@ -81,10 +81,6 @@
     Ce résultat reflète tes réponses du moment et sert de support à l'accompagnement.
   </p>
   <div id="resultat"></div>
-  <div class="carte" id="carteCroise" hidden>
-    <p class="tit">Avec tes mesures de tir</p>
-    <div id="croise"></div>
-  </div>
   <div class="carte">
     <div class="note">
       Ce questionnaire est un outil de réflexion et d'accompagnement sportif.
@@ -188,29 +184,6 @@ function terminer() {
     barre(resultat.pression, 'var(--rouge)'));
 
   $('resultat').innerHTML = h;
-  croiserAvecLesTirs();
-}
-
-/* ------------------------- croisement avec la dérive de fatigue ------- */
-async function croiserAvecLesTirs() {
-  let m = null;
-  try {
-    const r = await api('listShotMetrics', { limit: 20 });
-    m = (r.profiles || r.metrics || []).find(x => x.tirs && x.tirs.fatigue) ||
-        (r.metrics || []).find(x => x.regularite);
-  } catch (e) { return; }
-  if (!m) return;
-  const fat = m.tirs && m.tirs.fatigue;
-  if (!fat) return;
-  $('carteCroise').hidden = false;
-  $('croise').innerHTML =
-    '<div class="lig"><span>Gestion de la pression</span><b>' + resultat.pression + '</b></div>' +
-    barre(resultat.pression, 'var(--rouge)') +
-    '<div class="lig"><span>Extension du bras en fin de série</span><b>' +
-      (fat.extensionDelta >= 0 ? '+' : '') + fat.extensionDelta.toFixed(1) + ' °</b></div>' +
-    '<div class="note" style="margin-top:12px">' +
-      'Deux chiffres mis côte à côte, rien de plus : un lien entre les deux se discute avec ' +
-      'le préparateur et le coach, il ne se déduit pas d\'un écart.</div>';
 }
 
 /* ------------------------------------------------ enregistrement */
