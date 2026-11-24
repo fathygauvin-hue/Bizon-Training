@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Bizon — profil du basketteur</title>
+<style>
+  :root{--fond:#141210;--carte:#1C1A16;--trait:#322C22;--encre:#F4F1EA;
+        --gris:#A09A8E;--gris2:#6A6559;--or:#C9A227;--vert:#4FD894;--rouge:#FF6E5E;--bleu:#5B9BE0}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--fond);color:var(--encre);
+       font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  main{max-width:640px;margin:0 auto;padding:22px}
+  h1{font-size:23px;margin:0 0 6px}
+  .tit{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--or);margin:0 0 6px}
+  .carte{background:var(--carte);border:1px solid var(--trait);border-radius:14px;padding:18px;margin-bottom:14px}
+  .cta{display:block;width:100%;background:var(--or);color:#100E0A;border:0;border-radius:12px;
+       padding:15px;font-size:16px;font-weight:700;cursor:pointer}
+  .cta:disabled{opacity:.4}
+  .sec{background:transparent;color:var(--encre);border:1px solid var(--trait);border-radius:12px;
+       padding:12px 15px;font-size:15px;cursor:pointer;width:100%;text-align:left;margin-bottom:9px;line-height:1.35}
+  .sec:hover{border-color:var(--gris2)}
+  .sec.on{border-color:var(--or);background:rgba(201,162,39,.09)}
+  .jauge{height:4px;background:var(--trait);border-radius:2px;overflow:hidden;margin:12px 0 18px}
+  .jauge i{display:block;height:100%;width:0;background:var(--or);transition:width .25s}
+  .q{font-size:18px;font-weight:700;line-height:1.35;margin:0 0 16px}
+  .note{font-size:12px;color:var(--gris);line-height:1.55}
+  .barre{height:8px;background:#2A2622;border-radius:4px;overflow:hidden;margin-top:6px}
+  .barre i{display:block;height:100%;border-radius:4px}
+  .lig{display:flex;align-items:baseline;justify-content:space-between;font-size:14px;margin-top:14px}
+  .lig b{font-variant-numeric:tabular-nums}
+  .gros{font-size:26px;font-weight:800;margin:2px 0 0}
+  .err{color:var(--rouge);font-size:14px;margin-top:10px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+
+<!-- ================= accueil ================= -->
+<div id="ecranDepart">
+  <p class="tit">Préparation mentale · basket</p>
+  <h1>Profil complet du basketteur</h1>
+  <p class="note" style="margin:10px 0 0">
+    27 questions pour mieux comprendre ta résilience mentale, ton style de leadership,
+    ton profil de jeu, ta motivation et ta gestion de la pression.
+  </p>
+  <p class="note">Il n'y a ni bonne ni mauvaise réponse. Réponds spontanément.</p>
+
+  <div class="carte" style="margin-top:18px">
+    <p class="tit" style="color:var(--gris)">Avant de commencer</p>
+    <div class="note">
+      Ce questionnaire est un <b>outil de réflexion et d'accompagnement sportif</b>.
+      Il ne constitue pas un diagnostic psychologique.<br><br>
+      Ton résultat est enregistré dans ton profil Bizon. <b>Ton coach et le staff y ont accès.</b>
+      Il sert de support à la discussion, pas d'étiquette.
+    </div>
+  </div>
+
+  <button class="cta" id="commencer">Commencer mon profil</button>
+  <div class="err" id="err0"></div>
+</div>
+
+<!-- ================= questionnaire ================= -->
+<div id="ecranQ" hidden>
+  <p class="tit" id="qSection">Résilience mentale</p>
+  <div class="note" id="qRang">Question 1 sur 27</div>
+  <div class="jauge"><i id="qJauge"></i></div>
+  <p class="q" id="qTexte"></p>
+  <div id="qOptions"></div>
+  <button class="cta" id="suivant" disabled style="margin-top:6px">Question suivante</button>
+  <button class="sec" id="retour" style="margin-top:10px;text-align:center">Revenir en arrière</button>
+</div>
+
+<!-- ================= résultat ================= -->
+<div id="ecranR" hidden>
+  <p class="tit">Résultat</p>
+  <h1>Ton profil complet</h1>
+  <p class="note" style="margin:8px 0 18px">
+    Ce résultat reflète tes réponses du moment et sert de support à l'accompagnement.
+  </p>
+  <div id="resultat"></div>
+  <div class="carte" id="carteCroise" hidden>
+    <p class="tit">Avec tes mesures de tir</p>
+    <div id="croise"></div>
+  </div>
+  <div class="carte">
+    <div class="note">
+      Ce questionnaire est un outil de réflexion et d'accompagnement sportif.
+      Il ne constitue pas un diagnostic psychologique.
+    </div>
+  </div>
+  <button class="cta" id="enregistrer">Enregistrer dans mon profil</button>
+  <div class="err" id="err1"></div>
+</div>
+
+</main>
+
+<script type="module">
+import { QUESTIONS, SECTIONS, ECHELLE, AXES, TITRES, calculer, VERSION_MENTAL } from './mental.js';
+
+const $ = i => document.getElementById(i);
+const reponses = {};
+let i = 0, resultat = null;
+
+const titreSection = cle => (SECTIONS.find(s => s.cle === cle) || {}).titre || '';
+
+function afficher() {
+  const q = QUESTIONS[i];
+  $('qSection').textContent = titreSection(q.section);
+  $('qRang').textContent = 'Question ' + (i + 1) + ' sur ' + QUESTIONS.length;
+  $('qJauge').style.width = ((i) / QUESTIONS.length * 100) + '%';
+  $('qTexte').textContent = q.texte;
+  $('retour').style.display = i === 0 ? 'none' : 'block';
+  $('suivant').textContent = i === QUESTIONS.length - 1 ? 'Voir mon résultat' : 'Question suivante';
+
+  const choix = q.options
+    ? q.options.map(([axe, texte]) => [axe, texte])
+    : ECHELLE.map((t, k) => [k + 1, t]);
+
+  $('qOptions').innerHTML = choix.map(([val, texte]) =>
+    '<button class="sec' + (reponses[q.n] === val ? ' on' : '') + '" data-v="' + val + '">' + texte + '</button>'
+  ).join('');
+
+  $('qOptions').querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      const v = b.dataset.v;
+      reponses[q.n] = q.options ? v : Number(v);
+      afficher();
+    };
+  });
+  $('suivant').disabled = reponses[q.n] === undefined;
+}
+
+$('commencer').onclick = () => { $('ecranDepart').hidden = true; $('ecranQ').hidden = false; afficher(); };
+$('retour').onclick = () => { if (i > 0) { i--; afficher(); window.scrollTo(0, 0); } };
+$('suivant').onclick = () => {
+  if (reponses[QUESTIONS[i].n] === undefined) return;
+  if (i < QUESTIONS.length - 1) { i++; afficher(); window.scrollTo(0, 0); }
+  else terminer();
+};
+
+/* ------------------------------------------------------- résultat */
+function barre(valeur, couleur) {
+  return '<div class="barre"><i style="width:' + Math.max(0, Math.min(100, valeur)) +
+         '%;background:' + couleur + '"></i></div>';
+}
+
+function terminer() {
+  resultat = calculer(reponses);
+  $('ecranQ').hidden = true; $('ecranR').hidden = false; window.scrollTo(0, 0);
+
+  const bloc = (titre, sousTitre, contenu) =>
+    '<div class="carte"><p class="tit">' + titre + '</p>' +
+    (sousTitre ? '<div class="gros">' + sousTitre + '</div>' : '') + contenu + '</div>';
+
+  let h = '';
+
+  h += bloc('Partie 1 · Résilience mentale', resultat.resilienceLabel,
+    '<div class="lig"><span>Résilience mentale</span><b>' + resultat.resilience + '</b></div>' +
+    barre(resultat.resilience, 'var(--vert)'));
+
+  const axesHTML = (section, res) =>
+    Object.keys(AXES[section]).map(a =>
+      '<div class="lig"><span>' + AXES[section][a] + '</span><b>' + res.pourcents[a] + '</b></div>' +
+      barre(res.pourcents[a], a === res.principal ? 'var(--bleu)' : (a === res.secondaire ? 'var(--rouge)' : 'var(--gris2)'))
+    ).join('');
+
+  h += bloc('Partie 2 · Style de leadership',
+    resultat.leadership.principal ? TITRES.leadership[resultat.leadership.principal] : '—',
+    (resultat.leadership.secondaire
+      ? '<div class="note" style="margin-top:4px">Profil secondaire : ' +
+        TITRES.leadership[resultat.leadership.secondaire] + '</div>' : '') +
+    axesHTML('leadership', resultat.leadership));
+
+  h += bloc('Partie 3 · Profil de jeu',
+    resultat.jeu.principal ? TITRES.jeu[resultat.jeu.principal] : '—',
+    (resultat.jeu.secondaire
+      ? '<div class="note" style="margin-top:4px">Profil secondaire : ' +
+        TITRES.jeu[resultat.jeu.secondaire] + '</div>' : '') +
+    axesHTML('jeu', resultat.jeu));
+
+  h += bloc('Partie 4 · Motivation et pression', '',
+    '<div class="lig"><span>Motivation intrinsèque</span><b>' + resultat.motivation + '</b></div>' +
+    barre(resultat.motivation, 'var(--or)') +
+    '<div class="lig"><span>Gestion de la pression</span><b>' + resultat.pression + '</b></div>' +
+    barre(resultat.pression, 'var(--rouge)'));
+
+  $('resultat').innerHTML = h;
+  croiserAvecLesTirs();
+}
+
+/* ------------------------- croisement avec la dérive de fatigue ------- */
+async function croiserAvecLesTirs() {
+  let m = null;
+  try {
+    const r = await api('listShotMetrics', { limit: 20 });
+    m = (r.profiles || r.metrics || []).find(x => x.tirs && x.tirs.fatigue) ||
+        (r.metrics || []).find(x => x.regularite);
+  } catch (e) { return; }
+  if (!m) return;
+  const fat = m.tirs && m.tirs.fatigue;
+  if (!fat) return;
+  $('carteCroise').hidden = false;
+  $('croise').innerHTML =
+    '<div class="lig"><span>Gestion de la pression</span><b>' + resultat.pression + '</b></div>' +
+    barre(resultat.pression, 'var(--rouge)') +
+    '<div class="lig"><span>Extension du bras en fin de série</span><b>' +
+      (fat.extensionDelta >= 0 ? '+' : '') + fat.extensionDelta.toFixed(1) + ' °</b></div>' +
+    '<div class="note" style="margin-top:12px">' +
+      'Deux chiffres mis côte à côte, rien de plus : un lien entre les deux se discute avec ' +
+      'le préparateur et le coach, il ne se déduit pas d\'un écart.</div>';
+}
+
+/* ------------------------------------------------ enregistrement */
+async function api(action, charge) {
+  const src = await fetch('./index.html', { cache: 'reload' }).then(r => r.text());
+  const url = (src.match(/https:\/\/[a-z0-9]+\.supabase\.co\/functions\/v1\/api/i) || [])[0];
+  const cle = (src.match(/sb_publishable_[A-Za-z0-9_\-]+/) || [])[0];
+  const code = localStorage.getItem('bizon_access_code');
+  if (!url || !cle || !code) throw new Error('Connecte-toi d’abord dans l’application.');
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': cle, 'Authorization': 'Bearer ' + cle },
+    body: JSON.stringify(Object.assign({ action: action, access_code: code }, charge || {}))
+  });
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error(j.error || ('Erreur ' + r.status));
+  return j;
+}
+
+$('enregistrer').onclick = async () => {
+  $('err1').textContent = '';
+  if (!resultat) return;
+  $('enregistrer').disabled = true;
+  $('enregistrer').textContent = 'Enregistrement…';
+  try {
+    await api('saveMentalProfile', {
+      version: VERSION_MENTAL, reponses: reponses, resultats: resultat
+    });
+    $('enregistrer').textContent = 'Profil enregistré';
+    $('enregistrer').style.background = '#4FD894';
+  } catch (e) {
+    $('enregistrer').disabled = false;
+    $('enregistrer').textContent = 'Enregistrer dans mon profil';
+    $('err1').textContent = e.message || String(e);
+  }
+};
+</script>
+</body>
+</html>
